@@ -1,26 +1,135 @@
+@import url('https://fonts.googleapis.com/css2?family=Almarai:wght@300;400;700;800&family=Lato:ital,wght@0,100;0,300;0,400;0,700;0,900;1,100;1,300;1,400;1,700;1,900&display=swap');
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --color-primary: #EDEEFE;
+
+  --color-secondary: #FFFFFF;
+
+  --color-third: #000000;
+
+  --color-fourth: #6d4bdd;
+
+  --color-fifth: #F6C029;
+
+  --color-sixth: #6E45E2;
+  --color-sixth2: #D3B5FF;
+
+  --color-seventh: #62d410;
+
+  --color-danger: #F8595F;
+  --color-danger2: #cc3232;
+
+  --shadow1: box-shadow: rgba(100, 100, 111, 0.2) 0px 7px 29px 0px;
+
+  --rounded1: 16px;
 }
+
+[data-theme="dark"] {}
+
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+
+  --color-primary: var(--color-primary);
+
+  --color-secondary: var(--color-secondary);
+
+  --color-third: var(--color-third);
+
+  --color-fourth: var(--color-fourth);
+
+  --color-fifth: var(--color-fifth);
+  
+  --color-sixth: var(--color-sixth);
+
+  --color-sixth2: var(--color-sixth2);
+
+  --color-seventh: var(--color-seventh);
+
+  --color-danger: var(--color-danger);
+  --color-danger2: var(--color-danger2);
+
+  --shadow-shadow1: var(--shadow1);
+
+  --radius-rounded1: var(--rounded1);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@layer base {
+  * {
+    outline: none;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Lato', 'Almarai', sans-serif;
   }
-}
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  body {
+    color: var(--color-white2);
+  }
+
+  [disabled] {
+    cursor: not-allowed;
+  }
+
+  button {
+    cursor: pointer;
+  }
+
+  input:disabled {
+    cursor: not-allowed;
+  }
+
+  h2 {
+    font-size: 18px;
+    font-weight: 500;
+    color: white;
+  }
+
+  h3 {
+    font-size: 16px;
+    font-weight: 500;
+    color: white;
+  }
+
+  *::-webkit-scrollbar {
+    width: 9px;
+    height: 9px;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: var(--color-primary);
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background-color: var(--color-primary3);
+    border-radius: 33px;
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background-color: var(--color-secondary2);
+  }
+
+  /* Prefer Almarai for Arabic text and RTL content */
+  :lang(ar),
+  [lang^="ar"],
+  [dir="rtl"] {
+    font-family: 'Almarai', 'Lato', sans-serif;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: rgba(0, 0, 0, 0.1);
+    border-radius: 3px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(0, 0, 0, 0.2);
+  }
 }
