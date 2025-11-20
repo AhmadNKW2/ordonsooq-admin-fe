@@ -130,7 +130,9 @@ export function SidebarGroup({
           ${isOpen ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'}
         `}
       >
-        {children}
+        <div className="space-y-1">
+          {children}
+        </div>
       </div>
     </div>
   );

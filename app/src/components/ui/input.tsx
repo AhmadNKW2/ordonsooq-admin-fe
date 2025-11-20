@@ -59,7 +59,6 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
         rightIcon={isNum ? <span className={`${FIELD_ICON_CLASSES} inline-block`}>#</span> : undefined}
         labelLeftOffset={isSearch ? 'left-9' : 'left-8'}
         isClearButton={size === 'sm' ? false : true}
-        size={size}
       >
         <input
           ref={ref}
@@ -68,7 +67,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
           onFocus={handleFocus}
           onBlur={handleBlur}
           placeholder=" "
-          className={getFieldClasses(error, hasValue, isSearch, hasRightIcon, className, size)}
+          className={getFieldClasses(error, hasValue, isSearch, hasRightIcon, className)}
           {...props}
         />
       </FieldWrapper>

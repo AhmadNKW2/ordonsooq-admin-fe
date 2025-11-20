@@ -5,8 +5,10 @@
  * Main page component for displaying and managing products
  */
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { useProducts, useDeleteProduct } from "../src/services/products/hooks/use-products";
+import { useCategories } from "../src/services/categories/hooks/use-categories";
 import { Plus, RefreshCw, Package, AlertCircle, Star, DollarSign, Search, X } from "lucide-react";
 import { Pagination } from "../src/components/ui/pagination";
 import { Card } from "../src/components/ui/card";
@@ -14,6 +16,7 @@ import { Button } from "../src/components/ui/button";
 import { Input } from "../src/components/ui/input";
 import { Badge } from "../src/components/ui/badge";
 import { IconButton } from "../src/components/ui/icon-button";
+import { ViewProductModal } from "../src/components/products/ViewProductModal";
 import {
   Table,
   TableBody,
@@ -26,16 +29,25 @@ import { PAGINATION } from "../src/lib/constants";
 import { ProductFilters, Product } from "../src/services/products/types/product.types";
 
 export default function ProductsPage() {
+  const router = useRouter();
   const [queryParams, setQueryParams] = useState<ProductFilters>({
     page: PAGINATION.defaultPage,
     limit: PAGINATION.defaultPageSize,
   });
 
   const [searchTerm, setSearchTerm] = useState("");
+  const [viewProduct, setViewProduct] = useState<Product | null>(null);
 
   const { data, isLoading, isError, error, refetch } =
     useProducts(queryParams);
+  const { data: categoriesData } = useCategories();
   const deleteProduct = useDeleteProduct();
+
+  // Create a category lookup map for O(1) lookups
+  const categoryMap = useMemo(() => {
+    if (!categoriesData) return new Map();
+    return new Map(categoriesData.map(cat => [cat.id, cat.name]));
+  }, [categoriesData]);
 
   const handleFilterChange = (filters: ProductFilters) => {
     setQueryParams((prev) => ({
@@ -54,12 +66,11 @@ export default function ProductsPage() {
   };
 
   const handleEdit = (product: Product) => {
-    // TODO: Implement edit functionality
-    console.log("Edit product:", product);
+    router.push(`/products/${product.id}`);
   };
 
   const handleDelete = async (product: Product) => {
-    if (window.confirm(`Are you sure you want to delete "${product.name}"?`)) {
+    if (window.confirm(`Are you sure you want to delete "${product.name_en}"?`)) {
       try {
         await deleteProduct.mutateAsync(product.id);
         // Success feedback handled by the mutation hook
@@ -71,13 +82,11 @@ export default function ProductsPage() {
   };
 
   const handleView = (product: Product) => {
-    // TODO: Implement view functionality
-    console.log("View product:", product);
+    router.push(`/products/${product.id}/view`);
   };
 
   const handleCreateNew = () => {
-    // TODO: Implement create functionality
-    console.log("Create new product");
+    router.push("/products/create");
   };
 
   const handleSearchChange = (value: string) => {
@@ -104,14 +113,12 @@ export default function ProductsPage() {
     (key) => queryParams[key as keyof ProductFilters] !== undefined && key !== 'page' && key !== 'limit'
   );
 
-  const getStatusVariant = (isActive?: boolean, isFeatured?: boolean): 'default' | 'success' | 'danger' => {
-    if (isFeatured) return "default";
+  const getStatusVariant = (isActive?: boolean): 'default' | 'success' | 'danger' => {
     if (isActive) return "success";
     return "danger";
   };
 
-  const getStatusLabel = (isActive?: boolean, isFeatured?: boolean) => {
-    if (isFeatured) return "Featured";
+  const getStatusLabel = (isActive?: boolean) => {
     if (isActive) return "Active";
     return "Inactive";
   };
@@ -121,7 +128,7 @@ export default function ProductsPage() {
     return numPrice.toFixed(2);
   };
 
-  const formatRating = (rating?: number | string) => {
+  const formatRating = (rating?: number | string | null) => {
     if (!rating) return "0.0";
     const numRating = typeof rating === 'number' ? rating : parseFloat(rating);
     return numRating.toFixed(1);
@@ -157,6 +164,14 @@ export default function ProductsPage() {
 
   return (
     <div className="flex flex-col justify-center items-center gap-5 p-5">
+      {/* View Product Modal */}
+      <ViewProductModal
+        isOpen={!!viewProduct}
+        onClose={() => setViewProduct(null)}
+        product={viewProduct}
+        categoryName={viewProduct ? categoryMap.get(viewProduct.category_id) : undefined}
+      />
+
       {/* Header */}
       <div className="w-full justify-between items-center flex gap-5">
         <div className="flex items-center gap-5">
@@ -233,13 +248,7 @@ export default function ProductsPage() {
                   <TableCell className="font-semibold text-third max-w-xs">
                     <div className="flex items-center gap-2">
                       <div className="flex-1 min-w-0">
-                        <div className="truncate">{product.name}</div>
-                        {product.isFeatured && (
-                          <div className="flex items-center gap-1 mt-1">
-                            <Star className="h-3 w-3 text-fourth fill-fourth" />
-                            <span className="text-xs text-fourth">Featured</span>
-                          </div>
-                        )}
+                        <div className="truncate">{product.name_en}</div>
                       </div>
                     </div>
                   </TableCell>
@@ -248,45 +257,30 @@ export default function ProductsPage() {
                   </TableCell>
                   <TableCell>
                     <div className="text-gray-700">
-                      {typeof product.category === 'object' 
-                        ? product.category?.name 
-                        : product.category || <span className="text-gray-400">Uncategorized</span>}
+                      {categoryMap.get(product.category_id) || <span className="text-gray-400">Category {product.category_id}</span>}
                     </div>
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center gap-1 font-semibold text-third">
                       <DollarSign className="h-4 w-4 text-gray-500" />
-                      {formatPrice(product.price)}
+                      <span className="text-gray-400">—</span>
                     </div>
-                    {product.discountPrice && (
-                      <div className="ml-5 text-xs text-gray-400 line-through">
-                        ${formatPrice(product.discountPrice)}
-                      </div>
-                    )}
                   </TableCell>
                   <TableCell>
-                    <span className={`inline-flex items-center justify-center px-2 py-1 rounded-full text-xs font-semibold ${
-                      product.stock > 50 
-                        ? 'bg-fourth/20 text-fourth' 
-                        : product.stock > 10 
-                        ? 'bg-sixth/20 text-sixth' 
-                        : 'bg-danger/20 text-danger'
-                    }`}>
-                      {product.stock}
-                    </span>
+                    <span className="text-gray-400">—</span>
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center justify-center gap-1">
                       <Star className="h-4 w-4 text-fourth fill-fourth" />
-                      <span className="font-semibold text-third">{formatRating(product.averageRating)}</span>
-                      {product.totalRatings && (
-                        <span className="text-xs text-gray-400">({product.totalRatings})</span>
+                      <span className="font-semibold text-third">{formatRating(product.average_rating)}</span>
+                      {product.total_ratings && (
+                        <span className="text-xs text-gray-400">({product.total_ratings})</span>
                       )}
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge variant={getStatusVariant(product.isActive, product.isFeatured)}>
-                      {getStatusLabel(product.isActive, product.isFeatured)}
+                    <Badge variant={getStatusVariant(product.is_active)}>
+                      {getStatusLabel(product.is_active)}
                     </Badge>
                   </TableCell>
                   <TableCell>

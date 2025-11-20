@@ -14,11 +14,13 @@ import { Card } from "@/components/ui";
 interface AttributesSectionProps {
     attributes: Attribute[];
     onChange: (attributes: Attribute[]) => void;
+    availableAttributes?: Array<{ id: string; name: string; displayName: string; values: Array<{ id: string; value: string; displayValue: string }> }>;
 }
 
 export const AttributesSection: React.FC<AttributesSectionProps> = ({
     attributes,
     onChange,
+    availableAttributes = [],
 }) => {
     const [selectedPredefined, setSelectedPredefined] = useState<string>("");
 
@@ -32,13 +34,17 @@ export const AttributesSection: React.FC<AttributesSectionProps> = ({
     };
 
     const handleAddAttribute = () => {
-        const attributeName = selectedPredefined;
-        if (!attributeName) return;
+        const attributeId = selectedPredefined;
+        if (!attributeId) return;
+
+        // Find the attribute from available attributes
+        const selectedAttr = availableAttributes.find(a => a.id === attributeId);
+        if (!selectedAttr) return;
 
         const newAttribute: Attribute = {
-            id: `attr-${Date.now()}`,
-            name: attributeName,
-            values: [],
+            id: selectedAttr.id,
+            name: selectedAttr.name,
+            values: [], // Values will be added by user
             order: attributes.length,
             controlsPricing: false,
             controlsWeightDimensions: false,
@@ -146,7 +152,7 @@ export const AttributesSection: React.FC<AttributesSectionProps> = ({
             </h3>
 
             <div className="flex gap-5">
-                <SimpleFieldWrapper label="Select Predefined Attribute" className="flex-1">
+                <SimpleFieldWrapper label="Select Attribute" className="flex-1">
                     <Select
                         value={selectedPredefined}
                         onChange={(value) => {
@@ -154,10 +160,12 @@ export const AttributesSection: React.FC<AttributesSectionProps> = ({
                         }}
                         options={[
                             { value: "", label: "Choose from list..." },
-                            ...PREDEFINED_ATTRIBUTES.map((attr) => ({
-                                value: attr,
-                                label: attr,
-                            })),
+                            ...availableAttributes
+                                .filter(attr => !attributes.some(a => a.id === attr.id)) // Filter out already added attributes
+                                .map((attr) => ({
+                                    value: attr.id,
+                                    label: `${attr.name} (${attr.displayName})`,
+                                })),
                         ]}
                         search={true}
                     />
@@ -175,23 +183,26 @@ export const AttributesSection: React.FC<AttributesSectionProps> = ({
             </div>
 
             {attributes.length > 0 && (
-                <div>
-                    {attributes.map((attribute, index) => (
-                        <AttributeCard
-                            key={attribute.id}
-                            attribute={attribute}
-                            index={index}
-                            totalAttributes={attributes.length}
-                            onAddValue={handleAddValue}
-                            onRemoveValue={handleRemoveValue}
-                            onRemove={handleRemoveAttribute}
-                            onMove={handleMoveAttribute}
-                            onToggleControl={handleToggleControl}
-                            availableValues={
-                                PREDEFINED_ATTRIBUTE_VALUES[attribute.name] || []
-                            }
-                        />
-                    ))}
+                <div className="flex flex-col gap-5">
+                    {attributes.map((attribute, index) => {
+                        const availableAttr = availableAttributes.find(a => a.id === attribute.id);
+                        const availableValues = availableAttr?.values.map(v => v.value) || [];
+                        
+                        return (
+                            <AttributeCard
+                                key={attribute.id}
+                                attribute={attribute}
+                                index={index}
+                                totalAttributes={attributes.length}
+                                onAddValue={handleAddValue}
+                                onRemoveValue={handleRemoveValue}
+                                onRemove={handleRemoveAttribute}
+                                onMove={handleMoveAttribute}
+                                onToggleControl={handleToggleControl}
+                                availableValues={availableValues}
+                            />
+                        );
+                    })}
                 </div>
             )}
         </Card>

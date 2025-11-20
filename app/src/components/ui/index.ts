@@ -8,6 +8,7 @@ export { Input } from './input';
 export { Textarea } from './textarea';
 export { Select } from './select';
 export { DatePicker } from './date-picker';
+export { Modal, ConfirmModal } from './modal';
 export {
   Sidebar,
   SidebarHeader,

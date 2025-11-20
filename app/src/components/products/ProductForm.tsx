@@ -33,6 +33,7 @@ interface ProductFormProps {
   onSaveDraft?: (data: Partial<ProductFormData>) => Promise<void>;
   categories?: Array<{ id: string; name: string }>;
   vendors?: Array<{ id: string; name: string }>;
+  attributes?: Array<{ id: string; name: string; displayName: string; values: Array<{ id: string; value: string; displayValue: string }> }>;
 }
 
 export const ProductForm: React.FC<ProductFormProps> = ({
@@ -42,6 +43,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
   onSaveDraft,
   categories = [],
   vendors = [],
+  attributes = [],
 }) => {
   const [formData, setFormData] = useState<Partial<ProductFormData>>({
     nameEn: "",
@@ -166,6 +168,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
       {formData.pricingType === "variant" && (
         <AttributesSection
           attributes={formData.attributes || []}
+          availableAttributes={attributes}
           onChange={(attributes: Attribute[]) =>
             handleFieldChange("attributes", attributes)
           }

@@ -81,7 +81,7 @@ class HttpClient {
 
     try {
       const errorData = await response.json();
-      errorMessage = errorData.message || errorMessage;
+      errorMessage = errorData.message || errorData.error?.message || errorMessage;
       errors = errorData.errors;
     } catch {
       // If response is not JSON, use status text
@@ -93,6 +93,17 @@ class HttpClient {
       statusCode: response.status,
       errors,
     };
+
+    // Handle 401 Unauthorized - redirect to login
+    if (response.status === 401) {
+      // Clear auth data
+      if (typeof window !== "undefined") {
+        localStorage.removeItem("auth_token");
+        localStorage.removeItem("auth_user");
+        // Redirect to login page
+        window.location.href = "/login";
+      }
+    }
 
     throw error;
   }
@@ -196,6 +207,31 @@ class HttpClient {
   public delete<T>(endpoint: string): Promise<T> {
     return this.request<T>(endpoint, {
       method: "DELETE",
+    });
+  }
+
+  /**
+   * POST request with FormData (for file uploads)
+   */
+  public postFormData<T>(endpoint: string, formData: FormData): Promise<T> {
+    const url = `${this.baseURL}${endpoint}`;
+
+    // Don't set Content-Type for FormData - browser will set it with boundary
+    const headers: HeadersInit = {};
+    const authHeader = (this.defaultHeaders as any).Authorization;
+    if (authHeader) {
+      headers['Authorization'] = authHeader;
+    }
+
+    return fetch(url, {
+      method: "POST",
+      headers,
+      body: formData,
+    }).then(async (response) => {
+      if (!response.ok) {
+        await this.handleError(response);
+      }
+      return response.json();
     });
   }
 

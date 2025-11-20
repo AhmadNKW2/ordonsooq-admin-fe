@@ -2,6 +2,7 @@
 
 import { Fragment } from 'react';
 import type { ReactNode } from 'react';
+import { useAuth } from '../../contexts/auth.context';
 
 import {
   Sidebar,
@@ -42,10 +43,14 @@ interface AppSidebarProps {
 }
 
 export function AppSidebar({ groups, header, footer }: AppSidebarProps) {
-  const handleLogout = () => {
-    console.log('Logout clicked');
-    // Add your logout logic here
-    // Example: router.push('/login');
+  const { logout, user } = useAuth();
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
   };
 
   return (
@@ -96,19 +101,19 @@ export function AppSidebar({ groups, header, footer }: AppSidebarProps) {
             {footer.userAvatar ? (
               <img
                 src={footer.userAvatar}
-                alt={footer.userName}
+                alt={user?.name || footer.userName}
                 className="w-10 h-10 rounded-full object-cover"
               />
             ) : (
               <div className="w-10 h-10 rounded-full bg-sixth flex items-center justify-center text-secondary font-bold">
-                {footer.userName.charAt(0).toUpperCase()}
+                {(user?.name || footer.userName).charAt(0).toUpperCase()}
               </div>
             )}
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold text-third truncate">
-                {footer.userName}
+                {user?.name || footer.userName}
               </p>
-              <p className="text-xs text-gray-500 truncate">{footer.userEmail}</p>
+              <p className="text-xs text-gray-500 truncate">{user?.email || footer.userEmail}</p>
             </div>
             <button
               onClick={handleLogout}

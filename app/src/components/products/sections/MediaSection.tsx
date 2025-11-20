@@ -81,19 +81,26 @@ export const MediaSection: React.FC<MediaSectionProps> = ({
         return generateCombos(mediaAttributes);
     };
 
-    const handleSingleMediaAdd = (file: File) => {
-        const newMedia: MediaItem = {
-            id: `media-${Date.now()}`,
-            url: URL.createObjectURL(file),
-            type: file.type.startsWith("video") ? "video" : "image",
-            isPrimary: singleMedia.length === 0,
-            order: singleMedia.length,
-        };
+    const handleSingleMediaAdd = (files: FileList | null) => {
+        if (!files || files.length === 0) return;
 
-        onChangeSingle([...singleMedia, newMedia]);
+        const newMediaItems: MediaItem[] = Array.from(files).map((file, index) => ({
+            id: `media-${Date.now()}-${index}`,
+            file: file,
+            preview: URL.createObjectURL(file),
+            type: file.type.startsWith("video") ? "video" : "image",
+            isPrimary: singleMedia.length === 0 && index === 0,
+            order: singleMedia.length + index,
+        }));
+
+        onChangeSingle([...singleMedia, ...newMediaItems]);
     };
 
     const handleSingleMediaRemove = (mediaId: string) => {
+        const mediaToRemove = singleMedia.find((m) => m.id === mediaId);
+        if (mediaToRemove) {
+            URL.revokeObjectURL(mediaToRemove.preview);
+        }
         const filtered = singleMedia.filter((m) => m.id !== mediaId);
         onChangeSingle(filtered);
     };
@@ -115,7 +122,9 @@ export const MediaSection: React.FC<MediaSectionProps> = ({
         onChangeSingle(updated);
     };
 
-    const handleVariantMediaAdd = (key: string, file: File) => {
+    const handleVariantMediaAdd = (key: string, files: FileList | null) => {
+        if (!files || files.length === 0) return;
+
         const combinations = generateMediaCombinations();
         const combo = combinations.find((c) => c.key === key);
         if (!combo) return;
@@ -123,18 +132,19 @@ export const MediaSection: React.FC<MediaSectionProps> = ({
         const existing = variantMedia.find((vm) => vm.key === key);
         const currentMedia = existing?.media || [];
 
-        const newMedia: MediaItem = {
-            id: `media-${Date.now()}`,
-            url: URL.createObjectURL(file),
+        const newMediaItems: MediaItem[] = Array.from(files).map((file, index) => ({
+            id: `media-${Date.now()}-${index}`,
+            file: file,
+            preview: URL.createObjectURL(file),
             type: file.type.startsWith("video") ? "video" : "image",
-            isPrimary: currentMedia.length === 0,
-            order: currentMedia.length,
-        };
+            isPrimary: currentMedia.length === 0 && index === 0,
+            order: currentMedia.length + index,
+        }));
 
         const updated: VariantMedia = {
             key,
             attributeValues: combo.attributeValues,
-            media: [...currentMedia, newMedia],
+            media: [...currentMedia, ...newMediaItems],
         };
 
         const newVariantMedia = variantMedia.filter((vm) => vm.key !== key);
@@ -144,6 +154,11 @@ export const MediaSection: React.FC<MediaSectionProps> = ({
     const handleVariantMediaRemove = (key: string, mediaId: string) => {
         const existing = variantMedia.find((vm) => vm.key === key);
         if (!existing) return;
+
+        const mediaToRemove = existing.media.find((m) => m.id === mediaId);
+        if (mediaToRemove) {
+            URL.revokeObjectURL(mediaToRemove.preview);
+        }
 
         const filtered = existing.media.filter((m) => m.id !== mediaId);
 
@@ -274,7 +289,7 @@ export const MediaSection: React.FC<MediaSectionProps> = ({
 // Media Upload Area Component
 interface MediaUploadAreaProps {
     media: MediaItem[];
-    onAdd: (file: File) => void;
+    onAdd: (files: FileList | null) => void;
     onRemove: (mediaId: string) => void;
     onSetPrimary: (mediaId: string) => void;
     onReorder?: (fromIndex: number, toIndex: number) => void;
@@ -295,19 +310,15 @@ const MediaUploadArea: React.FC<MediaUploadAreaProps> = ({
         e.preventDefault();
         setDragOver(false);
 
-        const files = Array.from(e.dataTransfer.files);
-        files.forEach((file) => {
-            if (file.type.startsWith("image") || file.type.startsWith("video")) {
-                onAdd(file);
-            }
-        });
+        const files = e.dataTransfer.files;
+        if (files && files.length > 0) {
+            onAdd(files);
+        }
     };
 
     const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = e.target.files;
-        if (files) {
-            Array.from(files).forEach((file) => onAdd(file));
-        }
+        onAdd(files);
     };
 
     return (
@@ -396,13 +407,13 @@ const MediaUploadArea: React.FC<MediaUploadAreaProps> = ({
                         >
                             {item.type === "image" ? (
                                 <Image
-                                    src={item.url}
+                                    src={item.preview}
                                     alt=""
                                     fill
                                     className="object-cover"
                                 />
                             ) : (
-                                <video src={item.url} className="object-cover w-full h-full" />
+                                <video src={item.preview} className="object-cover w-full h-full" />
                             )}
 
                             {item.isPrimary && (

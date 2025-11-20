@@ -151,7 +151,6 @@ export const Pagination: React.FC<PaginationProps> = ({
                 disabled: totalItems < 10 ? true : (totalItems < 50 && option >= 50) || (totalItems >= 10 && totalItems < 50 && option === 10)
               }))}
               search={false}
-              size="sm"
               disabled={totalItems < 10}
             />
           </div>

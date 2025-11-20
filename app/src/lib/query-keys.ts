@@ -40,11 +40,35 @@ export const queryKeys = {
   // Categories
   categories: {
     all: ["categories"] as const,
+    tree: ["categories", "tree"] as const,
+    main: ["categories", "main"] as const,
     lists: () => [...queryKeys.categories.all, "list"] as const,
     list: (params?: Record<string, any>) =>
       [...queryKeys.categories.lists(), params] as const,
     details: () => [...queryKeys.categories.all, "detail"] as const,
     detail: (id: string | number) =>
       [...queryKeys.categories.details(), id] as const,
+  },
+
+  // Vendors
+  vendors: {
+    all: ["vendors"] as const,
+    lists: () => [...queryKeys.vendors.all, "list"] as const,
+    list: (params?: Record<string, any>) =>
+      [...queryKeys.vendors.lists(), params] as const,
+    details: () => [...queryKeys.vendors.all, "detail"] as const,
+    detail: (id: string | number) =>
+      [...queryKeys.vendors.details(), id] as const,
+  },
+
+  // Attributes
+  attributes: {
+    all: ["attributes"] as const,
+    lists: () => [...queryKeys.attributes.all, "list"] as const,
+    list: (params?: Record<string, any>) =>
+      [...queryKeys.attributes.lists(), params] as const,
+    details: () => [...queryKeys.attributes.all, "detail"] as const,
+    detail: (id: string | number) =>
+      [...queryKeys.attributes.details(), id] as const,
   },
 } as const;

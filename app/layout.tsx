@@ -2,8 +2,10 @@ import type { Metadata } from "next";
 import { Lato, Almarai } from "next/font/google";
 import "./globals.css";
 import { QueryProvider } from "./src/providers/query-provider";
+import { AuthProvider } from "./src/contexts/auth.context";
 import { AppSidebar } from './src/components/sidebar/app-sidebar';
 import { sidebarConfig } from './src/components/sidebar/sidebar.config';
+import { ProtectedRoute } from "./src/components/auth/ProtectedRoute";
 
 const lato = Lato({
   variable: '--font-lato',
@@ -35,16 +37,20 @@ export default function RootLayout({
         className={`${lato.variable} ${almarai.variable} antialiased`}
       >
         <QueryProvider>
-          <div className="flex h-screen bg-primary">
-            <AppSidebar
-              groups={sidebarConfig.groups}
-              header={sidebarConfig.header}
-              footer={sidebarConfig.footer}
-            />
-            <main className="flex-1 overflow-auto">
-              {children}
-            </main>
-          </div>
+          <AuthProvider>
+            <ProtectedRoute>
+              <div className="flex h-screen bg-primary">
+                <AppSidebar
+                  groups={sidebarConfig.groups}
+                  header={sidebarConfig.header}
+                  footer={sidebarConfig.footer}
+                />
+                <main className="flex-1 overflow-auto">
+                  {children}
+                </main>
+              </div>
+            </ProtectedRoute>
+          </AuthProvider>
         </QueryProvider>
       </body>
     </html>

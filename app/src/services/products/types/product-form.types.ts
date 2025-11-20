@@ -70,7 +70,8 @@ export interface VariantWeightDimensions {
 // Media Configuration
 export interface MediaItem {
   id: string;
-  url: string;
+  file: File | null; // Store actual File object for upload (null for existing media from URLs)
+  preview: string; // Blob URL for preview or remote URL for existing media
   type: "image" | "video";
   order: number;
   isPrimary: boolean;
@@ -168,7 +169,8 @@ export const productFormSchema = z.object({
     .array(
       z.object({
         id: z.string(),
-        url: z.string(),
+        file: z.instanceof(File).nullable(), // Nullable for existing media loaded from URLs
+        preview: z.string(),
         type: z.enum(["image", "video"]),
         order: z.number(),
         isPrimary: z.boolean(),
@@ -183,7 +185,8 @@ export const productFormSchema = z.object({
         media: z.array(
           z.object({
             id: z.string(),
-            url: z.string(),
+            file: z.instanceof(File).nullable(), // Nullable for existing media loaded from URLs
+            preview: z.string(),
             type: z.enum(["image", "video"]),
             order: z.number(),
             isPrimary: z.boolean(),
