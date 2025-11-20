@@ -122,10 +122,17 @@ export const WeightDimensionsSection: React.FC<WeightDimensionsSectionProps> = (
     if (!isWeightVariantBased && !hasAttributeControllingWeight) {
         return (
             <Card>
-                <div className="flex items-center justify-between">
-                    <h2 className="text-xl font-semibold text-gray-900">
-                        Weight & Dimensions
-                    </h2>
+                <div className="flex flex-col gap-2">
+                    <div className="flex items-center justify-between">
+                        <h2 className="text-xl font-semibold text-gray-900">
+                            Weight & Dimensions
+                        </h2>
+                    </div>
+                    {hasAttributeControllingWeight && weightAttributes.length === 0 && (
+                        <p className="text-sm text-gray-600">
+                            No attributes are controlling weight/dimensions. These values apply to all variants.
+                        </p>
+                    )}
                 </div>
 
                 <div className="grid grid-cols-4 gap-5">

@@ -136,11 +136,10 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
         return (
             <Card>
                 <div className="flex flex-col gap-2">
-                    <div className="flex justify-between items-center">
+                    <div className="flex gap-5 items-center">
                         <h2 className="text-xl font-semibold text-gray-900">
                             Pricing Configuration
                         </h2>
-
                         <Checkbox
                             checked={singlePricing?.isSale || false}
                             onChange={(checked) => {

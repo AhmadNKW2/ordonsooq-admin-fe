@@ -87,7 +87,7 @@ export const FIELD_ICON_CLASSES = 'h-4 w-4 text-gray-400';
 
 export const getFieldClasses = (error?: string, hasValue?: boolean, hasLeftIcon?: boolean, hasRightIcon?: boolean, className?: string) => {
     const leftPadding = hasLeftIcon ? 'pl-9' : 'pl-4';
-    const rightPadding = hasRightIcon ? 'pr-16' : 'pr-8';
+    const rightPadding = hasRightIcon ? 'pr-15' : 'pr-4';
     const horizontalPadding = `${leftPadding} ${rightPadding}`;
     
     const borderColor = error ? 'border-danger' : 'border-primary';

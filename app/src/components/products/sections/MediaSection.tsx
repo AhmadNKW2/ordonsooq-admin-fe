@@ -184,10 +184,17 @@ export const MediaSection: React.FC<MediaSectionProps> = ({
     if (!isMediaVariantBased && !hasAttributeControllingMedia) {
         return (
             <Card>
-                <div className="flex items-center justify-between">
-                    <h2 className="text-xl font-semibold text-gray-900">
-                        Media Management
-                    </h2>
+                <div className="flex flex-col gap-2">
+                    <div className="flex items-center justify-between">
+                        <h2 className="text-xl font-semibold text-gray-900">
+                            Media Management
+                        </h2>
+                    </div>
+                    {hasAttributeControllingMedia && mediaAttributes.length === 0 && (
+                        <p className="text-sm text-gray-600">
+                            No attributes are controlling media. These images apply to all variants.
+                        </p>
+                    )}
                 </div>
 
                 <MediaUploadArea
@@ -281,6 +288,7 @@ const MediaUploadArea: React.FC<MediaUploadAreaProps> = ({
     onReorder,
 }) => {
     const [dragOver, setDragOver] = useState(false);
+    const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
     const fileInputRef = React.useRef<HTMLInputElement>(null);
 
     const handleDrop = (e: React.DragEvent) => {
@@ -357,11 +365,34 @@ const MediaUploadArea: React.FC<MediaUploadAreaProps> = ({
 
             {/* Media Grid */}
             {media.length > 0 && (
-                <div className="grid grid-cols-9 justify-items-center gap-5">
+                <div className="flex flex-wrap gap-5">
                     {media.map((item, index) => (
                         <div
                             key={item.id}
-                            className="w-40 h-40 relative group border-2 border-gray-200 rounded-lg overflow-hidden"
+                            draggable={!!onReorder}
+                            onDragStart={(e) => {
+                                if (onReorder) {
+                                    setDraggedIndex(index);
+                                    e.dataTransfer.effectAllowed = "move";
+                                }
+                            }}
+                            onDragOver={(e) => {
+                                if (onReorder && draggedIndex !== null) {
+                                    e.preventDefault();
+                                    e.dataTransfer.dropEffect = "move";
+                                }
+                            }}
+                            onDrop={(e) => {
+                                if (onReorder && draggedIndex !== null && draggedIndex !== index) {
+                                    e.preventDefault();
+                                    onReorder(draggedIndex, index);
+                                    setDraggedIndex(null);
+                                }
+                            }}
+                            onDragEnd={() => setDraggedIndex(null)}
+                            className={`w-40 h-40 relative group border-2 rounded-lg overflow-hidden transition-all ${
+                                draggedIndex === index ? "opacity-50 border-sixth" : "border-gray-200"
+                            } ${onReorder ? "cursor-move" : ""}`}
                         >
                             {item.type === "image" ? (
                                 <Image
@@ -391,32 +422,11 @@ const MediaUploadArea: React.FC<MediaUploadAreaProps> = ({
                                 )}
                                 <button
                                     onClick={() => onRemove(item.id)}
-                                    className="absolute top-2 right-2 bg-danger w-6 h-6 flex justify-center items-center text-white rounded text-sm hover:bg-danger2"
+                                    className="absolute top-2 right-2 bg-danger w-6 h-6 flex justify-center items-center text-white rounded text-md hover:bg-danger2"
                                 >
-                                    X
+                                    &times; 
                                 </button>
                             </div>
-
-                            {onReorder && (
-                                <div className="absolute bottom-2 right-2 flex gap-1">
-                                    {index > 0 && (
-                                        <button
-                                            onClick={() => onReorder(index, index - 1)}
-                                            className="bg-white p-1 rounded shadow hover:bg-gray-100"
-                                        >
-                                            ←
-                                        </button>
-                                    )}
-                                    {index < media.length - 1 && (
-                                        <button
-                                            onClick={() => onReorder(index, index + 1)}
-                                            className="bg-white p-1 rounded shadow hover:bg-gray-100"
-                                        >
-                                            →
-                                        </button>
-                                    )}
-                                </div>
-                            )}
                         </div>
                     ))}
                 </div>

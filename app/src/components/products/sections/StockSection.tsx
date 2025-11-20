@@ -5,6 +5,14 @@ import {
     VariantCombination,
 } from "../../../services/products/types/product-form.types";
 import { Card } from "@/components/ui";
+import {
+    Table2,
+    TableHeader2,
+    TableBody2,
+    TableRow2,
+    TableHead2,
+    TableCell2,
+} from "../../ui/table";
 
 interface StockSectionProps {
     attributes: Attribute[];
@@ -168,43 +176,43 @@ export const StockSection: React.FC<StockSectionProps> = ({
             )}
 
             {/* Variants Table */}
-            <div className="border border-gray-200 rounded-lg overflow-hidden">
-                <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                        <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Variant
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Current Stock
-                            </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Status
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                        {filteredCombinations.map((variant) => {
-                            const label = getVariantLabel(variant);
-                            const status =
-                                variant.stock === 0
-                                    ? "Out of Stock"
-                                    : variant.stock < 10
-                                        ? "Low Stock"
-                                        : "In Stock";
-                            const statusColor =
-                                variant.stock === 0
-                                    ? "text-danger"
-                                    : variant.stock < 10
-                                        ? "text-primary"
-                                        : "text-sixth";
+            <Table2>
+                <TableHeader2>
+                    <TableRow2>
+                        <TableHead2>
+                            Variant
+                        </TableHead2>
+                        <TableHead2>
+                            Current Stock
+                        </TableHead2>
+                        <TableHead2>
+                            Status
+                        </TableHead2>
+                    </TableRow2>
+                </TableHeader2>
+                <TableBody2>
+                    {filteredCombinations.map((variant) => {
+                        const label = getVariantLabel(variant);
+                        const status =
+                            variant.stock === 0
+                                ? "Out of Stock"
+                                : variant.stock < 10
+                                    ? "Low Stock"
+                                    : "In Stock";
+                        const statusColor =
+                            variant.stock === 0
+                                ? "text-danger"
+                                : variant.stock < 10
+                                    ? "text-primary"
+                                    : "text-sixth";
 
-                            return (
-                                <tr key={variant.id}>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                        {label}
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        return (
+                            <TableRow2 key={variant.id}>
+                                <TableCell2 className="font-medium">
+                                    {label}
+                                </TableCell2>
+                                <TableCell2>
+                                    <div className="flex justify-center">
                                         <Input
                                             type="number"
                                             min="0"
@@ -216,20 +224,18 @@ export const StockSection: React.FC<StockSectionProps> = ({
                                                     e.target.value
                                                 )
                                             }
-                                            className="max-w-[100px]"
+                                            className="max-w-32"
                                         />
-                                    </td>
-                                    <td
-                                        className={`px-6 py-4 whitespace-nowrap text-sm font-medium ${statusColor}`}
-                                    >
-                                        {status}
-                                    </td>
-                                </tr>
-                            );
-                        })}
-                    </tbody>
-                </table>
-            </div>
+                                    </div>
+                                </TableCell2>
+                                <TableCell2 className={`font-medium ${statusColor}`}>
+                                    {status}
+                                </TableCell2>
+                            </TableRow2>
+                        );
+                    })}
+                </TableBody2>
+            </Table2>
 
             {filteredCombinations.length === 0 && searchQuery && (
                 <div className="text-center py-8 text-gray-500">

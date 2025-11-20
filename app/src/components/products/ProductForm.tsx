@@ -239,7 +239,6 @@ export const ProductForm: React.FC<ProductFormProps> = ({
           <Button
             onClick={handleSubmit}
             disabled={isSubmitting}
-            className="bg-seventh hover:bg-seventh/90"
           >
             {isSubmitting
               ? "Submitting..."
