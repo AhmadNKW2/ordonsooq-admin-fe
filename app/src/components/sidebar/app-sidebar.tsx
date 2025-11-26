@@ -1,6 +1,5 @@
 'use client';
 
-import { Fragment } from 'react';
 import type { ReactNode } from 'react';
 import { useAuth } from '../../contexts/auth.context';
 
@@ -69,11 +68,10 @@ export function AppSidebar({ groups, header, footer }: AppSidebarProps) {
 
       <SidebarContent>
         {groups.map((group, groupIndex) => {
-          const groupKey = `${group.label}-${groupIndex}`;
           const showDivider = groupIndex === groups.length - 2;
 
           return (
-            <Fragment key={`group-${groupKey}`}>
+            <div key={`group-wrapper-${groupIndex}`}>
               <SidebarGroup
                 label={group.label}
                 icon={group.icon}
@@ -81,7 +79,7 @@ export function AppSidebar({ groups, header, footer }: AppSidebarProps) {
               >
                 {group.links.map((link, linkIndex) => (
                   <SidebarLink
-                    key={`link-${groupKey}-${link.href}-${linkIndex}`}
+                    key={`link-${groupIndex}-${linkIndex}`}
                     href={link.href}
                     icon={link.icon}
                     label={link.label}
@@ -90,7 +88,7 @@ export function AppSidebar({ groups, header, footer }: AppSidebarProps) {
                 ))}
               </SidebarGroup>
               {showDivider && <SidebarDivider />}
-            </Fragment>
+            </div>
           );
         })}
       </SidebarContent>
@@ -105,7 +103,7 @@ export function AppSidebar({ groups, header, footer }: AppSidebarProps) {
                 className="w-10 h-10 rounded-full object-cover"
               />
             ) : (
-              <div className="w-10 h-10 rounded-full bg-sixth flex items-center justify-center text-secondary font-bold">
+              <div className="w-10 h-10 rounded-full bg-fourth flex items-center justify-center text-secondary font-bold">
                 {(user?.name || footer.userName).charAt(0).toUpperCase()}
               </div>
             )}

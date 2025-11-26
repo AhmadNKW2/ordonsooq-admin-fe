@@ -1,7 +1,6 @@
 import React from "react";
 import { Input } from "../../ui/input";
 import { Toggle } from "../../ui/toggle";
-import { SimpleFieldWrapper } from "../SimpleFieldWrapper";
 import {
     Attribute,
     WeightDimensions,
@@ -18,6 +17,7 @@ interface WeightDimensionsSectionProps {
     onChangeSingle: (data: WeightDimensions) => void;
     onChangeVariant: (data: VariantWeightDimensions[]) => void;
     hasAttributeControllingWeight: boolean;
+    errors: Record<string, string>;
 }
 
 export const WeightDimensionsSection: React.FC<WeightDimensionsSectionProps> = ({
@@ -29,6 +29,7 @@ export const WeightDimensionsSection: React.FC<WeightDimensionsSectionProps> = (
     onChangeSingle,
     onChangeVariant,
     hasAttributeControllingWeight,
+    errors,
 }) => {
     const weightAttributes = attributes.filter((attr) => attr.controlsWeightDimensions);
 
@@ -136,57 +137,57 @@ export const WeightDimensionsSection: React.FC<WeightDimensionsSectionProps> = (
                 </div>
 
                 <div className="grid grid-cols-4 gap-5">
-                    <SimpleFieldWrapper label="Weight (kg)">
-                        <Input
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            value={singleWeightDimensions?.weight || ""}
-                            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                                handleSingleChange("weight", e.target.value)
-                            }
-                            placeholder="0.00"
-                        />
-                    </SimpleFieldWrapper>
+                    <Input
+                        id="singleWeightDimensions.weight"
+                        label="Weight (kg)"
+                        type="number"
+                        min="0"
+                        step="0.1"
+                        value={singleWeightDimensions?.weight || ""}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                            handleSingleChange("weight", e.target.value)
+                        }
+                        error={errors["singleWeightDimensions.weight"]}
+                    />
 
-                    <SimpleFieldWrapper label="Length (cm)">
-                        <Input
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            value={singleWeightDimensions?.length || ""}
-                            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                                handleSingleChange("length", e.target.value)
-                            }
-                            placeholder="0.00"
-                        />
-                    </SimpleFieldWrapper>
+                    <Input
+                        id="singleWeightDimensions.length"
+                        label="Length (cm)"
+                        type="number"
+                        min="0"
+                        step="0.1"
+                        value={singleWeightDimensions?.length || ""}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                            handleSingleChange("length", e.target.value)
+                        }
+                        error={errors["singleWeightDimensions.length"]}
+                    />
 
-                    <SimpleFieldWrapper label="Width (cm)">
-                        <Input
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            value={singleWeightDimensions?.width || ""}
-                            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                                handleSingleChange("width", e.target.value)
-                            }
-                            placeholder="0.00"
-                        />
-                    </SimpleFieldWrapper>
+                    <Input
+                        id="singleWeightDimensions.width"
+                        label="Width (cm)"
+                        type="number"
+                        min="0"
+                        step="0.1"
+                        value={singleWeightDimensions?.width || ""}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                            handleSingleChange("width", e.target.value)
+                        }
+                        error={errors["singleWeightDimensions.width"]}
+                    />
 
-                    <SimpleFieldWrapper label="Height (cm)">
-                        <Input
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            value={singleWeightDimensions?.height || ""}
-                            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                                handleSingleChange("height", e.target.value)
-                            }
-                            placeholder="0.00"
-                        />
-                    </SimpleFieldWrapper>
+                    <Input
+                        id="singleWeightDimensions.height"
+                        label="Height (cm)"
+                        type="number"
+                        min="0"
+                        step="0.1"
+                        value={singleWeightDimensions?.height || ""}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                            handleSingleChange("height", e.target.value)
+                        }
+                        error={errors["singleWeightDimensions.height"]}
+                    />
                 </div>
             </Card>
         );
@@ -195,7 +196,7 @@ export const WeightDimensionsSection: React.FC<WeightDimensionsSectionProps> = (
     // Variant-based mode
     const combinations = generateWeightCombinations();
 
-    if (weightAttributes.length === 0) {
+    if (combinations.length === 0) {
         return (
             <Card>
                 <div className="flex items-center justify-between">
@@ -205,8 +206,7 @@ export const WeightDimensionsSection: React.FC<WeightDimensionsSectionProps> = (
                 </div>
                 <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
                     <p className="text-gray-600">
-                        Please configure at least one attribute that controls weight/dimensions
-                        in the Attributes Configuration section.
+                        Please select attribute values to configure weight and dimensions.
                     </p>
                 </div>
             </Card>
@@ -226,74 +226,73 @@ export const WeightDimensionsSection: React.FC<WeightDimensionsSectionProps> = (
                 <strong>{weightAttributes.map((a) => a.name).join(", ")}</strong>
             </p>
 
-            <div className="space-y-4">
-                {combinations.map((combo) => {
-                    const weight = getVariantWeight(combo.key);
+            {combinations.map((combo) => {
+                const weight = getVariantWeight(combo.key);
+                const variantIndex = variantWeightDimensions.findIndex(vw => vw.key === combo.key);
 
-                    return (
-                        <div
-                            key={combo.key}
-                            className="bg-gray-50 p-4 rounded-lg border border-gray-200"
-                        >
-                            <h4 className="font-medium text-gray-900">{combo.label}</h4>
+                return (
+                    <div
+                        key={combo.key}
+                        className="bg-gray-50 p-4 rounded-lg border border-gray-200"
+                    >
+                        <h4 className="font-medium text-gray-900">{combo.label}</h4>
 
-                            <div className="grid grid-cols-4 gap-5">
-                                <SimpleFieldWrapper label="Weight (kg)">
-                                    <Input
-                                        type="number"
-                                        step="0.01"
-                                        min="0"
-                                        value={weight?.weight || ""}
-                                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                                            handleVariantChange(combo.key, "weight", e.target.value)
-                                        }
-                                        placeholder="0.00"
-                                    />
-                                </SimpleFieldWrapper>
+                        <div className="grid grid-cols-4 gap-5">
+                            <Input
+                                id={`variantWeightDimensions.${variantIndex}.weight`}
+                                label="Weight (kg)"
+                                type="number"
+                                min="0"
+                                step="0.1"
+                                value={weight?.weight || ""}
+                                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                                    handleVariantChange(combo.key, "weight", e.target.value)
+                                }
+                                error={variantIndex >= 0 ? errors[`variantWeightDimensions.${variantIndex}.weight`] : undefined}
+                            />
 
-                                <SimpleFieldWrapper label="Length (cm)">
-                                    <Input
-                                        type="number"
-                                        step="0.01"
-                                        min="0"
-                                        value={weight?.length || ""}
-                                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                                            handleVariantChange(combo.key, "length", e.target.value)
-                                        }
-                                        placeholder="0.00"
-                                    />
-                                </SimpleFieldWrapper>
+                            <Input
+                                id={`variantWeightDimensions.${variantIndex}.length`}
+                                label="Length (cm)"
+                                type="number"
+                                min="0"
+                                step="0.1"
+                                value={weight?.length || ""}
+                                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                                    handleVariantChange(combo.key, "length", e.target.value)
+                                }
+                                error={variantIndex >= 0 ? errors[`variantWeightDimensions.${variantIndex}.length`] : undefined}
+                            />
 
-                                <SimpleFieldWrapper label="Width (cm)">
-                                    <Input
-                                        type="number"
-                                        step="0.01"
-                                        min="0"
-                                        value={weight?.width || ""}
-                                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                                            handleVariantChange(combo.key, "width", e.target.value)
-                                        }
-                                        placeholder="0.00"
-                                    />
-                                </SimpleFieldWrapper>
+                            <Input
+                                id={`variantWeightDimensions.${variantIndex}.width`}
+                                label="Width (cm)"
+                                type="number"
+                                min="0"
+                                step="0.1"
+                                value={weight?.width || ""}
+                                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                                    handleVariantChange(combo.key, "width", e.target.value)
+                                }
+                                error={variantIndex >= 0 ? errors[`variantWeightDimensions.${variantIndex}.width`] : undefined}
+                            />
 
-                                <SimpleFieldWrapper label="Height (cm)">
-                                    <Input
-                                        type="number"
-                                        step="0.01"
-                                        min="0"
-                                        value={weight?.height || ""}
-                                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                                            handleVariantChange(combo.key, "height", e.target.value)
-                                        }
-                                        placeholder="0.00"
-                                    />
-                                </SimpleFieldWrapper>
-                            </div>
+                            <Input
+                                id={`variantWeightDimensions.${variantIndex}.height`}
+                                label="Height (cm)"
+                                type="number"
+                                min="0"
+                                step="0.1"
+                                value={weight?.height || ""}
+                                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                                    handleVariantChange(combo.key, "height", e.target.value)
+                                }
+                                error={variantIndex >= 0 ? errors[`variantWeightDimensions.${variantIndex}.height`] : undefined}
+                            />
                         </div>
-                    );
-                })}
-            </div>
+                    </div>
+                );
+            })}
         </Card>
     );
 };

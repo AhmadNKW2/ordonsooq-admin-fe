@@ -5,7 +5,7 @@
 
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { Button } from "../ui/button";
 import {
   ProductFormData,
@@ -25,6 +25,7 @@ import { WeightDimensionsSection } from "./sections/WeightDimensionsSection";
 import { MediaSection } from "./sections/MediaSection";
 import { StockSection } from "./sections/StockSection";
 import { Card } from "../ui";
+import { useFormValidation, ValidationSchema } from "../../hooks/use-form-validation";
 
 interface ProductFormProps {
   initialData?: Partial<ProductFormData>;
@@ -68,18 +69,86 @@ export const ProductForm: React.FC<ProductFormProps> = ({
     variants: [],
     ...initialData,
   });
-  const [errors, setErrors] = useState<{ [key: string]: string }>({});
+
+  const validationSchema = useMemo<ValidationSchema>(() => {
+    const schema: ValidationSchema = {
+      nameEn: ['required', 'isEn'],
+      nameAr: ['required', 'isAr'],
+      shortDescriptionEn: ['required', 'isEn'],
+      shortDescriptionAr: ['required', 'isAr'],
+      longDescriptionEn: ['required', 'isEn'],
+      longDescriptionAr: ['required', 'isAr'],
+      categoryId: ['required'],
+      vendorId: ['required'],
+    };
+
+    // Conditional Validation: Pricing
+    if (formData.pricingType === 'single') {
+      schema['singlePricing.cost'] = ['required', 'isNum'];
+      schema['singlePricing.price'] = ['required', 'isNum'];
+      
+      if (formData.singlePricing?.isSale) {
+        schema['singlePricing.salePrice'] = ['required', 'isNum'];
+      }
+    } else {
+      schema['attributes'] = ['required'];
+      schema['variants'] = ['required'];
+      schema['variantPricing.$.cost'] = ['required', 'isNum'];
+      schema['variantPricing.$.price'] = ['required', 'isNum'];
+      
+      formData.variantPricing?.forEach((vp, index) => {
+        if (vp.isSale) {
+          schema[`variantPricing.${index}.salePrice`] = ['required', 'isNum'];
+        }
+      });
+
+      schema['variants.$.stock'] = ['required', 'isNum'];
+    }
+
+    // Conditional Validation: Weight & Dimensions
+    if (!formData.isWeightVariantBased) {
+      schema['singleWeightDimensions.weight'] = ['required', 'isNum'];
+      schema['singleWeightDimensions.length'] = ['required', 'isNum'];
+      schema['singleWeightDimensions.width'] = ['required', 'isNum'];
+      schema['singleWeightDimensions.height'] = ['required', 'isNum'];
+    } else {
+      schema['variantWeightDimensions.$.weight'] = ['required', 'isNum'];
+      schema['variantWeightDimensions.$.length'] = ['required', 'isNum'];
+      schema['variantWeightDimensions.$.width'] = ['required', 'isNum'];
+      schema['variantWeightDimensions.$.height'] = ['required', 'isNum'];
+    }
+
+    // Conditional Validation: Media
+    if (!formData.isMediaVariantBased) {
+      schema['singleMedia'] = ['required'];
+    } else {
+      schema['variantMedia.$.media'] = ['required'];
+    }
+
+    return schema;
+  }, [
+    formData.singlePricing?.isSale,
+    formData.variantPricing,
+    formData.isWeightVariantBased,
+    formData.isMediaVariantBased
+  ]);
+
+  const { errors, handleValidationChange, validateForm, isSubmitted } = useFormValidation(validationSchema);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleFieldChange = (field: string, value: any) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
-    if (errors[field]) {
-      setErrors((prev) => {
-        const newErrors = { ...prev };
-        delete newErrors[field];
-        return newErrors;
-      });
-    }
+    setFormData((prev) => {
+      const newData = { ...prev, [field]: value };
+      
+      // Reset variant flags if switching to single pricing
+      if (field === 'pricingType' && value === 'single') {
+          newData.isWeightVariantBased = false;
+          newData.isMediaVariantBased = false;
+      }
+      
+      return newData;
+    });
+    handleValidationChange(field, value);
   };
 
   // Check if any attribute controls pricing, media, or weight
@@ -90,29 +159,10 @@ export const ProductForm: React.FC<ProductFormProps> = ({
   const hasAttributeControllingWeight =
     formData.attributes?.some((attr) => attr.controlsWeightDimensions) || false;
 
-  const handleSaveDraft = async () => {
-    if (onSaveDraft) {
-      setIsSubmitting(true);
-      try {
-        await onSaveDraft(formData);
-      } catch (error) {
-        console.error("Failed to save draft:", error);
-      } finally {
-        setIsSubmitting(false);
-      }
-    }
-  };
-
   const handleSubmit = async () => {
-    // Basic validation
-    const newErrors: { [key: string]: string } = {};
+    const isValid = validateForm(formData);
 
-    if (!formData.nameEn) newErrors.nameEn = "English name is required";
-    if (!formData.nameAr) newErrors.nameAr = "Arabic name is required";
-    if (!formData.categoryId) newErrors.categoryId = "Category is required";
-
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
+    if (!isValid) {
       return;
     }
 
@@ -132,7 +182,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
   };
 
   return (
-    <div className="mx-auto px-4 py-8 flex flex-col gap-5">
+    <div className="mx-auto px-50 py-8 flex flex-col gap-5">
       <div className="">
         <h1 className="text-3xl font-bold text-gray-900">
           {isEditMode ? "Edit Product" : "Create New Product"}
@@ -169,9 +219,19 @@ export const ProductForm: React.FC<ProductFormProps> = ({
         <AttributesSection
           attributes={formData.attributes || []}
           availableAttributes={attributes}
-          onChange={(attributes: Attribute[]) =>
-            handleFieldChange("attributes", attributes)
-          }
+          onChange={(attributes: Attribute[]) => {
+            const hasWeight = attributes.some(a => a.controlsWeightDimensions);
+            const hasMedia = attributes.some(a => a.controlsMedia);
+            
+            setFormData(prev => ({
+                ...prev,
+                attributes,
+                isWeightVariantBased: hasWeight,
+                isMediaVariantBased: hasMedia
+            }));
+            handleValidationChange("attributes", attributes);
+          }}
+          errors={errors}
         />
       )}
 
@@ -188,6 +248,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
           handleFieldChange("variantPricing", pricing)
         }
         calculateSalePercentage={calculateSalePercentage}
+        errors={errors}
       />
 
       {/* Weight & Dimensions */}
@@ -206,6 +267,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
           handleFieldChange("variantWeightDimensions", data)
         }
         hasAttributeControllingWeight={hasAttributeControllingWeight}
+        errors={errors}
       />
 
       {/* Media Management */}
@@ -224,6 +286,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
           handleFieldChange("variantMedia", media)
         }
         hasAttributeControllingMedia={hasAttributeControllingMedia}
+        errors={errors}
       />
 
       {/* Stock Management */}
@@ -234,6 +297,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
         onChange={(variants: VariantCombination[]) =>
           handleFieldChange("variants", variants)
         }
+        errors={errors}
       />
 
       {/* Submit Buttons */}

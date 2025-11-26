@@ -1,14 +1,30 @@
 import React, { useState } from "react";
 import { Toggle } from "../../ui/toggle";
 import { Button } from "../../ui/button";
-import { SimpleFieldWrapper } from "../SimpleFieldWrapper";
 import {
     Attribute,
     MediaItem,
     VariantMedia,
 } from "../../../services/products/types/product-form.types";
-import { Card } from "@/components/ui";
+import { Card, Modal } from "@/components/ui";
 import Image from "next/image";
+import {
+    DndContext,
+    closestCenter,
+    KeyboardSensor,
+    PointerSensor,
+    useSensor,
+    useSensors,
+    DragEndEvent,
+} from '@dnd-kit/core';
+import {
+    arrayMove,
+    SortableContext,
+    sortableKeyboardCoordinates,
+    useSortable,
+    rectSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 interface MediaSectionProps {
     attributes: Attribute[];
@@ -19,6 +35,7 @@ interface MediaSectionProps {
     onChangeSingle: (media: MediaItem[]) => void;
     onChangeVariant: (media: VariantMedia[]) => void;
     hasAttributeControllingMedia: boolean;
+    errors?: Record<string, string>;
 }
 
 export const MediaSection: React.FC<MediaSectionProps> = ({
@@ -30,7 +47,9 @@ export const MediaSection: React.FC<MediaSectionProps> = ({
     onChangeSingle,
     onChangeVariant,
     hasAttributeControllingMedia,
+    errors = {},
 }) => {
+    const [previewImage, setPreviewImage] = useState<string | null>(null);
     const mediaAttributes = attributes.filter((attr) => attr.controlsMedia);
 
     // Generate all combinations for media attributes
@@ -191,6 +210,25 @@ export const MediaSection: React.FC<MediaSectionProps> = ({
         onChangeVariant([...newVariantMedia, updated]);
     };
 
+    const handleVariantMediaReorder = (key: string, fromIndex: number, toIndex: number) => {
+        const existing = variantMedia.find((vm) => vm.key === key);
+        if (!existing) return;
+
+        const reordered = [...existing.media];
+        const [movedItem] = reordered.splice(fromIndex, 1);
+        reordered.splice(toIndex, 0, movedItem);
+
+        const updatedMedia = reordered.map((m, idx) => ({ ...m, order: idx }));
+
+        const updated: VariantMedia = {
+            ...existing,
+            media: updatedMedia,
+        };
+
+        const newVariantMedia = variantMedia.filter((vm) => vm.key !== key);
+        onChangeVariant([...newVariantMedia, updated]);
+    };
+
     const getVariantMedia = (key: string): MediaItem[] => {
         return variantMedia.find((vm) => vm.key === key)?.media || [];
     };
@@ -198,8 +236,8 @@ export const MediaSection: React.FC<MediaSectionProps> = ({
     // Single mode (not variant-based)
     if (!isMediaVariantBased && !hasAttributeControllingMedia) {
         return (
-            <Card>
-                <div className="flex flex-col gap-2">
+            <Card className={errors['singleMedia'] ? "border-danger" : ""}>
+                <div className="flex flex-col gap-2" id="singleMedia">
                     <div className="flex items-center justify-between">
                         <h2 className="text-xl font-semibold text-gray-900">
                             Media Management
@@ -210,6 +248,9 @@ export const MediaSection: React.FC<MediaSectionProps> = ({
                             No attributes are controlling media. These images apply to all variants.
                         </p>
                     )}
+                    {errors['singleMedia'] && (
+                        <p className="text-sm text-danger">{errors['singleMedia']}</p>
+                    )}
                 </div>
 
                 <MediaUploadArea
@@ -218,7 +259,25 @@ export const MediaSection: React.FC<MediaSectionProps> = ({
                     onRemove={handleSingleMediaRemove}
                     onSetPrimary={handleSingleMediaSetPrimary}
                     onReorder={handleSingleMediaReorder}
+                    onPreview={setPreviewImage}
                 />
+
+                <Modal
+                    isOpen={!!previewImage}
+                    onClose={() => setPreviewImage(null)}
+                    variant="transparent"
+                >
+                    {previewImage && (
+                        <div className="w-188 h-188 relative rounded-rounded1">
+                            <Image
+                                src={previewImage}
+                                alt="Preview"
+                                fill
+                                className="object-cover rounded-rounded1"
+                            />
+                        </div>
+                    )}
+                </Modal>
             </Card>
         );
     }
@@ -226,7 +285,7 @@ export const MediaSection: React.FC<MediaSectionProps> = ({
     // Variant-based mode
     const combinations = generateMediaCombinations();
 
-    if (mediaAttributes.length === 0) {
+    if (combinations.length === 0) {
         return (
             <Card>
                 <div className="flex items-center justify-between">
@@ -236,8 +295,7 @@ export const MediaSection: React.FC<MediaSectionProps> = ({
                 </div>
                 <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
                     <p className="text-gray-600">
-                        Please configure at least one attribute that controls media in the
-                        Attributes Configuration section.
+                        Please select attribute values to configure media.
                     </p>
                 </div>
             </Card>
@@ -257,32 +315,140 @@ export const MediaSection: React.FC<MediaSectionProps> = ({
                 <strong>{mediaAttributes.map((a) => a.name).join(", ")}</strong>
             </p>
 
-            <div className="space-y-6">
-                {combinations.map((combo) => {
-                    const media = getVariantMedia(combo.key);
+            {combinations.map((combo) => {
+                const media = getVariantMedia(combo.key);
 
-                    return (
-                        <div
-                            key={combo.key}
-                            className="bg-gray-50 p-4 rounded-lg border border-gray-200"
-                        >
-                            <h4 className="font-medium text-gray-900">{combo.label}</h4>
+                return (
+                    <div
+                        key={combo.key}
+                        className="bg-gray-50 p-4 rounded-rounded1 border border-gray-200 flex flex-col gap-5"
+                    >
+                        <h4 className="font-medium text-gray-900">{combo.label}</h4>
 
-                            <MediaUploadArea
-                                media={media}
-                                onAdd={(file) => handleVariantMediaAdd(combo.key, file)}
-                                onRemove={(mediaId) =>
-                                    handleVariantMediaRemove(combo.key, mediaId)
-                                }
-                                onSetPrimary={(mediaId) =>
-                                    handleVariantMediaSetPrimary(combo.key, mediaId)
-                                }
-                            />
-                        </div>
-                    );
-                })}
-            </div>
+                        <MediaUploadArea
+                            media={media}
+                            onAdd={(file) => handleVariantMediaAdd(combo.key, file)}
+                            onRemove={(mediaId) =>
+                                handleVariantMediaRemove(combo.key, mediaId)
+                            }
+                            onSetPrimary={(mediaId) =>
+                                handleVariantMediaSetPrimary(combo.key, mediaId)
+                            }
+                            onReorder={(from, to) => handleVariantMediaReorder(combo.key, from, to)}
+                            onPreview={setPreviewImage}
+                        />
+                    </div>
+                );
+            })}
+
+            <Modal
+                isOpen={!!previewImage}
+                onClose={() => setPreviewImage(null)}
+                className="max-w-4xl shadow-none"
+                variant="transparent"
+            >
+                {previewImage && (
+                    <div className="relative w-[650px] h-[650px]">
+                        <Image
+                            src={previewImage}
+                            alt="Preview"
+                            fill
+                            className="object-contain rounded-rounded1"
+                        />
+                    </div>
+                )}
+            </Modal>
         </Card>
+    );
+};
+
+// Sortable Media Item Component
+interface SortableMediaItemProps {
+    item: MediaItem;
+    onRemove: (id: string) => void;
+    onSetPrimary: (id: string) => void;
+    onPreview?: (url: string) => void;
+}
+
+const SortableMediaItem = ({ item, onRemove, onSetPrimary, onPreview }: SortableMediaItemProps) => {
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+        isDragging
+    } = useSortable({ id: item.id });
+
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.5 : 1,
+        zIndex: isDragging ? 1000 : 'auto',
+    };
+
+    return (
+        <div
+            ref={setNodeRef}
+            style={style}
+            {...attributes}
+            {...listeners}
+            className="w-40 h-40 relative group border-2 rounded-lg overflow-hidden border-gray-200 touch-none"
+        >
+            {item.type === "image" ? (
+                <Image
+                    src={item.preview}
+                    alt=""
+                    fill
+                    className="object-cover"
+                />
+            ) : (
+                <video src={item.preview} className="object-cover w-full h-full" />
+            )}
+
+            {item.isPrimary && (
+                <div className="absolute top-2 left-2 bg-fourth text-white text-xs px-2 py-1 rounded z-10">
+                    Primary
+                </div>
+            )}
+
+            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-all flex flex-col items-center justify-center gap-2 z-20">
+                {!item.isPrimary && (
+                    <button
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onSetPrimary(item.id);
+                        }}
+                        className="bg-white text-gray-900 px-3 py-1 rounded text-sm hover:bg-gray-100 w-24"
+                    >
+                        Set Primary
+                    </button>
+                )}
+                {onPreview && (
+                    <button
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onPreview(item.preview);
+                        }}
+                        className="bg-white text-gray-900 px-3 py-1 rounded text-sm hover:bg-gray-100 w-24"
+                    >
+                        Preview
+                    </button>
+                )}
+                <button
+                    onPointerDown={(e) => e.stopPropagation()}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onRemove(item.id);
+                    }}
+                    className="absolute top-2 right-2 bg-danger w-6 h-6 flex justify-center items-center text-white rounded text-md hover:bg-danger2"
+                >
+                    &times;
+                </button>
+            </div>
+        </div>
     );
 };
 
@@ -293,6 +459,7 @@ interface MediaUploadAreaProps {
     onRemove: (mediaId: string) => void;
     onSetPrimary: (mediaId: string) => void;
     onReorder?: (fromIndex: number, toIndex: number) => void;
+    onPreview?: (url: string) => void;
 }
 
 const MediaUploadArea: React.FC<MediaUploadAreaProps> = ({
@@ -301,10 +468,31 @@ const MediaUploadArea: React.FC<MediaUploadAreaProps> = ({
     onRemove,
     onSetPrimary,
     onReorder,
+    onPreview,
 }) => {
     const [dragOver, setDragOver] = useState(false);
-    const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
     const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+    const sensors = useSensors(
+        useSensor(PointerSensor, {
+            activationConstraint: {
+                distance: 8,
+            },
+        }),
+        useSensor(KeyboardSensor, {
+            coordinateGetter: sortableKeyboardCoordinates,
+        })
+    );
+
+    const handleDragEnd = (event: DragEndEvent) => {
+        const { active, over } = event;
+
+        if (over && active.id !== over.id && onReorder) {
+            const oldIndex = media.findIndex((item) => item.id === active.id);
+            const newIndex = media.findIndex((item) => item.id === over.id);
+            onReorder(oldIndex, newIndex);
+        }
+    };
 
     const handleDrop = (e: React.DragEvent) => {
         e.preventDefault();
@@ -322,7 +510,7 @@ const MediaUploadArea: React.FC<MediaUploadAreaProps> = ({
     };
 
     return (
-        <div className="space-y-4">
+        <div className="flex flex-col gap-5">
             {/* Upload Zone */}
             <div
                 onDragOver={(e) => {
@@ -345,102 +533,57 @@ const MediaUploadArea: React.FC<MediaUploadAreaProps> = ({
                     className="hidden"
                 />
 
-                <div className="space-y-2">
-                    <svg
-                        className="mx-auto h-12 w-12 text-gray-400"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                    >
-                        <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-                        />
-                    </svg>
+                <svg
+                    className="mx-auto h-12 w-12 text-gray-400"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                >
+                    <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                    />
+                </svg>
 
-                    <div>
-                        <Button
-                            onClick={() => fileInputRef.current?.click()}
-                            className="bg-sixth hover:bg-sixth/90"
-                        >
-                            Choose Files
-                        </Button>
-                        <p className="text-sm text-gray-500 mt-2">
-                            or drag and drop images/videos here
-                        </p>
-                    </div>
+                <div>
+                    <Button
+                        onClick={() => fileInputRef.current?.click()}
+                        className="bg-fourth hover:bg-fourth/90"
+                    >
+                        Choose Files
+                    </Button>
+                    <p className="text-sm text-gray-500 mt-2">
+                        or drag and drop images/videos here
+                    </p>
                 </div>
             </div>
 
             {/* Media Grid */}
             {media.length > 0 && (
-                <div className="flex flex-wrap gap-5">
-                    {media.map((item, index) => (
-                        <div
-                            key={item.id}
-                            draggable={!!onReorder}
-                            onDragStart={(e) => {
-                                if (onReorder) {
-                                    setDraggedIndex(index);
-                                    e.dataTransfer.effectAllowed = "move";
-                                }
-                            }}
-                            onDragOver={(e) => {
-                                if (onReorder && draggedIndex !== null) {
-                                    e.preventDefault();
-                                    e.dataTransfer.dropEffect = "move";
-                                }
-                            }}
-                            onDrop={(e) => {
-                                if (onReorder && draggedIndex !== null && draggedIndex !== index) {
-                                    e.preventDefault();
-                                    onReorder(draggedIndex, index);
-                                    setDraggedIndex(null);
-                                }
-                            }}
-                            onDragEnd={() => setDraggedIndex(null)}
-                            className={`w-40 h-40 relative group border-2 rounded-lg overflow-hidden transition-all ${
-                                draggedIndex === index ? "opacity-50 border-sixth" : "border-gray-200"
-                            } ${onReorder ? "cursor-move" : ""}`}
-                        >
-                            {item.type === "image" ? (
-                                <Image
-                                    src={item.preview}
-                                    alt=""
-                                    fill
-                                    className="object-cover"
+                <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragEnd={handleDragEnd}
+                >
+                    <SortableContext
+                        items={media.map(m => m.id)}
+                        strategy={rectSortingStrategy}
+                    >
+                        <div className="flex flex-wrap gap-5">
+                            {media.map((item) => (
+                                <SortableMediaItem
+                                    key={item.id}
+                                    item={item}
+                                    onRemove={onRemove}
+                                    onSetPrimary={onSetPrimary}
+                                    onPreview={onPreview}
                                 />
-                            ) : (
-                                <video src={item.preview} className="object-cover w-full h-full" />
-                            )}
-
-                            {item.isPrimary && (
-                                <div className="absolute top-2 left-2 bg-fourth text-white text-xs px-2 py-1 rounded">
-                                    Primary
-                                </div>
-                            )}
-
-                            <div className="absolute inset-0 hover:bg-black/50 transition-all flex items-center justify-center gap-2 ">
-                                {!item.isPrimary && (
-                                    <button
-                                        onClick={() => onSetPrimary(item.id)}
-                                        className="bg-white text-gray-900 px-3 py-1 rounded text-sm hover:bg-gray-100"
-                                    >
-                                        Set Primary
-                                    </button>
-                                )}
-                                <button
-                                    onClick={() => onRemove(item.id)}
-                                    className="absolute top-2 right-2 bg-danger w-6 h-6 flex justify-center items-center text-white rounded text-md hover:bg-danger2"
-                                >
-                                    &times; 
-                                </button>
-                            </div>
+                            ))}
                         </div>
-                    ))}
-                </div>
+                    </SortableContext>
+                </DndContext>
             )}
         </div>
     );

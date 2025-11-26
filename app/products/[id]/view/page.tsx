@@ -13,11 +13,11 @@ import { useVendors } from "../../../src/services/vendors/hooks/use-vendors";
 import { Card } from "../../../src/components/ui/card";
 import { Button } from "../../../src/components/ui/button";
 import { Badge } from "../../../src/components/ui/badge";
-import { 
-  AlertCircle, 
-  RefreshCw, 
-  ArrowLeft, 
-  Edit, 
+import {
+  AlertCircle,
+  RefreshCw,
+  ArrowLeft,
+  Edit,
   Package,
   Star,
   DollarSign,
@@ -62,7 +62,7 @@ export default function ViewProductPage() {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sixth mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-fourth mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading product...</p>
         </div>
       </div>
@@ -107,7 +107,7 @@ export default function ViewProductPage() {
           <Card>
             <div className="p-12 text-center">
               <h3 className="text-xl font-bold text-third mb-2">Product Not Found</h3>
-              <p className="text-gray-600 mb-6">The product you're looking for doesn't exist.</p>
+              <p className="text-gray-600 mb-6">The product you&apos;re looking for doesn&apos;t exist.</p>
               <Button onClick={() => router.push("/products")}>
                 Back to Products
               </Button>
@@ -154,7 +154,7 @@ export default function ViewProductPage() {
             </div>
             <h2 className="text-xl font-semibold text-third">Basic Information</h2>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="text-sm font-medium text-gray-600">Product ID</label>
@@ -189,33 +189,31 @@ export default function ViewProductPage() {
         {(product.short_description_en || product.short_description_ar || product.long_description_en || product.long_description_ar) && (
           <Card>
             <h2 className="text-xl font-semibold text-third mb-4">Descriptions</h2>
-            
-            <div className="space-y-4">
-              {product.short_description_en && (
-                <div>
-                  <label className="text-sm font-medium text-gray-600">Short Description (English)</label>
-                  <p className="text-third mt-1">{product.short_description_en}</p>
-                </div>
-              )}
-              {product.short_description_ar && (
-                <div>
-                  <label className="text-sm font-medium text-gray-600">Short Description (Arabic)</label>
-                  <p className="text-third mt-1 text-right" dir="rtl">{product.short_description_ar}</p>
-                </div>
-              )}
-              {product.long_description_en && (
-                <div>
-                  <label className="text-sm font-medium text-gray-600">Long Description (English)</label>
-                  <p className="text-third mt-1 whitespace-pre-wrap">{product.long_description_en}</p>
-                </div>
-              )}
-              {product.long_description_ar && (
-                <div>
-                  <label className="text-sm font-medium text-gray-600">Long Description (Arabic)</label>
-                  <p className="text-third mt-1 whitespace-pre-wrap text-right" dir="rtl">{product.long_description_ar}</p>
-                </div>
-              )}
-            </div>
+
+            {product.short_description_en && (
+              <div>
+                <label className="text-sm font-medium text-gray-600">Short Description (English)</label>
+                <p className="text-third mt-1">{product.short_description_en}</p>
+              </div>
+            )}
+            {product.short_description_ar && (
+              <div>
+                <label className="text-sm font-medium text-gray-600">Short Description (Arabic)</label>
+                <p className="text-third mt-1 text-right" dir="rtl">{product.short_description_ar}</p>
+              </div>
+            )}
+            {product.long_description_en && (
+              <div>
+                <label className="text-sm font-medium text-gray-600">Long Description (English)</label>
+                <p className="text-third mt-1 whitespace-pre-wrap">{product.long_description_en}</p>
+              </div>
+            )}
+            {product.long_description_ar && (
+              <div>
+                <label className="text-sm font-medium text-gray-600">Long Description (Arabic)</label>
+                <p className="text-third mt-1 whitespace-pre-wrap text-right" dir="rtl">{product.long_description_ar}</p>
+              </div>
+            )}
           </Card>
         )}
 
@@ -228,7 +226,7 @@ export default function ViewProductPage() {
               </div>
               <h2 className="text-xl font-semibold text-third">Customer Ratings</h2>
             </div>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="text-sm font-medium text-gray-600">Average Rating</label>
@@ -321,7 +319,7 @@ export default function ViewProductPage() {
             </div>
             <h2 className="text-xl font-semibold text-third">Timestamps</h2>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="text-sm font-medium text-gray-600">Created At</label>

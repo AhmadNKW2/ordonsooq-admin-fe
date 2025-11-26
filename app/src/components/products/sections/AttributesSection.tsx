@@ -2,12 +2,9 @@ import React, { useState } from "react";
 import { Button } from "../../ui/button";
 import { Select } from "../../ui/select";
 import { Checkbox } from "../../ui/checkbox";
-import { SimpleFieldWrapper } from "../SimpleFieldWrapper";
 import {
     Attribute,
     AttributeValue,
-    PREDEFINED_ATTRIBUTES,
-    PREDEFINED_ATTRIBUTE_VALUES,
 } from "../../../services/products/types/product-form.types";
 import { Card } from "@/components/ui";
 
@@ -15,12 +12,14 @@ interface AttributesSectionProps {
     attributes: Attribute[];
     onChange: (attributes: Attribute[]) => void;
     availableAttributes?: Array<{ id: string; name: string; displayName: string; values: Array<{ id: string; value: string; displayValue: string }> }>;
+    errors?: Record<string, string>;
 }
 
 export const AttributesSection: React.FC<AttributesSectionProps> = ({
     attributes,
     onChange,
     availableAttributes = [],
+    errors = {},
 }) => {
     const [selectedPredefined, setSelectedPredefined] = useState<string>("");
 
@@ -117,28 +116,19 @@ export const AttributesSection: React.FC<AttributesSectionProps> = ({
         onChange(updated);
     };
 
-    const handleMoveAttribute = (index: number, direction: "up" | "down") => {
-        const newAttributes = [...attributes];
-        const newIndex = direction === "up" ? index - 1 : index + 1;
-
-        if (newIndex < 0 || newIndex >= newAttributes.length) return;
-
-        [newAttributes[index], newAttributes[newIndex]] = [
-            newAttributes[newIndex],
-            newAttributes[index],
-        ];
-
-        onChange(newAttributes.map((attr, idx) => ({ ...attr, order: idx })));
-    };
-
     const totalCombinations = calculateCombinations();
 
     return (
         <Card>
             <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold text-gray-900">
-                    Attributes Configuration
-                </h2>
+                <div>
+                    <h2 className="text-xl font-semibold text-gray-900">
+                        Attributes Configuration
+                    </h2>
+                    {errors['attributes'] && (
+                        <p className="text-sm text-red-500 mt-1">{errors['attributes']}</p>
+                    )}
+                </div>
                 {totalCombinations > 0 && (
                     <div className="bg-primary/10 text-fifth px-4 py-2 rounded-lg">
                         <span className="font-semibold">{totalCombinations}</span> variant
@@ -152,14 +142,13 @@ export const AttributesSection: React.FC<AttributesSectionProps> = ({
             </h3>
 
             <div className="flex gap-5">
-                <SimpleFieldWrapper label="Select Attribute" className="flex-1">
                     <Select
+                        label="Select Attribute"
                         value={selectedPredefined}
                         onChange={(value) => {
                             setSelectedPredefined(value as string);
                         }}
                         options={[
-                            { value: "", label: "Choose from list..." },
                             ...availableAttributes
                                 .filter(attr => !attributes.some(a => a.id === attr.id)) // Filter out already added attributes
                                 .map((attr) => ({
@@ -169,13 +158,12 @@ export const AttributesSection: React.FC<AttributesSectionProps> = ({
                         ]}
                         search={true}
                     />
-                </SimpleFieldWrapper>
 
                 <div className="flex items-end">
                     <Button
                         onClick={handleAddAttribute}
                         disabled={!selectedPredefined}
-                        className="bg-sixth hover:bg-sixth/90"
+                        className="bg-fourth hover:bg-fourth/90"
                     >
                         Add Attribute
                     </Button>
@@ -197,7 +185,6 @@ export const AttributesSection: React.FC<AttributesSectionProps> = ({
                                 onAddValue={handleAddValue}
                                 onRemoveValue={handleRemoveValue}
                                 onRemove={handleRemoveAttribute}
-                                onMove={handleMoveAttribute}
                                 onToggleControl={handleToggleControl}
                                 availableValues={availableValues}
                             />
@@ -217,7 +204,6 @@ interface AttributeCardProps {
     onAddValue: (attributeId: string, value: string) => void;
     onRemoveValue: (attributeId: string, valueId: string) => void;
     onRemove: (attributeId: string) => void;
-    onMove: (index: number, direction: "up" | "down") => void;
     onToggleControl: (
         attributeId: string,
         controlType: "pricing" | "weightDimensions" | "media"
@@ -232,7 +218,6 @@ const AttributeCard: React.FC<AttributeCardProps> = ({
     onAddValue,
     onRemoveValue,
     onRemove,
-    onMove,
     onToggleControl,
     availableValues,
 }) => {
@@ -265,55 +250,13 @@ const AttributeCard: React.FC<AttributeCardProps> = ({
         <div className="bg-white p-5 rounded-rounded1 border-2 border-primary flex flex-col gap-5">
             <div className="flex items-start justify-between">
                 <div className="flex items-center gap-1">
-                    <div className="flex flex-col">
-                        <button
-                            onClick={() => onMove(index, "up")}
-                            disabled={index === 0}
-                            className="p-1 hover:bg-gray-100 rounded disabled:opacity-30"
-                            title="Move up"
-                        >
-                            <svg
-                                className="w-4 h-4"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                            >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M5 15l7-7 7 7"
-                                />
-                            </svg>
-                        </button>
-                        <button
-                            onClick={() => onMove(index, "down")}
-                            disabled={index === totalAttributes - 1}
-                            className="p-1 hover:bg-gray-100 rounded disabled:opacity-30"
-                            title="Move down"
-                        >
-                            <svg
-                                className="w-4 h-4"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                            >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M19 9l-7 7-7-7"
-                                />
-                            </svg>
-                        </button>
-                    </div>
-                    <div className="mr-5">
+                    <div className="flex justify-center items-center gap-5">
                         <h4 className="text-lg font-semibold text-gray-900">
                             {attribute.name}
                         </h4>
-                        <p className="text-sm text-gray-500">
+                        <h4 className="text-lg text-gray-500">
                             {attribute.values.length} value(s)
-                        </p>
+                        </h4>
                     </div>
 
                 </div>
@@ -341,8 +284,9 @@ const AttributeCard: React.FC<AttributeCardProps> = ({
 
             <div className="flex gap-5">
                 {availableValues.length > 0 && (
-                    <SimpleFieldWrapper label="Select Values" className="flex-1">
+                    <div className="flex-1">
                         <Select
+                            label="Select Values"
                             value={selectedValues}
                             onChange={handleValuesChange}
                             options={availableValues.map((val) => ({
@@ -351,9 +295,8 @@ const AttributeCard: React.FC<AttributeCardProps> = ({
                             }))}
                             search={true}
                             multiple={true}
-                            placeholder="Select values..."
                         />
-                    </SimpleFieldWrapper>
+                    </div>
                 )}
             </div>
             <div className="flex flex-col gap-2">

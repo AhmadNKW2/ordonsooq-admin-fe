@@ -14,6 +14,7 @@ interface FieldWrapperProps {
     className?: string;
     labelLeftOffset?: string;
     disabled?: boolean;
+    isRtl?: boolean;
 }
 
 export const FieldWrapper: React.FC<FieldWrapperProps> = ({
@@ -27,8 +28,9 @@ export const FieldWrapper: React.FC<FieldWrapperProps> = ({
     isClearButton = true,
     children,
     className = '',
-    labelLeftOffset = 'left-8',
+    labelLeftOffset = 'left-4',
     disabled = false,
+    isRtl = false,
 }) => {
     const showLabel = isFocused || hasValue;
     const showClear = isClearButton && hasValue && onClear;
@@ -44,19 +46,19 @@ export const FieldWrapper: React.FC<FieldWrapperProps> = ({
 
                 {children}
 
-                {/* Right icon always shown if provided */}
+                {/* Right icon - positioned on left for RTL, right for LTR */}
                 {rightIcon && (
-                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none z-10">
+                    <div className={`absolute ${isRtl ? 'left-4' : 'right-4'} top-1/2 -translate-y-1/2 pointer-events-none z-10`}>
                         {rightIcon}
                     </div>
                 )}
 
-                {/* Clear button positioned separately, next to right icon */}
+                {/* Clear button positioned on left for RTL, right for LTR */}
                 {showClear && (
                     <button
                         type="button"
                         onClick={onClear}
-                        className={`absolute ${rightIcon ? 'right-9' : 'right-5'} top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors z-10`}
+                        className={`absolute ${isRtl ? (rightIcon ? 'left-9' : leftIcon ? 'left-9' : 'left-3') : (rightIcon ? 'right-9' : 'right-3')} top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors z-10`}
                     >
                         <X className="h-4 w-4" />
                     </button>
@@ -66,8 +68,8 @@ export const FieldWrapper: React.FC<FieldWrapperProps> = ({
                     <label
                         className={`absolute ${labelLeftOffset} px-1 bg-secondary font-medium transition-all duration-200 pointer-events-none z-10 ${showLabel
                             ? 'top-0 -translate-y-1/2 text-third text-xs'
-                            : 'top-1/2 -translate-y-1/2 text-third/60 text-sm'
-                            } ${error && showLabel ? 'text-danger' : ''}`}
+                            : 'top-1/2 -translate-y-1/2 text-fourth/60 text-sm'
+                            } ${error && showLabel ? 'text-danger' : ''} peer-autofill:top-0 peer-autofill:-translate-y-1/2 peer-autofill:text-third peer-autofill:text-xs`}
                     >
                         {label}
                     </label>
@@ -80,18 +82,56 @@ export const FieldWrapper: React.FC<FieldWrapperProps> = ({
 };
 
 // Shared field styles constant
-export const FIELD_BASE_CLASSES = 'w-full border-2 rounded-rounded1 placeholder-transparent bg-secondary focus:outline-none focus:ring-2 focus:ring-fifth focus:border-transparent transition-[border-color,box-shadow,background-color] disabled:opacity-50 disabled:cursor-not-allowed';
+export const FIELD_BASE_CLASSES = 'border-2 rounded-rounded1 placeholder-fourth/60 bg-secondary focus:outline-none focus:border-fifth transition-[border-color,background-color] disabled:cursor-not-allowed aria-disabled:cursor-not-allowed [&:-webkit-autofill]:bg-secondary [&:-webkit-autofill]:text-third [&:-webkit-autofill]:shadow-[0_0_0px_1000px_theme(colors.secondary)_inset]';
 
 // Shared icon styles for consistent appearance across all field components
-export const FIELD_ICON_CLASSES = 'h-4 w-4 text-gray-400';
+export const FIELD_ICON_CLASSES = 'h-4 w-4 text-fourth/60';
 
-export const getFieldClasses = (error?: string, hasValue?: boolean, hasLeftIcon?: boolean, hasRightIcon?: boolean, className?: string) => {
-    const leftPadding = hasLeftIcon ? 'pl-9' : 'pl-4';
-    const rightPadding = hasRightIcon ? 'pr-15' : 'pr-4';
-    const horizontalPadding = `${leftPadding} ${rightPadding}`;
-    
-    const borderColor = error ? 'border-danger' : 'border-primary';
-    const verticalPadding = 'py-2';
+// Shared right icon color for consistency across all inputs
+export const FIELD_RIGHT_ICON_COLOR = 'text-fourth/60';
 
-    return `${FIELD_BASE_CLASSES} ${verticalPadding} ${horizontalPadding} ${borderColor} ${className || ''}`;
+// Get right icon position based on size
+export const getRightIconPosition = (size: 'default' | 'sm') => {
+    return size === 'sm' ? 'right-4' : 'right-4';
+};
+
+// Get field classes based on size variant
+export const getFieldClassesBySize = (
+    size: 'default' | 'sm',
+    error?: string,
+    hasValue?: boolean,
+    isSearchVariant?: boolean,
+    isNum?: boolean,
+    className?: string,
+    isRtl?: boolean
+) => {
+    const hasLeftIcon = isSearchVariant;
+    const hasRightIcon = isNum;
+    const borderColor = error ? 'border-danger!' : 'border-primary';
+
+    if (size === 'sm') {
+        const rightPadding = hasRightIcon ? 'pr-7' : 'pr-2';
+        const leftPadding = hasLeftIcon ? 'pl-7' : 'pl-2';
+        return `${className || ''} ${FIELD_BASE_CLASSES} w-20 py-2.5 px-1 ${leftPadding} ${rightPadding} text-base ${borderColor}`;
+    }
+
+    // Default size
+    let leftPadding: string;
+    let rightPadding: string;
+
+    if (isNum && isRtl) {
+        // Reverse padding for RTL number inputs
+        leftPadding = 'pl-13';
+        rightPadding = 'pr-4';
+    } else {
+        leftPadding = hasLeftIcon ? 'pl-9' : (isRtl ? 'pl-8' : 'pl-4');
+        rightPadding = hasRightIcon ? 'pr-13' : (isRtl ? 'pr-4' : 'pr-8');
+    }
+
+    return `${className || ''} ${FIELD_BASE_CLASSES} w-full py-3 ${leftPadding} ${rightPadding} ${borderColor}`;
+};
+
+// Legacy function for backward compatibility
+export const getFieldClasses = (error?: string, hasValue?: boolean, hasLeftIcon?: boolean, hasRightIcon?: boolean, className?: string, isRtl?: boolean) => {
+    return getFieldClassesBySize('default', error, hasValue, hasLeftIcon, hasRightIcon, className, isRtl);
 };

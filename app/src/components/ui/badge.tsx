@@ -9,8 +9,8 @@ interface BadgeProps {
 }
 
 const variantStyles: Record<BadgeVariant, string> = {
-  default: 'bg-sixth text-sixth border-sixth/40',
-  success: 'bg-seventh/15 text-seventh border-seventh/40',
+  default: 'bg-fourth text-fourth border-fourth/40',
+  success: 'bg-success/15 text-success border-success/40',
   danger: 'bg-danger/15 text-danger border-danger/40',
 };
 

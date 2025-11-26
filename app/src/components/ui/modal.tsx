@@ -5,31 +5,56 @@
 
 "use client";
 
-import React, { useEffect } from "react";
-import { X } from "lucide-react";
-import { Button } from "./button";
+import React, { useEffect, useState, useContext } from "react";
+import { IconButton } from "./icon-button";
 
 interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
-  title?: string;
   children: React.ReactNode;
-  size?: "sm" | "md" | "lg" | "xl" | "full";
-  showCloseButton?: boolean;
   closeOnBackdrop?: boolean;
   footer?: React.ReactNode;
+  className?: string;
+  variant?: 'default' | 'transparent';
 }
 
 export const Modal: React.FC<ModalProps> = ({
   isOpen,
   onClose,
-  title,
   children,
-  size = "md",
-  showCloseButton = true,
   closeOnBackdrop = true,
-  footer,
+  className = "",
+  variant = 'default',
 }) => {
+  const [isVisible, setIsVisible] = useState(false);
+  const [isAnimating, setIsAnimating] = useState(false);
+
+  // Handle modal visibility with animation
+  useEffect(() => {
+    if (isOpen) {
+      // Use setTimeout to avoid synchronous state update during render phase
+      const showTimer = setTimeout(() => {
+        setIsVisible(true);
+        // Trigger animation after render with small delay
+        const animTimer = setTimeout(() => {
+          setIsAnimating(true);
+        }, 10);
+        return () => clearTimeout(animTimer);
+      }, 0);
+      return () => clearTimeout(showTimer);
+    } else {
+      const animTimer = setTimeout(() => setIsAnimating(false), 0);
+      // Wait for animation to complete before hiding
+      const timer = setTimeout(() => {
+        setIsVisible(false);
+      }, 200); // Match animation duration
+      return () => {
+        clearTimeout(animTimer);
+        clearTimeout(timer);
+      };
+    }
+  }, [isOpen]);
+
   // Handle escape key press
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -55,15 +80,7 @@ export const Modal: React.FC<ModalProps> = ({
     };
   }, [isOpen]);
 
-  if (!isOpen) return null;
-
-  const sizeClasses = {
-    sm: "max-w-md",
-    md: "max-w-2xl",
-    lg: "max-w-4xl",
-    xl: "max-w-6xl",
-    full: "max-w-[95vw]",
-  };
+  if (!isVisible) return null;
 
   const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (closeOnBackdrop && e.target === e.currentTarget) {
@@ -73,96 +90,39 @@ export const Modal: React.FC<ModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200"
+      className={`
+        fixed inset-0 z-50 flex items-center justify-center p-4 
+        bg-black/50 backdrop-blur-sm
+        transition-opacity duration-200 ease-out
+        ${isAnimating ? 'opacity-100' : 'opacity-0'}
+      `}
       onClick={handleBackdropClick}
     >
       <div
         className={`
-          relative w-full ${sizeClasses[size]} 
-          bg-secondary rounded-rounded1 shadow-2xl
-          animate-in zoom-in-95 duration-200
-          max-h-[90vh] flex flex-col
-        `}
+          relative max-md:max-h-[90vh] rounded-rounded1 shadow-2xl
+          flex flex-col justify-center items-center gap-5
+          transition-all duration-200 ease-out
+          ${variant === 'default' ? 'p-5' : ''}
+          ${isAnimating
+            ? 'opacity-100 scale-100 translate-y-0'
+            : 'opacity-0 scale-95 -translate-y-4'
+          } ${className}`}
+        onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
-        {(title || showCloseButton) && (
-          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-            {title && (
-              <h2 className="text-xl font-bold text-third">{title}</h2>
-            )}
-            {showCloseButton && (
-              <button
-                onClick={onClose}
-                className="p-2 rounded-lg hover:bg-gray-100 transition-colors duration-200 text-gray-500 hover:text-gray-700"
-                aria-label="Close modal"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            )}
-          </div>
-        )}
+        {/* Content */}
+        <IconButton
+          onClick={onClose}
+          variant="cancel"
+          className="absolute top-3 right-3"
+        />
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto px-6 py-4 custom-scrollbar">
-          {children}
-        </div>
 
-        {/* Footer */}
-        {footer && (
-          <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-end gap-3">
-            {footer}
-          </div>
-        )}
+        {/* Content */}
+        {children}
+
       </div>
     </div>
-  );
-};
-
-// Simple confirmation modal helper
-interface ConfirmModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onConfirm: () => void;
-  title: string;
-  message: string;
-  confirmText?: string;
-  cancelText?: string;
-  variant?: "danger" | "primary";
-}
-
-export const ConfirmModal: React.FC<ConfirmModalProps> = ({
-  isOpen,
-  onClose,
-  onConfirm,
-  title,
-  message,
-  confirmText = "Confirm",
-  cancelText = "Cancel",
-  variant = "primary",
-}) => {
-  return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title={title}
-      size="sm"
-      footer={
-        <>
-          <Button variant="outline" onClick={onClose}>
-            {cancelText}
-          </Button>
-          <Button
-            onClick={() => {
-              onConfirm();
-              onClose();
-            }}
-          >
-            {confirmText}
-          </Button>
-        </>
-      }
-    >
-      <p className="text-gray-600">{message}</p>
-    </Modal>
   );
 };

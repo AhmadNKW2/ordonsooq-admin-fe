@@ -12,21 +12,17 @@
 
   --color-fifth: #F6C029;
 
-  --color-sixth: #6E45E2;
-  --color-sixth2: #D3B5FF;
+  --color-sixth: #c2adff;
 
-  --color-seventh: #62d410;
+  --color-success: #86da4e;
+  --color-success2: #80ff2b;
 
   --color-danger: #F8595F;
   --color-danger2: #cc3232;
 
-  --shadow1: box-shadow: rgba(100, 100, 111, 0.2) 0px 7px 29px 0px;
-
+  --shadow1: rgba(33, 35, 38, 0.1) 0px 10px 10px -10px;
   --rounded1: 16px;
 }
-
-[data-theme="dark"] {}
-
 
 @theme inline {
 
@@ -39,12 +35,11 @@
   --color-fourth: var(--color-fourth);
 
   --color-fifth: var(--color-fifth);
-  
+
   --color-sixth: var(--color-sixth);
 
-  --color-sixth2: var(--color-sixth2);
-
-  --color-seventh: var(--color-seventh);
+  --color-success: var(--color-success);
+  --color-success2: var(--color-success2);
 
   --color-danger: var(--color-danger);
   --color-danger2: var(--color-danger2);
@@ -52,6 +47,17 @@
   --shadow-shadow1: var(--shadow1);
 
   --radius-rounded1: var(--rounded1);
+}
+
+@layer utilities {
+  .divide-fifth {
+    @apply divide-y;
+    border-bottom-color: var(--color-fifth) !important;
+  }
+
+  .divide-fifth>* {
+    border-bottom-color: var(--color-fifth) !important;
+  }
 }
 
 @layer base {
@@ -133,3 +139,4 @@
     background-color: rgba(0, 0, 0, 0.2);
   }
 }
+

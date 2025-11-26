@@ -151,3 +151,205 @@ export interface ProductFilters {
   is_active?: boolean;
   is_featured?: boolean;
 }
+
+// ==================== DTOs ====================
+
+//  Product Creation DTOs
+export interface ProductAttributeInput {
+  attribute_id: number;
+  controls_pricing: boolean;
+  controls_media: boolean;
+  controls_weight: boolean;
+}
+
+export interface SinglePricingInput {
+  cost: number;
+  price: number;
+  sale_price?: number;
+}
+
+export interface VariantPricingInput {
+  combination: Record<string, number>; // { "Color": 1, "Size": 3 }
+  cost: number;
+  price: number;
+  sale_price?: number;
+}
+
+export interface MediaInput {
+  media_url: string;
+  media_type: 'image' | 'video';
+  sort_order?: number;
+  is_primary?: boolean;
+}
+
+export interface VariantMediaInput {
+  combination: Record<string, number>;
+  media_url: string;
+  media_type: 'image' | 'video';
+  sort_order?: number;
+  is_primary?: boolean;
+}
+
+export interface WeightInput {
+  weight: number;
+  length?: number;
+  width?: number;
+  height?: number;
+}
+
+export interface VariantWeightInput {
+  combination: Record<string, number>;
+  weight: number;
+  length?: number;
+  width?: number;
+  height?: number;
+}
+
+export interface StockInput {
+  combination: Record<string, number>;
+  stock_quantity: number;
+}
+
+// ==================== CREATE PRODUCT DTO ====================
+export interface CreateProductDto {
+  // Basic product info
+  name_en: string;
+  name_ar: string;
+  sku?: string;
+  short_description_en: string;
+  short_description_ar: string;
+  long_description_en: string;
+  long_description_ar: string;
+  pricing_type: 'single' | 'variant';
+  category_id: number;
+  vendor_id?: number;
+  is_active?: boolean;
+
+  // Attributes
+  attributes?: ProductAttributeInput[];
+
+  // Pricing
+  single_pricing?: SinglePricingInput;
+  variant_pricing?: VariantPricingInput[];
+
+  // Weight
+  product_weight?: WeightInput;
+  variant_weights?: VariantWeightInput[];
+
+  // Stock
+  stock?: StockInput[];
+}
+
+// ==================== UPDATE PRODUCT DTOs ====================
+
+// Media Management
+export interface UpdateMediaDto {
+  media_id: number;
+  sort_order?: number;
+  is_primary?: boolean;
+}
+
+export interface DeleteMediaDto {
+  media_id: number;
+  is_variant?: boolean;
+}
+
+export interface ReorderMediaDto {
+  media_id: number;
+  sort_order: number;
+  is_primary?: boolean;
+}
+
+export interface MediaManagementDto {
+  update_media?: UpdateMediaDto[];
+  delete_media?: DeleteMediaDto[];
+  reorder_media?: ReorderMediaDto[];
+  set_primary_media_id?: number;
+  is_variant_media?: boolean;
+}
+
+// Attributes Management
+export interface UpdateProductAttributeInputDto {
+  attribute_id: number;
+  controls_pricing?: boolean;
+  controls_media?: boolean;
+  controls_weight?: boolean;
+}
+
+export interface AddProductAttributeInputDto {
+  attribute_id: number;
+  controls_pricing: boolean;
+  controls_media: boolean;
+  controls_weight: boolean;
+}
+
+// Pricing Management
+export interface UpdateSinglePricingDto {
+  cost?: number;
+  price?: number;
+  sale_price?: number;
+}
+
+export interface UpdateVariantPricingDto {
+  combination: Record<string, number>;
+  cost?: number;
+  price?: number;
+  sale_price?: number;
+}
+
+// Weight Management
+export interface UpdateWeightDto {
+  weight?: number;
+  length?: number;
+  width?: number;
+  height?: number;
+}
+
+export interface UpdateVariantWeightDto {
+  combination: Record<string, number>;
+  weight?: number;
+  length?: number;
+  width?: number;
+  height?: number;
+}
+
+// Stock Management
+export interface UpdateStockInputDto {
+  combination: Record<string, number>;
+  stock_quantity: number;
+}
+
+// Main Update DTO
+export interface UpdateProductDto {
+  // Basic Information
+  name_en?: string;
+  name_ar?: string;
+  sku?: string;
+  short_description_en?: string;
+  short_description_ar?: string;
+  long_description_en?: string;
+  long_description_ar?: string;
+  pricing_type?: 'single' | 'variant';
+  category_id?: number;
+  vendor_id?: number;
+  is_active?: boolean;
+
+  // Media Management
+  media_management?: MediaManagementDto;
+
+  // Attributes
+  add_attributes?: AddProductAttributeInputDto[];
+  update_attributes?: UpdateProductAttributeInputDto[];
+  delete_attribute_ids?: number[];
+
+  // Pricing
+  single_pricing?: UpdateSinglePricingDto;
+  variant_pricing?: UpdateVariantPricingDto[];
+
+  // Weight
+  product_weight?: UpdateWeightDto;
+  variant_weights?: UpdateVariantWeightDto[];
+
+  // Stock
+  stock?: UpdateStockInputDto[];
+}

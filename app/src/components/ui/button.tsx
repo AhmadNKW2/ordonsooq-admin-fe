@@ -12,11 +12,11 @@ interface ButtonProps {
   isSquare?: boolean;
 }
 
-export const Button: React.FC<ButtonProps> = ({ children, onClick, variant = 'solid', color, disabled = false, className='', type = 'button', isSquare = false }) => {
+export const Button: React.FC<ButtonProps> = ({ children, onClick, variant = 'solid', color, disabled = false, className = '', type = 'button', isSquare = false }) => {
 
   const defaultVariantClasses = {
     solid: 'bg-fifth active:bg-fifth/75 hover:bg-fifth/80 text-white',
-    outline: 'border-2 border-secondary text-secondary hover:bg-fifth hover:text-white active:bg-fifth active:text-white',
+    outline: 'border-2 border-sixth text-sixth hover:bg-sixth hover:text-white active:bg-sixth active:text-white',
   };
 
   const customVariantClasses = {
@@ -27,15 +27,15 @@ export const Button: React.FC<ButtonProps> = ({ children, onClick, variant = 'so
   const variantClasses = color ? customVariantClasses : defaultVariantClasses;
 
   const buttonStyle: React.CSSProperties = color ? { '--button-color': color } as React.CSSProperties : {};
-  
-  const sizeClasses = isSquare ? 'w-11 h-11 p-0 flex items-center justify-center' : 'px-5 h-11';
+
+  const sizeClasses = isSquare ? 'w-11 h-11 p-0 flex items-center justify-center' : 'px-5 h-13';
 
   return (
     <button
       type={type}
       onClick={onClick}
       disabled={disabled}
-      className={`text-nowrap ${sizeClasses} rounded-rounded1 font-[500] text-[16px] transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${variantClasses[variant]} ${className}`}
+      className={`text-nowrap ${sizeClasses} rounded-rounded1 font-medium text-[16px] transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${variantClasses[variant]} ${className}`}
       style={buttonStyle}
     >
       {children}

@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 
 interface SidebarContextType {
   // Context for future sidebar features
+  _?: never;
 }
 
 const SidebarContext = createContext<SidebarContextType | undefined>(undefined);
@@ -14,7 +15,7 @@ const useSidebar = () => {
   const context = useContext(SidebarContext);
   if (!context) {
     throw new Error('useSidebar must be used within a SidebarProvider');
-  }
+  } 
   return context;
 };
 
@@ -109,9 +110,8 @@ export function SidebarGroup({
           <span className="uppercase tracking-wide">{label}</span>
         </div>
         <svg
-          className={`w-4 h-4 transition-transform duration-200 ${
-            isOpen ? 'rotate-180' : ''
-          }`}
+          className={`w-4 h-4 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''
+            }`}
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -130,9 +130,7 @@ export function SidebarGroup({
           ${isOpen ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'}
         `}
       >
-        <div className="space-y-1">
-          {children}
-        </div>
+        {children}
       </div>
     </div>
   );
@@ -163,10 +161,9 @@ export function SidebarLink({
       className={`
         group relative flex items-center gap-5 px-3 py-2.5 mb-1 rounded-lg
         transition-all duration-200 ease-in-out
-        ${
-          isActive
-            ? 'bg-sixth text-secondary shadow-md'
-            : 'text-gray-600 hover:bg-gray-50 hover:text-third'
+        ${isActive
+          ? 'bg-fourth text-secondary shadow-md'
+          : 'text-gray-600 hover:bg-gray-50 hover:text-third'
         }
       `}
     >
@@ -194,10 +191,9 @@ export function SidebarLink({
           className={`
             px-2 py-0.5 text-xs font-semibold rounded-full
             transition-all duration-200
-            ${
-              isActive
-                ? 'bg-secondary text-sixth'
-                : 'bg-sixth2 text-sixth'
+            ${isActive
+              ? 'bg-secondary text-fourth'
+              : 'bg-fourth2 text-fourth'
             }
           `}
         >

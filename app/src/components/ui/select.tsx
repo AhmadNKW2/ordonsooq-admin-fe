@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ChevronDown, Search, X } from 'lucide-react';
-import { FieldWrapper, getFieldClasses, FIELD_ICON_CLASSES } from './field-wrapper';
+import { ChevronDown, Search } from 'lucide-react';
+import { FieldWrapper, getFieldClassesBySize, FIELD_ICON_CLASSES, FIELD_RIGHT_ICON_COLOR, getRightIconPosition } from './field-wrapper';
+import { Input } from './input';
 
 export interface SelectOption {
   value: string;
@@ -18,44 +19,55 @@ interface SelectProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'onChan
   placeholder?: string;
   disabled?: boolean;
   search?: boolean;
+  onSearchChange?: (query: string) => void;
   multiple?: boolean;
+  size?: 'default' | 'sm';
+  name?: string;
 }
 
 export const Select = React.forwardRef<HTMLDivElement, SelectProps>(
-  ({ label, error, className = '', value, onChange, onClear, options, placeholder, disabled = false, search = true, multiple = false, ...props }, ref) => {
+  ({ label, error, className = '', value, onChange, onClear, options, placeholder, disabled = false, search = true, onSearchChange, multiple = false, size = 'default', ...props }, ref) => {
     const [isFocused, setIsFocused] = useState(false);
     const [isOpen, setIsOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const containerRef = useRef<HTMLDivElement>(null);
     const searchInputRef = useRef<HTMLInputElement>(null);
-    
-    const selectedValues = multiple 
+
+    const selectedValues = multiple
       ? (Array.isArray(value) ? value : [])
       : (value ? [value as string] : []);
-    
+
     const hasValue = selectedValues.length > 0;
+    const isSm = size === 'sm';
 
     const getDisplayValue = () => {
       if (!hasValue) return '';
-      
+
       if (multiple) {
         const selectedLabels = selectedValues
           .map(val => options.find(opt => opt.value === val)?.label)
           .filter(Boolean);
         return selectedLabels.join(', ');
       }
-      
+
       return options.find(opt => opt.value === selectedValues[0])?.label || '';
     };
 
     const displayValue = getDisplayValue();
 
     // Filter options based on search query
-    const filteredOptions = search && searchQuery
-      ? options.filter(opt => 
-          opt.label.toLowerCase().includes(searchQuery.toLowerCase())
-        )
+    // If onSearchChange is provided, we assume external filtering
+    const filteredOptions = search && searchQuery && !onSearchChange
+      ? options.filter(opt =>
+        opt.label.toLowerCase().includes(searchQuery.toLowerCase())
+      )
       : options;
+
+    useEffect(() => {
+      if (onSearchChange) {
+        onSearchChange(searchQuery);
+      }
+    }, [searchQuery, onSearchChange]);
 
     useEffect(() => {
       const handleClickOutside = (event: MouseEvent) => {
@@ -78,6 +90,16 @@ export const Select = React.forwardRef<HTMLDivElement, SelectProps>(
         document.removeEventListener('mousedown', handleClickOutside);
       };
     }, [isOpen, search]);
+
+    const [menuWidth, setMenuWidth] = useState<string | number>('100%');
+
+    useEffect(() => {
+      if (isOpen && containerRef.current && !isSm) {
+        setMenuWidth(containerRef.current.getBoundingClientRect().width);
+      } else if (isSm) {
+        setMenuWidth('max-content');
+      }
+    }, [isOpen, isSm]);
 
     const handleToggle = () => {
       if (!disabled) {
@@ -120,6 +142,10 @@ export const Select = React.forwardRef<HTMLDivElement, SelectProps>(
         if (!isOpen) {
           setIsOpen(true);
           setIsFocused(true);
+        } else {
+          // If already open and not searching, toggle close
+          setIsOpen(false);
+          setIsFocused(false);
         }
       } else if (e.key === 'Escape' && isOpen) {
         setIsOpen(false);
@@ -166,7 +192,9 @@ export const Select = React.forwardRef<HTMLDivElement, SelectProps>(
     };
 
     const handleSearchKeyDown = (e: React.KeyboardEvent) => {
-      if (e.key === 'ArrowDown') {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+      } else if (e.key === 'ArrowDown') {
         e.preventDefault();
         const firstOption = containerRef.current?.querySelector('[role="option"]:not([aria-disabled="true"])') as HTMLElement;
         firstOption?.focus();
@@ -178,89 +206,135 @@ export const Select = React.forwardRef<HTMLDivElement, SelectProps>(
       }
     };
 
+    const selectClasses = getFieldClassesBySize(
+      size,
+      error,
+      hasValue,
+      false,
+      !isSm,
+      className
+    );
+    const rightIconPosition = getRightIconPosition(size);
+    const chevronIcon = <ChevronDown className={`h-4 w-4 ${FIELD_RIGHT_ICON_COLOR} transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />;
+
     return (
-      <div ref={containerRef} className="relative w-full">
-        <FieldWrapper
-          label={label}
-          error={error}
-          isFocused={isFocused}
-          hasValue={hasValue}
-          onClear={handleClear}
-          rightIcon={<ChevronDown className={`${FIELD_ICON_CLASSES} transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />}
-          isClearButton={true}
-          disabled={disabled}
-        >
-          <div
-            ref={ref}
-            role="combobox"
-            aria-expanded={isOpen}
-            aria-haspopup="listbox"
-            aria-controls="select-dropdown"
-            aria-disabled={disabled}
-            tabIndex={disabled ? -1 : 0}
-            onClick={handleToggle}
-            onKeyDown={handleKeyDown}
-            className={`${getFieldClasses(error, hasValue, false, true, className)} ${disabled ? '' : 'cursor-pointer'} ${multiple && hasValue ? 'py-1.5!' : ''}`}
-            {...props}
-          >
-            {multiple && hasValue ? (
-              <div className="flex flex-wrap gap-1.5">
-                {selectedValues.map((val) => {
-                  const option = options.find(opt => opt.value === val);
-                  return (
-                    <div
-                      key={val}
-                      className="inline-flex items-center bg-sixth/10 text-sixth rounded-full px-2.5 py-1 text-sm font-medium"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                      }}
-                    >
-                      <span>{option?.label || val}</span>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleSelect(val);
-                        }}
-                        className="ml-1.5 text-sixth hover:text-sixth/80 font-bold"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
+      <div ref={containerRef} className={`relative ${isSm ? 'w-fit' : 'w-full'}`}>
+        {isSm ? (
+          <>
+            <div
+              ref={ref}
+              role="combobox"
+              aria-expanded={isOpen}
+              aria-haspopup="listbox"
+              aria-controls="select-dropdown"
+              aria-disabled={disabled}
+              // --- FIX 1: Add Event Handlers to Small Variant ---
+              onClick={handleToggle}
+              onKeyDown={handleKeyDown}
+              tabIndex={disabled ? -1 : 0}
+              // ------------------------------------------------
+              className={`${selectClasses} ${disabled ? 'opacity-50' : 'cursor-pointer'} flex items-center justify-start text-center`}
+              {...props}
+            >
               <span className={hasValue ? 'text-third' : 'text-transparent'}>
                 {displayValue || 'placeholder'}
               </span>
-            )}
-          </div>
-        </FieldWrapper>
+            </div>
+            {/* Icon */}
+            <div className={`absolute ${rightIconPosition} top-1/2 -translate-y-1/2 pointer-events-none z-10`}>
+              {chevronIcon}
+            </div>
+          </>
+        ) : (
+          <FieldWrapper
+            label={label}
+            error={error}
+            isFocused={isFocused}
+            hasValue={hasValue}
+            onClear={handleClear}
+            rightIcon={chevronIcon}
+            isClearButton={true}
+            disabled={disabled}
+          >
+            <div
+              ref={ref}
+              role="combobox"
+              aria-expanded={isOpen}
+              aria-haspopup="listbox"
+              aria-controls="select-dropdown"
+              aria-disabled={disabled}
+              tabIndex={disabled ? -1 : 0}
+              onClick={handleToggle}
+              onKeyDown={handleKeyDown}
+              className={`${selectClasses} ${disabled ? '' : 'cursor-pointer'} ${multiple && hasValue ? 'py-1.5!' : ''}`}
+              {...props}
+            >
+              {multiple && hasValue ? (
+                <div className="flex flex-wrap gap-1.5">
+                  {selectedValues.map((val) => {
+                    const option = options.find(opt => opt.value === val);
+                    return (
+                      <div
+                        key={val}
+                        className="inline-flex items-center bg-fourth/10 text-fourth rounded-full px-2.5 py-1 text-sm font-medium"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                        }}
+                      >
+                        <span>{option?.label || val}</span>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleSelect(val);
+                          }}
+                          className="ml-1.5 text-fourth hover:text-fourth/80 font-bold"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <span className={hasValue ? 'text-third' : 'text-transparent'}>
+                  {displayValue || 'placeholder'}
+                </span>
+              )}
+            </div>
+          </FieldWrapper>
+        )}
 
         {/* Dropdown Menu */}
         <div
           id="select-dropdown"
           role="listbox"
           aria-multiselectable={multiple}
-          className={`absolute z-20 w-full mt-1 bg-secondary border-2 border-primary overflow-hidden rounded-rounded1 shadow-lg transition-all duration-200 origin-top ${
-            isOpen
-              ? 'opacity-100 scale-y-100 visible'
-              : 'opacity-0 scale-y-95 invisible'
-          }`}
+          // --- FIX 2: Change fixed to absolute to anchor to parent ---
+          className={`absolute z-50 mt-1 bg-secondary border-2 border-primary overflow-hidden rounded-rounded1 shadow-lg transition-all duration-200 origin-top ${isOpen
+            ? 'opacity-100 scale-y-100 visible'
+            : 'opacity-0 scale-y-95 invisible'
+            }`}
+          style={{
+            // Ensure it has at least 100% width of parent, but can be auto for small inputs
+            minWidth: '100%',
+            width: menuWidth,
+            // Fallback constraint
+            maxWidth: '300px'
+          }}
         >
           {/* Search Input */}
           {search && (
             <div className="p-2 border-b-2 border-primary">
               <div className="relative">
                 <Search className={`absolute left-3 top-1/2 -translate-y-1/2 ${FIELD_ICON_CLASSES} pointer-events-none`} />
-                <input
+                <Input
                   ref={searchInputRef}
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={handleSearchKeyDown}
                   placeholder="Search..."
-                  className={`w-full pl-9 pr-3 py-2 border-2 border-primary rounded-rounded1 bg-secondary text-third placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-fifth focus:border-transparent transition-[border-color,box-shadow,background-color]`}
+                  isSearch
                   onClick={(e) => e.stopPropagation()}
                 />
               </div>
@@ -284,16 +358,14 @@ export const Select = React.forwardRef<HTMLDivElement, SelectProps>(
                     tabIndex={option.disabled ? -1 : 0}
                     onClick={() => !option.disabled && handleSelect(option.value)}
                     onKeyDown={(e) => !option.disabled && handleOptionKeyDown(e, option.value, index)}
-                    className={`cursor-pointer transition-colors flex items-center gap-2 px-4 py-3 ${
-                      option.disabled
-                        ? 'opacity-50 cursor-not-allowed'
-                        : 'hover:bg-primary focus:bg-primary focus:outline-none'
-                    } ${isSelected ? 'bg-primary text-fourth font-medium' : 'text-third'}`}
+                    className={`cursor-pointer transition-colors flex items-center gap-2 px-4 py-3 ${option.disabled
+                      ? 'opacity-50 cursor-not-allowed'
+                      : 'hover:bg-primary focus:bg-primary focus:outline-none'
+                      } ${isSelected ? 'bg-primary text-fourth font-medium' : 'text-third'}`}
                   >
                     {multiple && (
-                      <div className={`w-4 h-4 border-2 rounded flex items-center justify-center shrink-0 ${
-                        isSelected ? 'bg-fourth border-fourth' : 'border-primary'
-                      }`}>
+                      <div className={`w-4 h-4 border-2 rounded flex items-center justify-center shrink-0 ${isSelected ? 'bg-fourth border-fourth' : 'border-primary'
+                        }`}>
                         {isSelected && (
                           <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />

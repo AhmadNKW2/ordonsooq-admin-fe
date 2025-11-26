@@ -1,6 +1,5 @@
 import React from "react";
 import { Input } from "../../ui/input";
-import { SimpleFieldWrapper } from "../SimpleFieldWrapper";
 import {
     Attribute,
     SinglePricing,
@@ -17,6 +16,7 @@ interface PricingSectionProps {
     onChangeSingle: (pricing: SinglePricing) => void;
     onChangeVariant: (pricing: VariantPricing[]) => void;
     calculateSalePercentage: (price: number, salePrice?: number) => number;
+    errors?: Record<string, string>;
 }
 
 export const PricingSection: React.FC<PricingSectionProps> = ({
@@ -27,6 +27,7 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
     onChangeSingle,
     onChangeVariant,
     calculateSalePercentage,
+    errors = {},
 }) => {
     const pricingAttributes = attributes.filter((attr) => attr.controlsPricing);
 
@@ -82,13 +83,13 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
     };
 
     const handleSinglePricingChange = (field: keyof SinglePricing, value: string) => {
-        const numValue = parseFloat(value) || 0;
+        const numValue = value === "" ? undefined : parseFloat(value);
         const updated: SinglePricing = {
             ...singlePricing,
-            cost: singlePricing?.cost || 0,
-            price: singlePricing?.price || 0,
+            cost: singlePricing?.cost,
+            price: singlePricing?.price,
             [field]: numValue,
-        };
+        } as any;
 
         if (field === "isSale" && typeof value === "boolean") {
             updated.isSale = value;
@@ -107,17 +108,17 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
         if (!combo) return;
 
         const existing = variantPricing.find((vp) => vp.key === key);
-        const numValue = typeof value === "string" ? parseFloat(value) || 0 : value;
+        const numValue = typeof value === "string" ? (value === "" ? undefined : parseFloat(value)) : value;
 
         const updated: VariantPricing = {
             key,
             attributeValues: combo.attributeValues,
-            cost: existing?.cost || 0,
-            price: existing?.price || 0,
+            cost: existing?.cost,
+            price: existing?.price,
             isSale: existing?.isSale || false,
             salePrice: existing?.salePrice,
             [field]: numValue,
-        };
+        } as any;
 
         const newVariantPricing = variantPricing.filter((vp) => vp.key !== key);
         onChangeVariant([...newVariantPricing, updated]);
@@ -145,10 +146,10 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
                             onChange={(checked) => {
                                 const updated: SinglePricing = {
                                     ...singlePricing,
-                                    cost: singlePricing?.cost || 0,
-                                    price: singlePricing?.price || 0,
+                                    cost: singlePricing?.cost,
+                                    price: singlePricing?.price,
                                     isSale: checked,
-                                };
+                                } as any;
                                 onChangeSingle(updated);
                             }}
                             label="On Sale"
@@ -163,58 +164,77 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
                 </div>
 
                 <div className="grid grid-cols-3 gap-5">
-                    <SimpleFieldWrapper label="Cost" required>
-                        <Input
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            value={singlePricing?.cost || ""}
-                            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                                handleSinglePricingChange("cost", e.target.value)
-                            }
-                            placeholder="0.00"
-                        />
-                    </SimpleFieldWrapper>
+                    <Input
+                        id="singlePricing.cost"
+                        label="Cost"
+                        type="number"
+                        step="1"
+                        min="0"
+                        value={singlePricing?.cost || ""}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                            handleSinglePricingChange("cost", e.target.value)
+                        }
+                        error={errors['singlePricing.cost']}
+                    />
 
-                    <SimpleFieldWrapper label="Price" required>
-                        <Input
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            value={singlePricing?.price || ""}
-                            onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                                handleSinglePricingChange("price", e.target.value)
-                            }
-                            placeholder="0.00"
-                        />
-                    </SimpleFieldWrapper>
+                    <Input
+                        id="singlePricing.price"
+                        label="Price"
+                        type="number"
+                        step="0.1"
+                        min="0"
+                        value={singlePricing?.price || ""}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                            handleSinglePricingChange("price", e.target.value)
+                        }
+                        error={errors['singlePricing.price']}
+                    />
 
                     {singlePricing?.isSale && (
-                        <SimpleFieldWrapper label="Sale Price">
+                        <div className="flex flex-col gap-1">
                             <Input
+                                id="singlePricing.salePrice"
+                                label="Sale Price"
                                 type="number"
-                                step="0.01"
+                                step="0.1"
                                 min="0"
                                 value={singlePricing?.salePrice || ""}
                                 onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                                     handleSinglePricingChange("salePrice", e.target.value)
                                 }
-                                placeholder="0.00"
+                                error={errors['singlePricing.salePrice']}
                             />
                             {salePercentage > 0 && (
                                 <p className="text-sm text-primary font-medium">
                                     {salePercentage}% off
                                 </p>
                             )}
-                        </SimpleFieldWrapper>
+                        </div>
                     )}
                 </div>
             </Card >
         );
     }
 
-    // Variant pricing
+    // Variant-based mode
     const combinations = generatePricingCombinations();
+
+    if (combinations.length === 0) {
+        return (
+            <Card>
+                <div className="flex items-center justify-between">
+                    <h2 className="text-xl font-semibold text-gray-900">
+                        Pricing Configuration
+                    </h2>
+                </div>
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                    <p className="text-gray-600">
+                        Please select attribute values to configure pricing.
+                    </p>
+                </div>
+            </Card>
+        );
+    }
 
     return (
         <Card>
@@ -227,89 +247,81 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
                 <strong>{pricingAttributes.map((a) => a.name).join(", ")}</strong>
             </p>
 
-            <div className="space-y-4">
-                {combinations.map((combo) => {
-                    const pricing = getVariantPricing(combo.key);
-                    const salePercentage = calculateSalePercentage(
-                        pricing?.price || 0,
-                        pricing?.salePrice
-                    );
+            {combinations.map((combo) => {
+                const pricing = getVariantPricing(combo.key);
+                const variantIndex = variantPricing.findIndex(vp => vp.key === combo.key);
+                const salePercentage = calculateSalePercentage(
+                    pricing?.price || 0,
+                    pricing?.salePrice
+                );
 
-                    return (
-                        <div
-                            key={combo.key}
-                            className="bg-gray-50 p-4 rounded-lg border border-gray-200"
-                        >
+                return (
+                    <div
+                        key={combo.key}
+                        className="bg-gray-50 p-4 rounded-lg border border-gray-200 flex flex-col gap-3"
+                    >
+                        <div className="flex gap-5 items-center">
                             <h4 className="font-medium text-gray-900">{combo.label}</h4>
-
-                            <div className="grid grid-cols-3 gap-5">
-                                <SimpleFieldWrapper label="Cost" required>
-                                    <Input
-                                        type="number"
-                                        step="0.01"
-                                        min="0"
-                                        value={pricing?.cost || ""}
-                                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                                            handleVariantPricingChange(combo.key, "cost", e.target.value)
-                                        }
-                                        placeholder="0.00"
-                                    />
-                                </SimpleFieldWrapper>
-
-                                <SimpleFieldWrapper label="Price" required>
-                                    <Input
-                                        type="number"
-                                        step="0.01"
-                                        min="0"
-                                        value={pricing?.price || ""}
-                                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                                            handleVariantPricingChange(combo.key, "price", e.target.value)
-                                        }
-                                        placeholder="0.00"
-                                    />
-                                </SimpleFieldWrapper>
-
-                                <SimpleFieldWrapper label="Sale Price">
-                                    <div className="space-y-2">
-                                        <div className="flex items-center gap-2">
-                                            <Checkbox
-                                                checked={pricing?.isSale || false}
-                                                onChange={(checked) =>
-                                                    handleVariantPricingChange(combo.key, "isSale", checked)
-                                                }
-                                                label="On Sale"
-                                            />
-                                        </div>
-                                        {pricing?.isSale && (
-                                            <>
-                                                <Input
-                                                    type="number"
-                                                    step="0.01"
-                                                    min="0"
-                                                    value={pricing?.salePrice || ""}
-                                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                                                        handleVariantPricingChange(
-                                                            combo.key,
-                                                            "salePrice",
-                                                            e.target.value
-                                                        )
-                                                    }
-                                                    placeholder="0.00"
-                                                />
-                                                {salePercentage > 0 && (
-                                                    <p className="text-sm text-primary font-medium">
-                                                        {salePercentage}% off
-                                                    </p>
-                                                )}
-                                            </>
-                                        )}
-                                    </div>
-                                </SimpleFieldWrapper>
-                            </div>
+                            <Checkbox
+                                checked={pricing?.isSale || false}
+                                onChange={(checked) =>
+                                    handleVariantPricingChange(combo.key, "isSale", checked)
+                                }
+                                label="On Sale"
+                            />
                         </div>
-                    );
-                })}
-            </div>
+
+                        <div className="grid grid-cols-3 gap-5">
+                            <Input
+                                id={`variantPricing.${variantIndex}.cost`}
+                                label="Cost"
+                                type="number"
+                                step="0.1"
+                                min="0"
+                                value={pricing?.cost || ""}
+                                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                                    handleVariantPricingChange(combo.key, "cost", e.target.value)
+                                }
+                                error={variantIndex >= 0 ? errors[`variantPricing.${variantIndex}.cost`] : undefined}
+                            />
+
+                            <Input
+                                id={`variantPricing.${variantIndex}.price`}
+                                label="Price"
+                                type="number"
+                                step="0.1"
+                                min="0"
+                                value={pricing?.price || ""}
+                                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                                    handleVariantPricingChange(combo.key, "price", e.target.value)
+                                }
+                                error={variantIndex >= 0 ? errors[`variantPricing.${variantIndex}.price`] : undefined}
+                            />
+
+                            {pricing?.isSale && (
+                                <>
+                                    <Input
+                                        label="Sale Price"
+                                        value={pricing?.salePrice || ""}
+                                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                                            handleVariantPricingChange(
+                                                combo.key,
+                                                "salePrice",
+                                                e.target.value
+                                            )
+                                        }
+                                    />
+                                    {salePercentage > 0 && (
+                                        <p className="text-sm text-primary font-medium">
+                                            {salePercentage}% off
+                                        </p>
+                                    )}
+                                </>
+                            )}
+                        </div>
+                    </div>
+                );
+            })}
         </Card>
     );
 };

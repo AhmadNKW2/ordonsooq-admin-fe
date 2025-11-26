@@ -38,7 +38,7 @@ export const Toggle: React.FC<ToggleProps> = ({
         />
         <div
           className={`w-14 h-7 rounded-full transition-colors ${
-            checked ? "bg-sixth" : "bg-gray-300"
+            checked ? "bg-fourth" : "bg-gray-300"
           } ${disabled ? "cursor-not-allowed" : ""}`}
         >
           <div

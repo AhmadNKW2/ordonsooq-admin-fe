@@ -75,7 +75,7 @@ export function useProduct(
  */
 export function useCreateProduct(
   options?: UseMutationOptions<
-    ApiResponse<Product>,
+    ApiResponse<{ product: Product }>,
     ApiError,
     CreateProductDto
   >

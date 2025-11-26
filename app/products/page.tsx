@@ -16,7 +16,6 @@ import { Button } from "../src/components/ui/button";
 import { Input } from "../src/components/ui/input";
 import { Badge } from "../src/components/ui/badge";
 import { IconButton } from "../src/components/ui/icon-button";
-import { ViewProductModal } from "../src/components/products/ViewProductModal";
 import {
   Table,
   TableBody,
@@ -164,14 +163,6 @@ export default function ProductsPage() {
 
   return (
     <div className="flex flex-col justify-center items-center gap-5 p-5">
-      {/* View Product Modal */}
-      <ViewProductModal
-        isOpen={!!viewProduct}
-        onClose={() => setViewProduct(null)}
-        product={viewProduct}
-        categoryName={viewProduct ? categoryMap.get(viewProduct.category_id) : undefined}
-      />
-
       {/* Header */}
       <div className="w-full justify-between items-center flex gap-5">
         <div className="flex items-center gap-5">
@@ -199,7 +190,7 @@ export default function ProductsPage() {
               value={searchTerm}
               onChange={(e) => handleSearchChange(e.target.value)}
               label="Search"
-              variant="search"              
+              variant="search"
             />
           </div>
 
@@ -217,124 +208,120 @@ export default function ProductsPage() {
       </Card>
 
       {/* Products Table */}
-      <Card>
-        {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-16">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-secondary"></div>
-            <div className="text-gray-600 font-medium">Loading products...</div>
-          </div>
-        ) : products.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16">
-            <div className="text-gray-600 font-medium text-lg">No products found</div>
-            <div className="text-gray-400 text-sm">Try adjusting your filters or add new products</div>
-          </div>
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Product Name</TableHead>
-                <TableHead>SKU</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Price</TableHead>
-                <TableHead>Stock</TableHead>
-                <TableHead>Rating</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {products.map((product) => (
-                <TableRow key={product.id}>
-                  <TableCell className="font-semibold text-third max-w-xs">
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1 min-w-0">
-                        <div className="truncate">{product.name_en}</div>
-                      </div>
+      {isLoading ? (
+        <div className="flex flex-col items-center justify-center py-16">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-secondary"></div>
+          <div className="text-gray-600 font-medium">Loading products...</div>
+        </div>
+      ) : products.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-16">
+          <div className="text-gray-600 font-medium text-lg">No products found</div>
+          <div className="text-gray-400 text-sm">Try adjusting your filters or add new products</div>
+        </div>
+      ) : (
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Product Name</TableHead>
+              <TableHead>SKU</TableHead>
+              <TableHead>Category</TableHead>
+              <TableHead>Price</TableHead>
+              <TableHead>Stock</TableHead>
+              <TableHead>Rating</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {products.map((product) => (
+              <TableRow key={product.id}>
+                <TableCell className="font-semibold text-third max-w-xs">
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 min-w-0">
+                      <div className="truncate">{product.name_en}</div>
                     </div>
-                  </TableCell>
-                  <TableCell className="font-mono text-xs text-gray-600">
-                    {product.sku || <span className="text-gray-400">—</span>}
-                  </TableCell>
-                  <TableCell>
-                    <div className="text-gray-700">
-                      {categoryMap.get(product.category_id) || <span className="text-gray-400">Category {product.category_id}</span>}
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center gap-1 font-semibold text-third">
-                      <DollarSign className="h-4 w-4 text-gray-500" />
-                      <span className="text-gray-400">—</span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
+                  </div>
+                </TableCell>
+                <TableCell className="font-mono text-xs text-gray-600">
+                  {product.sku || <span className="text-gray-400">—</span>}
+                </TableCell>
+                <TableCell>
+                  <div className="text-gray-700">
+                    {categoryMap.get(product.category_id) || <span className="text-gray-400">Category {product.category_id}</span>}
+                  </div>
+                </TableCell>
+                <TableCell className="text-right">
+                  <div className="flex items-center gap-1 font-semibold text-third">
+                    <DollarSign className="h-4 w-4 text-gray-500" />
                     <span className="text-gray-400">—</span>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center justify-center gap-1">
-                      <Star className="h-4 w-4 text-fourth fill-fourth" />
-                      <span className="font-semibold text-third">{formatRating(product.average_rating)}</span>
-                      {product.total_ratings && (
-                        <span className="text-xs text-gray-400">({product.total_ratings})</span>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={getStatusVariant(product.is_active)}>
-                      {getStatusLabel(product.is_active)}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-1">
-                      <IconButton
-                        variant="view"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleView(product);
-                        }}
-                        title="View product"
-                      />
-                      <IconButton
-                        variant="edit"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleEdit(product);
-                        }}
-                        title="Edit product"
-                      />
-                      <IconButton
-                        variant="delete"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDelete(product);
-                        }}
-                        title="Delete product"
-                      />
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-      </Card>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <span className="text-gray-400">—</span>
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center justify-start gap-1">
+                    <Star className="h-4 w-4 text-fifth fill-fifth" />
+                    <span className="font-semibold text-third">{formatRating(product.average_rating)}</span>
+                    {product.total_ratings && (
+                      <span className="text-xs text-gray-400">({product.total_ratings})</span>
+                    )}
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <Badge variant={getStatusVariant(product.is_active)}>
+                    {getStatusLabel(product.is_active)}
+                  </Badge>
+                </TableCell>
+                <TableCell>
+                  <div className="flex gap-1">
+                    <IconButton
+                      variant="view"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleView(product);
+                      }}
+                      title="View product"
+                    />
+                    <IconButton
+                      variant="edit"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleEdit(product);
+                      }}
+                      title="Edit product"
+                    />
+                    <IconButton
+                      variant="delete"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(product);
+                      }}
+                      title="Delete product"
+                    />
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      )}
 
       {/* Pagination */}
       {data?.data.pagination && (
-        <Card>
-          <Pagination
-            pagination={{
-              currentPage: data.data.pagination.page,
-              pageSize: data.data.pagination.limit,
-              totalItems: data.data.pagination.total,
-              totalPages: data.data.pagination.totalPages,
-              hasNextPage: data.data.pagination.page < data.data.pagination.totalPages,
-              hasPreviousPage: data.data.pagination.page > 1,
-            }}
-            onPageChange={handlePageChange}
-            onPageSizeChange={handlePageSizeChange}
-            showPageSize={true}
-          />
-        </Card>
+        <Pagination
+          pagination={{
+            currentPage: data.data.pagination.page,
+            pageSize: data.data.pagination.limit,
+            totalItems: data.data.pagination.total,
+            totalPages: data.data.pagination.totalPages,
+            hasNextPage: data.data.pagination.page < data.data.pagination.totalPages,
+            hasPreviousPage: data.data.pagination.page > 1,
+          }}
+          onPageChange={handlePageChange}
+          onPageSizeChange={handlePageSizeChange}
+          showPageSize={true}
+        />
       )}
     </div>
   );

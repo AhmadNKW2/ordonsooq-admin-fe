@@ -3,7 +3,7 @@
  */
 
 import { ProductFormData, MediaItem } from "../types/product-form.types";
-import { CreateProductDto } from "../api/product.service";
+import { CreateProductDto } from "../types/product.types";
 
 /**
  * Media upload data structure
