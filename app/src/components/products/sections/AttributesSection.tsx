@@ -10,7 +10,7 @@ import { Card } from "@/components/ui";
 
 interface AttributesSectionProps {
     attributes: Attribute[];
-    onChange: (attributes: Attribute[]) => void;
+    onChange: (attributes: Attribute[], resetType?: 'pricing' | 'weight' | 'media') => void;
     availableAttributes?: Array<{ id: string; name: string; displayName: string; values: Array<{ id: string; value: string; displayValue: string }> }>;
     errors?: Record<string, string>;
 }
@@ -58,13 +58,27 @@ export const AttributesSection: React.FC<AttributesSectionProps> = ({
         onChange(attributes.filter((attr) => attr.id !== attributeId));
     };
 
-    const handleAddValue = (attributeId: string, value: string) => {
+    const handleAddValue = (attributeId: string, value: string, valueId?: string) => {
         if (!value.trim()) return;
 
         const updated = attributes.map((attr) => {
             if (attr.id === attributeId) {
+                // Look up the actual value ID from availableAttributes if not provided
+                let actualValueId = valueId;
+                if (!actualValueId) {
+                    const availableAttr = availableAttributes.find(a => a.id === attributeId);
+                    const availableValue = availableAttr?.values.find(v => v.value === value.trim());
+                    actualValueId = availableValue?.id;
+                }
+                
+                // If we still don't have an ID, skip adding this value
+                if (!actualValueId) {
+                    console.warn('Could not find value ID for:', value);
+                    return attr;
+                }
+
                 const newValue: AttributeValue = {
-                    id: `val-${Date.now()}-${Math.random()}`,
+                    id: actualValueId,
                     value: value.trim(),
                     order: attr.values.length,
                 };
@@ -94,26 +108,45 @@ export const AttributesSection: React.FC<AttributesSectionProps> = ({
         attributeId: string,
         controlType: "pricing" | "weightDimensions" | "media"
     ) => {
-        const updated = attributes.map((attr) => {
-            if (attr.id === attributeId) {
+        // Find the attribute being toggled
+        const attr = attributes.find(a => a.id === attributeId);
+        if (!attr) return;
+
+        // Determine if we're turning ON a control (false -> true)
+        let isTogglingOn = false;
+        if (controlType === "pricing" && !attr.controlsPricing) {
+            isTogglingOn = true;
+        } else if (controlType === "weightDimensions" && !attr.controlsWeightDimensions) {
+            isTogglingOn = true;
+        } else if (controlType === "media" && !attr.controlsMedia) {
+            isTogglingOn = true;
+        }
+
+        const updated = attributes.map((a) => {
+            if (a.id === attributeId) {
                 return {
-                    ...attr,
+                    ...a,
                     controlsPricing:
                         controlType === "pricing"
-                            ? !attr.controlsPricing
-                            : attr.controlsPricing,
+                            ? !a.controlsPricing
+                            : a.controlsPricing,
                     controlsWeightDimensions:
                         controlType === "weightDimensions"
-                            ? !attr.controlsWeightDimensions
-                            : attr.controlsWeightDimensions,
+                            ? !a.controlsWeightDimensions
+                            : a.controlsWeightDimensions,
                     controlsMedia:
-                        controlType === "media" ? !attr.controlsMedia : attr.controlsMedia,
+                        controlType === "media" ? !a.controlsMedia : a.controlsMedia,
                 };
             }
-            return attr;
+            return a;
         });
 
-        onChange(updated);
+        // Pass reset type when toggling ON
+        const resetType = isTogglingOn 
+            ? (controlType === "pricing" ? "pricing" : controlType === "weightDimensions" ? "weight" : "media")
+            : undefined;
+        
+        onChange(updated, resetType);
     };
 
     const totalCombinations = calculateCombinations();
@@ -174,7 +207,6 @@ export const AttributesSection: React.FC<AttributesSectionProps> = ({
                 <div className="flex flex-col gap-5">
                     {attributes.map((attribute, index) => {
                         const availableAttr = availableAttributes.find(a => a.id === attribute.id);
-                        const availableValues = availableAttr?.values.map(v => v.value) || [];
                         
                         return (
                             <AttributeCard
@@ -186,7 +218,7 @@ export const AttributesSection: React.FC<AttributesSectionProps> = ({
                                 onRemoveValue={handleRemoveValue}
                                 onRemove={handleRemoveAttribute}
                                 onToggleControl={handleToggleControl}
-                                availableValues={availableValues}
+                                availableAttr={availableAttr}
                             />
                         );
                     })}
@@ -201,14 +233,14 @@ interface AttributeCardProps {
     attribute: Attribute;
     index: number;
     totalAttributes: number;
-    onAddValue: (attributeId: string, value: string) => void;
+    onAddValue: (attributeId: string, value: string, valueId?: string) => void;
     onRemoveValue: (attributeId: string, valueId: string) => void;
     onRemove: (attributeId: string) => void;
     onToggleControl: (
         attributeId: string,
         controlType: "pricing" | "weightDimensions" | "media"
     ) => void;
-    availableValues: string[];
+    availableAttr?: { id: string; name: string; displayName: string; values: Array<{ id: string; value: string; displayValue: string }> };
 }
 
 const AttributeCard: React.FC<AttributeCardProps> = ({
@@ -219,9 +251,10 @@ const AttributeCard: React.FC<AttributeCardProps> = ({
     onRemoveValue,
     onRemove,
     onToggleControl,
-    availableValues,
+    availableAttr,
 }) => {
     const selectedValues = attribute.values.map(v => v.value);
+    const availableValues = availableAttr?.values.map(v => v.value) || [];
 
     const handleValuesChange = (values: string | string[]) => {
         const newValues = Array.isArray(values) ? values : [values];
@@ -232,9 +265,10 @@ const AttributeCard: React.FC<AttributeCardProps> = ({
         // Find removed values
         const removedValues = currentValues.filter(v => !newValues.includes(v));
         
-        // Add new values
+        // Add new values with their proper IDs from availableAttr
         addedValues.forEach(value => {
-            onAddValue(attribute.id, value);
+            const valueObj = availableAttr?.values.find(v => v.value === value);
+            onAddValue(attribute.id, value, valueObj?.id);
         });
         
         // Remove deselected values

@@ -118,7 +118,9 @@ export interface ProductWeight {
 export interface ProductStock {
   id: number;
   product_id: number;
-  stock_quantity: number;
+  variant_id?: number;
+  stock_quantity?: number;
+  quantity?: number;
   created_at?: string | Date;
   updated_at?: string | Date;
 }
@@ -134,10 +136,12 @@ export interface ProductDetail extends Product {
   pricing?: ProductPricing[];
   weight?: ProductWeight[];
   stock?: ProductStock[];
-  variant_pricing?: any[];
-  variant_media?: any[];
-  variant_weight?: any[];
+  variants?: any[];
   attributes?: any[];
+  // New API structure
+  priceGroups?: any[];
+  weightGroups?: any[];
+  mediaGroups?: any[];
 }
 
 // Product Filter (matches backend FilterProductDto)
@@ -210,6 +214,30 @@ export interface StockInput {
   stock_quantity: number;
 }
 
+// Price Group Input (for variant products)
+export interface PriceGroupInput {
+  combination: Record<string, number>; // { "attr_id": value_id }
+  cost: number;
+  price: number;
+  sale_price?: number | null;
+}
+
+// Weight Group Input (for variant products)
+export interface WeightGroupInput {
+  combination: Record<string, number>; // { "attr_id": value_id }
+  weight: number;
+  length?: number;
+  width?: number;
+  height?: number;
+}
+
+// Variant Input (for variant products - stock per variant)
+export interface VariantInput {
+  attribute_value_ids: number[];
+  sku_suffix?: string;
+  stock_quantity: number;
+}
+
 // ==================== CREATE PRODUCT DTO ====================
 export interface CreateProductDto {
   // Basic product info
@@ -225,19 +253,26 @@ export interface CreateProductDto {
   vendor_id?: number;
   is_active?: boolean;
 
-  // Attributes
+  // Attributes (for variant products)
   attributes?: ProductAttributeInput[];
 
-  // Pricing
+  // Price groups (for variant products - grouped by pricing-controlling attributes)
+  price_groups?: PriceGroupInput[];
+
+  // Weight groups (for variant products - grouped by weight-controlling attributes)
+  weight_groups?: WeightGroupInput[];
+
+  // Variants array (for variant products - all combinations with stock)
+  variants?: VariantInput[];
+
+  // Single product pricing (for single pricing type)
   single_pricing?: SinglePricingInput;
-  variant_pricing?: VariantPricingInput[];
 
-  // Weight
+  // Single product weight (for single pricing type or non-variant-based weight)
   product_weight?: WeightInput;
-  variant_weights?: VariantWeightInput[];
 
-  // Stock
-  stock?: StockInput[];
+  // Single product stock (for single pricing type)
+  stock_quantity?: number;
 }
 
 // ==================== UPDATE PRODUCT DTOs ====================

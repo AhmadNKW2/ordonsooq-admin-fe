@@ -70,6 +70,43 @@ export const ProductForm: React.FC<ProductFormProps> = ({
     ...initialData,
   });
 
+  // Update formData when initialData changes (for edit mode)
+  // Use JSON.stringify to create a stable dependency
+  const initialDataJson = JSON.stringify(initialData);
+  React.useEffect(() => {
+    if (isEditMode && initialData && Object.keys(initialData).length > 0) {
+      console.log('=== DEBUG: Updating formData from initialData ===');
+      console.log('initialData:', initialData);
+      console.log('initialData.isMediaVariantBased:', initialData.isMediaVariantBased);
+      console.log('initialData.variantMedia:', initialData.variantMedia);
+      console.log('initialData.singleMedia:', initialData.singleMedia);
+      setFormData({
+        nameEn: "",
+        nameAr: "",
+        categoryId: "",
+        vendorId: "",
+        shortDescriptionEn: "",
+        shortDescriptionAr: "",
+        longDescriptionEn: "",
+        longDescriptionAr: "",
+        pricingType: "single",
+        isActive: true,
+        attributes: [],
+        singlePricing: undefined,
+        variantPricing: [],
+        isWeightVariantBased: false,
+        singleWeightDimensions: undefined,
+        variantWeightDimensions: [],
+        isMediaVariantBased: false,
+        singleMedia: [],
+        variantMedia: [],
+        variants: [],
+        ...initialData,
+      });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEditMode, initialDataJson]);
+
   const validationSchema = useMemo<ValidationSchema>(() => {
     const schema: ValidationSchema = {
       nameEn: ['required', 'isEn'],
@@ -127,6 +164,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
 
     return schema;
   }, [
+    formData.pricingType,
     formData.singlePricing?.isSale,
     formData.variantPricing,
     formData.isWeightVariantBased,
@@ -136,7 +174,50 @@ export const ProductForm: React.FC<ProductFormProps> = ({
   const { errors, handleValidationChange, validateForm, isSubmitted } = useFormValidation(validationSchema);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const handleSubmit = async () => {
+    console.log('=== DEBUG: handleSubmit called ===');
+    console.log('formData:', formData);
+    console.log('formData.isMediaVariantBased:', formData.isMediaVariantBased);
+    console.log('formData.variantMedia:', formData.variantMedia);
+    console.log('formData.singleMedia:', formData.singleMedia);
+    console.log('validationSchema:', validationSchema);
+    
+    const isValid = validateForm(formData);
+    console.log('isValid:', isValid);
+    console.log('errors after validation:', errors);
+
+    if (!isValid) {
+      console.log('=== Validation failed, not submitting ===');
+      return;
+    }
+
+    console.log('=== Validation passed, submitting ===');
+
+    setIsSubmitting(true);
+    try {
+      await onSubmit(formData as ProductFormData);
+    } catch (error) {
+      console.error("Failed to submit form:", error);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleFieldChange = (field: string, value: any) => {
+    // DEBUG: Log field changes for media
+    if (field === 'singleMedia' || field === 'variantMedia' || field === 'isMediaVariantBased') {
+      console.log('=== DEBUG: handleFieldChange for media ===');
+      console.log('field:', field);
+      console.log('value:', value);
+      if (field === 'singleMedia' && Array.isArray(value)) {
+        value.forEach((item: any, idx: number) => {
+          console.log(`value[${idx}]:`, item);
+          console.log(`value[${idx}].file:`, item.file);
+          console.log(`value[${idx}].file instanceof File:`, item.file instanceof File);
+        });
+      }
+    }
+    
     setFormData((prev) => {
       const newData = { ...prev, [field]: value };
       
@@ -144,6 +225,13 @@ export const ProductForm: React.FC<ProductFormProps> = ({
       if (field === 'pricingType' && value === 'single') {
           newData.isWeightVariantBased = false;
           newData.isMediaVariantBased = false;
+      }
+      
+      // DEBUG: Log updated form data for media fields
+      if (field === 'singleMedia' || field === 'variantMedia' || field === 'isMediaVariantBased') {
+        console.log('=== DEBUG: Updated formData ===');
+        console.log('newData.singleMedia:', newData.singleMedia);
+        console.log('newData.singleMedia?.length:', newData.singleMedia?.length);
       }
       
       return newData;
@@ -158,23 +246,6 @@ export const ProductForm: React.FC<ProductFormProps> = ({
     formData.attributes?.some((attr) => attr.controlsMedia) || false;
   const hasAttributeControllingWeight =
     formData.attributes?.some((attr) => attr.controlsWeightDimensions) || false;
-
-  const handleSubmit = async () => {
-    const isValid = validateForm(formData);
-
-    if (!isValid) {
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      await onSubmit(formData as ProductFormData);
-    } catch (error) {
-      console.error("Failed to submit form:", error);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
 
   const calculateSalePercentage = (price: number, salePrice?: number) => {
     if (!salePrice || salePrice >= price) return 0;
@@ -219,16 +290,29 @@ export const ProductForm: React.FC<ProductFormProps> = ({
         <AttributesSection
           attributes={formData.attributes || []}
           availableAttributes={attributes}
-          onChange={(attributes: Attribute[]) => {
+          onChange={(attributes: Attribute[], resetType?: 'pricing' | 'weight' | 'media') => {
             const hasWeight = attributes.some(a => a.controlsWeightDimensions);
             const hasMedia = attributes.some(a => a.controlsMedia);
             
-            setFormData(prev => ({
+            setFormData(prev => {
+              const updates: Partial<ProductFormData> = {
                 ...prev,
                 attributes,
                 isWeightVariantBased: hasWeight,
-                isMediaVariantBased: hasMedia
-            }));
+                isMediaVariantBased: hasMedia,
+              };
+              
+              // Reset data when control changes from false to true
+              if (resetType === 'pricing') {
+                updates.variantPricing = [];
+              } else if (resetType === 'weight') {
+                updates.variantWeightDimensions = [];
+              } else if (resetType === 'media') {
+                updates.variantMedia = [];
+              }
+              
+              return updates as ProductFormData;
+            });
             handleValidationChange("attributes", attributes);
           }}
           errors={errors}

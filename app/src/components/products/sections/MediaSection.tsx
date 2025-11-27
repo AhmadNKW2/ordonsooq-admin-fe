@@ -101,18 +101,39 @@ export const MediaSection: React.FC<MediaSectionProps> = ({
     };
 
     const handleSingleMediaAdd = (files: FileList | null) => {
-        if (!files || files.length === 0) return;
+        console.log('=== DEBUG: handleSingleMediaAdd called ===');
+        console.log('files:', files);
+        console.log('files?.length:', files?.length);
+        
+        if (!files || files.length === 0) {
+            console.log('No files to add, returning');
+            return;
+        }
 
-        const newMediaItems: MediaItem[] = Array.from(files).map((file, index) => ({
-            id: `media-${Date.now()}-${index}`,
-            file: file,
-            preview: URL.createObjectURL(file),
-            type: file.type.startsWith("video") ? "video" : "image",
-            isPrimary: singleMedia.length === 0 && index === 0,
-            order: singleMedia.length + index,
-        }));
+        const newMediaItems: MediaItem[] = Array.from(files).map((file, index) => {
+            console.log(`Creating media item for file ${index}:`, file);
+            console.log('file instanceof File:', file instanceof File);
+            console.log('file.name:', file.name);
+            console.log('file.size:', file.size);
+            console.log('file.type:', file.type);
+            
+            return {
+                id: `media-${Date.now()}-${index}`,
+                file: file,
+                preview: URL.createObjectURL(file),
+                type: file.type.startsWith("video") ? "video" : "image",
+                isPrimary: singleMedia.length === 0 && index === 0,
+                order: singleMedia.length + index,
+            };
+        });
 
-        onChangeSingle([...singleMedia, ...newMediaItems]);
+        console.log('newMediaItems:', newMediaItems);
+        console.log('Current singleMedia:', singleMedia);
+        
+        const updatedMedia = [...singleMedia, ...newMediaItems];
+        console.log('Updated media array:', updatedMedia);
+        
+        onChangeSingle(updatedMedia);
     };
 
     const handleSingleMediaRemove = (mediaId: string) => {
@@ -229,8 +250,54 @@ export const MediaSection: React.FC<MediaSectionProps> = ({
         onChangeVariant([...newVariantMedia, updated]);
     };
 
-    const getVariantMedia = (key: string): MediaItem[] => {
-        return variantMedia.find((vm) => vm.key === key)?.media || [];
+    // Find existing media data that best matches the given attribute values
+    // This preserves data when attributes controlling media change
+    const findMatchingMedia = (attributeValues: { [attrId: string]: string }): VariantMedia | undefined => {
+        // First try exact key match
+        const key = Object.values(attributeValues).join("-");
+        const exactMatch = variantMedia.find((vm) => vm.key === key);
+        if (exactMatch) return exactMatch;
+
+        // Try to find a match where attribute values overlap
+        let bestMatch: VariantMedia | undefined;
+        let bestMatchScore = 0;
+
+        for (const vm of variantMedia) {
+            if (!vm.attributeValues) continue;
+            
+            let matchScore = 0;
+            let allMatch = true;
+            
+            for (const [attrId, valueId] of Object.entries(attributeValues)) {
+                if (vm.attributeValues[attrId] === valueId) {
+                    matchScore++;
+                } else if (vm.attributeValues[attrId] !== undefined) {
+                    allMatch = false;
+                    break;
+                }
+            }
+            
+            if (allMatch && matchScore > bestMatchScore) {
+                bestMatchScore = matchScore;
+                bestMatch = vm;
+            }
+        }
+
+        return bestMatch;
+    };
+
+    const getVariantMedia = (key: string, attributeValues?: { [attrId: string]: string }): MediaItem[] => {
+        // First try exact key match
+        const exactMatch = variantMedia.find((vm) => vm.key === key);
+        if (exactMatch) return exactMatch.media || [];
+        
+        // Fall back to attribute-based matching
+        if (attributeValues) {
+            const match = findMatchingMedia(attributeValues);
+            return match?.media || [];
+        }
+        
+        return [];
     };
 
     // Single mode (not variant-based)
@@ -316,7 +383,7 @@ export const MediaSection: React.FC<MediaSectionProps> = ({
             </p>
 
             {combinations.map((combo) => {
-                const media = getVariantMedia(combo.key);
+                const media = getVariantMedia(combo.key, combo.attributeValues);
 
                 return (
                     <div

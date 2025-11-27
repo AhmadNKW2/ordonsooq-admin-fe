@@ -216,18 +216,35 @@ class HttpClient {
   public postFormData<T>(endpoint: string, formData: FormData): Promise<T> {
     const url = `${this.baseURL}${endpoint}`;
 
+    // DEBUG: Log the FormData contents
+    console.log('=== DEBUG: postFormData ===');
+    console.log('url:', url);
+    console.log('FormData entries:');
+    for (const [key, value] of formData.entries()) {
+      if (value instanceof File) {
+        console.log(`  ${key}: File(name=${value.name}, size=${value.size}, type=${value.type})`);
+      } else {
+        console.log(`  ${key}: ${value}`);
+      }
+    }
+
     // Don't set Content-Type for FormData - browser will set it with boundary
     const headers: HeadersInit = {};
     const authHeader = (this.defaultHeaders as any).Authorization;
     if (authHeader) {
       headers['Authorization'] = authHeader;
     }
+    console.log('headers:', headers);
 
     return fetch(url, {
       method: "POST",
       headers,
       body: formData,
     }).then(async (response) => {
+      console.log('=== DEBUG: postFormData response ===');
+      console.log('response.ok:', response.ok);
+      console.log('response.status:', response.status);
+      
       if (!response.ok) {
         await this.handleError(response);
       }

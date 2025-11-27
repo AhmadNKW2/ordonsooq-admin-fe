@@ -115,8 +115,53 @@ export const WeightDimensionsSection: React.FC<WeightDimensionsSectionProps> = (
         onChangeVariant([...newVariantWeight, updated]);
     };
 
-    const getVariantWeight = (key: string): VariantWeightDimensions | undefined => {
-        return variantWeightDimensions.find((vw) => vw.key === key);
+    // Find existing weight data that best matches the given attribute values
+    // This preserves data when attributes controlling weight change
+    const findMatchingWeight = (attributeValues: { [attrId: string]: string }): VariantWeightDimensions | undefined => {
+        // First try exact key match
+        const key = Object.values(attributeValues).join("-");
+        const exactMatch = variantWeightDimensions.find((vw) => vw.key === key);
+        if (exactMatch) return exactMatch;
+
+        // Try to find a match where attribute values overlap
+        let bestMatch: VariantWeightDimensions | undefined;
+        let bestMatchScore = 0;
+
+        for (const vw of variantWeightDimensions) {
+            if (!vw.attributeValues) continue;
+            
+            let matchScore = 0;
+            let allMatch = true;
+            
+            for (const [attrId, valueId] of Object.entries(attributeValues)) {
+                if (vw.attributeValues[attrId] === valueId) {
+                    matchScore++;
+                } else if (vw.attributeValues[attrId] !== undefined) {
+                    allMatch = false;
+                    break;
+                }
+            }
+            
+            if (allMatch && matchScore > bestMatchScore) {
+                bestMatchScore = matchScore;
+                bestMatch = vw;
+            }
+        }
+
+        return bestMatch;
+    };
+
+    const getVariantWeight = (key: string, attributeValues?: { [attrId: string]: string }): VariantWeightDimensions | undefined => {
+        // First try exact key match
+        const exactMatch = variantWeightDimensions.find((vw) => vw.key === key);
+        if (exactMatch) return exactMatch;
+        
+        // Fall back to attribute-based matching
+        if (attributeValues) {
+            return findMatchingWeight(attributeValues);
+        }
+        
+        return undefined;
     };
 
     // Single mode (not variant-based)
@@ -227,7 +272,7 @@ export const WeightDimensionsSection: React.FC<WeightDimensionsSectionProps> = (
             </p>
 
             {combinations.map((combo) => {
-                const weight = getVariantWeight(combo.key);
+                const weight = getVariantWeight(combo.key, combo.attributeValues);
                 const variantIndex = variantWeightDimensions.findIndex(vw => vw.key === combo.key);
 
                 return (

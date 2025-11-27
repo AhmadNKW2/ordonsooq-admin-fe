@@ -92,6 +92,10 @@ export const useFormValidation = (schema: ValidationSchema) => {
     }, [schema, validateField]);
 
     const validateForm = useCallback((data: any) => {
+        console.log('=== DEBUG: validateForm called ===');
+        console.log('data:', data);
+        console.log('schema:', schema);
+        
         setIsSubmitted(true);
         const newErrors: Record<string, string> = {};
         let isValid = true;
@@ -106,10 +110,13 @@ export const useFormValidation = (schema: ValidationSchema) => {
                 const itemPath = parts[1];
                 
                 const array = getValueByPath(data, arrayPath);
+                console.log(`Validating array field: ${key}, arrayPath: ${arrayPath}, array:`, array);
+                
                 if (Array.isArray(array)) {
                     array.forEach((item, index) => {
                         const itemValue = getValueByPath(item, itemPath);
                         const error = validateValue(itemValue, schema[key], true);
+                        console.log(`  [${index}].${itemPath} = ${itemValue}, error: ${error}`);
                         if (error) {
                             const errorKey = `${arrayPath}.${index}.${itemPath}`;
                             newErrors[errorKey] = error;
@@ -122,6 +129,7 @@ export const useFormValidation = (schema: ValidationSchema) => {
                 // Normal key
                 const value = getValueByPath(data, key);
                 const error = validateValue(value, schema[key], true);
+                console.log(`Validating field: ${key} = ${JSON.stringify(value)}, error: ${error}`);
                 if (error) {
                     newErrors[key] = error;
                     if (!firstErrorKey) firstErrorKey = key;
@@ -130,6 +138,11 @@ export const useFormValidation = (schema: ValidationSchema) => {
             }
         });
 
+        console.log('=== Validation Result ===');
+        console.log('isValid:', isValid);
+        console.log('newErrors:', newErrors);
+        console.log('firstErrorKey:', firstErrorKey);
+        
         setErrors(newErrors);
         
         if (firstErrorKey) {

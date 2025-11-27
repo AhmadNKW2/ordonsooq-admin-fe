@@ -124,8 +124,64 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
         onChangeVariant([...newVariantPricing, updated]);
     };
 
-    const getVariantPricing = (key: string): VariantPricing | undefined => {
-        return variantPricing.find((vp) => vp.key === key);
+    // Find existing pricing data that best matches the given attribute values
+    // This preserves data when attributes controlling pricing change
+    const findMatchingPricing = (attributeValues: { [attrId: string]: string }): VariantPricing | undefined => {
+        // First try exact key match
+        const key = Object.values(attributeValues).join("-");
+        const exactMatch = variantPricing.find((vp) => vp.key === key);
+        if (exactMatch) return exactMatch;
+
+        // Try to find a match where all current attribute values are present in existing data
+        // This handles the case where we're adding/removing controlling attributes
+        let bestMatch: VariantPricing | undefined;
+        let bestMatchScore = 0;
+
+        for (const vp of variantPricing) {
+            if (!vp.attributeValues) continue;
+            
+            let matchScore = 0;
+            let allMatch = true;
+            
+            // Check how many attribute values match
+            for (const [attrId, valueId] of Object.entries(attributeValues)) {
+                if (vp.attributeValues[attrId] === valueId) {
+                    matchScore++;
+                } else if (vp.attributeValues[attrId] !== undefined) {
+                    // Attribute exists in old data but with different value - no match
+                    allMatch = false;
+                    break;
+                }
+            }
+            
+            // Also check reverse: if old data has attributes not in new combination
+            for (const [attrId, valueId] of Object.entries(vp.attributeValues)) {
+                if (attributeValues[attrId] === undefined) {
+                    // Old data has extra attributes - still could be a partial match
+                    continue;
+                }
+            }
+            
+            if (allMatch && matchScore > bestMatchScore) {
+                bestMatchScore = matchScore;
+                bestMatch = vp;
+            }
+        }
+
+        return bestMatch;
+    };
+
+    const getVariantPricing = (key: string, attributeValues?: { [attrId: string]: string }): VariantPricing | undefined => {
+        // First try exact key match
+        const exactMatch = variantPricing.find((vp) => vp.key === key);
+        if (exactMatch) return exactMatch;
+        
+        // Fall back to attribute-based matching
+        if (attributeValues) {
+            return findMatchingPricing(attributeValues);
+        }
+        
+        return undefined;
     };
 
     if (shouldShowSinglePricing) {
@@ -248,7 +304,7 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
             </p>
 
             {combinations.map((combo) => {
-                const pricing = getVariantPricing(combo.key);
+                const pricing = getVariantPricing(combo.key, combo.attributeValues);
                 const variantIndex = variantPricing.findIndex(vp => vp.key === combo.key);
                 const salePercentage = calculateSalePercentage(
                     pricing?.price || 0,

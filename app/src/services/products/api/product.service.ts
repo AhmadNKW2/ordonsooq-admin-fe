@@ -290,53 +290,44 @@ class ProductService extends BaseService<Product> {
   }
 
   /**
-   * Upload product media file
+   * Upload product media file (unified endpoint)
+   * - Without variantId: saves as general product media
+   * - With variantId: saves as variant-specific media
    */
   async uploadProductMedia(
     productId: number,
     file: File,
-    type: 'image' | 'video',
     sortOrder?: number,
-    isPrimary?: boolean
+    isPrimary?: boolean,
+    variantId?: number
   ): Promise<ApiResponse<any>> {
     const formData = new FormData();
     formData.append('file', file);
-    formData.append('type', type);
     if (sortOrder !== undefined) formData.append('sort_order', sortOrder.toString());
     if (isPrimary !== undefined) formData.append('is_primary', isPrimary.toString());
+    if (variantId !== undefined) formData.append('variant_id', variantId.toString());
     
     return httpClient.postFormData(`${this.endpoint}/${productId}/media`, formData);
   }
 
   /**
-   * Add variant media
-   */
-  async addVariantMedia(
-    productId: number,
-    data: VariantMediaDto
-  ): Promise<ApiResponse<any>> {
-    return httpClient.post(`${this.endpoint}/${productId}/variant-media`, data);
-  }
-
-  /**
-   * Upload variant media file
+   * Upload variant media file using variant_id
+   * Uses the unified media endpoint with variant_id parameter
    */
   async uploadVariantMedia(
     productId: number,
-    attributeValueId: number,
+    variantId: number,
     file: File,
-    type: 'image' | 'video',
     sortOrder?: number,
     isPrimary?: boolean
   ): Promise<ApiResponse<any>> {
     const formData = new FormData();
     formData.append('file', file);
-    formData.append('attribute_value_id', attributeValueId.toString());
-    formData.append('type', type);
+    formData.append('variant_id', variantId.toString());
     if (sortOrder !== undefined) formData.append('sort_order', sortOrder.toString());
     if (isPrimary !== undefined) formData.append('is_primary', isPrimary.toString());
     
-    return httpClient.postFormData(`${this.endpoint}/${productId}/variant-media`, formData);
+    return httpClient.postFormData(`${this.endpoint}/${productId}/media`, formData);
   }
 
   /**

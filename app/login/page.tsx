@@ -54,7 +54,7 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
       <Card className="w-full max-w-md p-8">
-        <div className="text-center mb-8">
+        <div className="text-center">
           <h1 className="text-3xl font-bold text-gray-900">Admin Login</h1>
           <p className="text-gray-600 mt-2">Sign in to your account</p>
         </div>
@@ -66,7 +66,7 @@ export default function LoginPage() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-5">
           <div>
             <Input
               label="Email"
@@ -98,7 +98,7 @@ export default function LoginPage() {
           </Button>
         </form>
 
-        <div className="mt-6 text-center text-sm text-gray-600">
+        <div className="text-center text-sm text-gray-600">
           <p>Ordonsooq Admin Dashboard</p>
         </div>
       </Card>

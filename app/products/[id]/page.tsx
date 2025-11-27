@@ -53,64 +53,329 @@ export default function EditProductPage() {
 
   // Transform product data to form initial data
   const product: ProductDetail | undefined = productData?.data;
-  const initialData: Partial<ProductFormData> | undefined = product ? {
-    nameEn: product.name_en,
-    nameAr: product.name_ar,
-    categoryId: product.category?.id?.toString() || product.category_id.toString(),
-    vendorId: product.vendor?.id?.toString() || product.vendor_id?.toString(),
-    shortDescriptionEn: product.short_description_en || "",
-    shortDescriptionAr: product.short_description_ar || "",
+  
+  // Helper function to build attributeValues map from variant combinations
+  const buildAttributeValuesMap = (combinations: any[]): { [attrId: string]: string } => {
+    const map: { [attrId: string]: string } = {};
+    combinations?.forEach((combo: any) => {
+      const attrId = combo.attribute_value?.attribute_id?.toString();
+      const valueId = combo.attribute_value_id?.toString();
+      if (attrId && valueId) {
+        map[attrId] = valueId;
+      }
+    });
+    return map;
+  };
+
+  // Helper function to build attributeValues map from groupValues
+  const buildAttributeValuesFromGroupValues = (groupValues: any[]): { [attrId: string]: string } => {
+    const map: { [attrId: string]: string } = {};
+    groupValues?.forEach((gv: any) => {
+      const attrId = gv.attribute_id?.toString();
+      const valueId = gv.attribute_value_id?.toString();
+      if (attrId && valueId) {
+        map[attrId] = valueId;
+      }
+    });
+    return map;
+  };
+
+  // Helper function to generate variant key from attributeValues
+  const generateVariantKey = (attributeValues: { [attrId: string]: string }): string => {
+    return Object.values(attributeValues).sort().join('-');
+  };
+
+  // Transform attributes from product data
+  const transformProductAttributes = () => {
+    if (!product?.attributes || product.attributes.length === 0) return undefined;
+    
+    // Get unique attribute values used across all variants
+    const attributeValuesUsed: { [attrId: string]: Set<string> } = {};
+    
+    product.variants?.forEach((variant: any) => {
+      variant.combinations?.forEach((combo: any) => {
+        const attrId = combo.attribute_value?.attribute_id?.toString();
+        const valueId = combo.attribute_value_id?.toString();
+        if (attrId && valueId) {
+          if (!attributeValuesUsed[attrId]) {
+            attributeValuesUsed[attrId] = new Set();
+          }
+          attributeValuesUsed[attrId].add(valueId);
+        }
+      });
+    });
+
+    return product.attributes.map((attr: any, index: number) => {
+      const attrId = attr.attribute_id?.toString() || attr.attribute?.id?.toString();
+      const attrName = attr.attribute?.name_en || '';
+      
+      // Get the values used for this attribute from variants
+      const usedValueIds = attributeValuesUsed[attrId] || new Set();
+      
+      // Find all values from availableAttributes that match the used IDs
+      const availableAttr = attributesData?.find(a => a.id.toString() === attrId);
+      const values = availableAttr?.values
+        ?.filter(v => usedValueIds.has(v.id.toString()))
+        .map((v, idx) => ({
+          id: v.id.toString(),
+          value: v.value_en,
+          order: idx,
+        })) || [];
+
+      return {
+        id: attrId,
+        name: attrName,
+        values,
+        order: index,
+        controlsPricing: attr.controls_pricing || false,
+        controlsWeightDimensions: attr.controls_weight || false,
+        controlsMedia: attr.controls_media || false,
+      };
+    });
+  };
+
+  // Transform variant pricing from priceGroups
+  const transformVariantPricing = () => {
+    if (product?.pricing_type !== 'variant') return undefined;
+    
+    // Use priceGroups if available (new API structure)
+    const priceGroups = (product as any).priceGroups;
+    if (priceGroups && priceGroups.length > 0) {
+      return priceGroups.map((pg: any) => {
+        const attributeValues = buildAttributeValuesFromGroupValues(pg.groupValues || []);
+        const key = generateVariantKey(attributeValues);
+        
+        return {
+          key,
+          attributeValues,
+          cost: pg.cost ? parseFloat(pg.cost) : 0,
+          price: pg.price ? parseFloat(pg.price) : 0,
+          isSale: !!pg.sale_price,
+          salePrice: pg.sale_price ? parseFloat(pg.sale_price) : undefined,
+        };
+      });
+    }
+    
+    return undefined;
+  };
+
+  // Transform variant weight/dimensions from weightGroups
+  const transformVariantWeightDimensions = () => {
+    // Use weightGroups if available (new API structure)
+    const weightGroups = (product as any).weightGroups;
+    if (!weightGroups || weightGroups.length === 0) return undefined;
+
+    return weightGroups.map((wg: any) => {
+      const attributeValues = buildAttributeValuesFromGroupValues(wg.groupValues || []);
+      const key = generateVariantKey(attributeValues);
+      
+      return {
+        key,
+        attributeValues,
+        weight: wg.weight ? parseFloat(wg.weight) : undefined,
+        length: wg.length ? parseFloat(wg.length) : undefined,
+        width: wg.width ? parseFloat(wg.width) : undefined,
+        height: wg.height ? parseFloat(wg.height) : undefined,
+      };
+    });
+  };
+
+  // Transform variants (stock) from product data
+  const transformVariants = () => {
+    if (!product?.variants || product.variants.length === 0) return undefined;
+    
+    return product.variants.map((variant: any) => {
+      const stock = product.stock?.find((s: any) => s.variant_id === variant.id);
+      const attributeValues = buildAttributeValuesMap(variant.combinations);
+      
+      return {
+        id: variant.id.toString(),
+        attributeValues,
+        stock: stock?.quantity || 0,
+      };
+    });
+  };
+
+  // Check if weight is variant-based (has weightGroups)
+  // Check if weight is variant-based (has weightGroups OR any attribute controls weight)
+  const isWeightVariantBased = () => {
+    // Check if weightGroups exist in the API response
+    const weightGroups = (product as any)?.weightGroups;
+    if (weightGroups && weightGroups.length > 0) {
+      return true;
+    }
+    
+    // Also check if any attribute controls weight (from product attributes)
+    const productAttributes = product?.attributes;
+    if (productAttributes && productAttributes.length > 0) {
+      return productAttributes.some((attr: any) => attr.controls_weight === true);
+    }
+    
+    return false;
+  };
+
+  // Check if media is variant-based (has mediaGroups OR any attribute controls media)
+  const isMediaVariantBased = () => {
+    // Check if mediaGroups exist in the API response
+    const mediaGroups = (product as any)?.mediaGroups;
+    if (mediaGroups && mediaGroups.length > 0) {
+      return true;
+    }
+    
+    // Also check if any attribute controls media (from product attributes)
+    const productAttributes = product?.attributes;
+    if (productAttributes && productAttributes.length > 0) {
+      return productAttributes.some((attr: any) => attr.controls_media === true);
+    }
+    
+    return false;
+  };
+
+  // Transform single media (non-variant) - when no mediaGroups exist
+  const transformSingleMedia = () => {
+    if (!product?.media) return [];
+    
+    // If there are no mediaGroups, all media is single/general
+    const mediaGroups = (product as any)?.mediaGroups;
+    if (!mediaGroups || mediaGroups.length === 0) {
+      return product.media
+        .sort((a: any, b: any) => a.sort_order - b.sort_order)
+        .map((m: any) => ({
+          id: m.id.toString(),
+          file: null,
+          preview: m.url,
+          type: m.type as 'image' | 'video',
+          order: m.sort_order,
+          isPrimary: m.is_primary,
+        }));
+    }
+    
+    return [];
+  };
+
+  // Transform variant media from mediaGroups
+  const transformVariantMedia = () => {
+    const mediaGroups = (product as any)?.mediaGroups;
+    if (!mediaGroups || mediaGroups.length === 0 || !product?.media) return undefined;
+
+    return mediaGroups.map((mg: any) => {
+      const attributeValues = buildAttributeValuesFromGroupValues(mg.groupValues || []);
+      const key = generateVariantKey(attributeValues);
+      
+      // Find all media items belonging to this media group
+      const mediaItems = product.media
+        ?.filter((m: any) => m.media_group_id === mg.id)
+        .sort((a: any, b: any) => a.sort_order - b.sort_order)
+        .map((m: any) => ({
+          id: m.id.toString(),
+          file: null,
+          preview: m.url,
+          type: m.type as 'image' | 'video',
+          order: m.sort_order,
+          isPrimary: m.is_primary,
+        })) || [];
+
+      return {
+        key,
+        attributeValues,
+        media: mediaItems,
+      };
+    });
+  };
+
+  // Transform single weight (for single pricing type)
+  const transformSingleWeight = () => {
+    // For single pricing, there's no weightGroups
+    const weightGroups = (product as any)?.weightGroups;
+    if (weightGroups && weightGroups.length > 0) return undefined;
+    
+    // Check for legacy weight array
+    if (product?.weight && product.weight.length > 0) {
+      const singleWeight = product.weight[0];
+      return {
+        weight: singleWeight.weight ? parseFloat(singleWeight.weight) : undefined,
+        length: singleWeight.length ? parseFloat(singleWeight.length) : undefined,
+        width: singleWeight.width ? parseFloat(singleWeight.width) : undefined,
+        height: singleWeight.height ? parseFloat(singleWeight.height) : undefined,
+      };
+    }
+    
+    return undefined;
+  };
+
+  // Transform single pricing (for single pricing type)
+  const transformSinglePricing = () => {
+    if (product?.pricing_type !== 'single') return undefined;
+    
+    // Check for legacy pricing array
+    if (product?.pricing && product.pricing.length > 0) {
+      const pricing = product.pricing[0];
+      return {
+        cost: parseFloat(pricing.cost),
+        price: parseFloat(pricing.price),
+        isSale: !!pricing.sale_price,
+        salePrice: pricing.sale_price ? parseFloat(pricing.sale_price) : undefined,
+      };
+    }
+    
+    // Check for priceGroups (single product would have one group with no groupValues)
+    const priceGroups = (product as any)?.priceGroups;
+    if (priceGroups && priceGroups.length > 0) {
+      const pricing = priceGroups[0];
+      return {
+        cost: parseFloat(pricing.cost),
+        price: parseFloat(pricing.price),
+        isSale: !!pricing.sale_price,
+        salePrice: pricing.sale_price ? parseFloat(pricing.sale_price) : undefined,
+      };
+    }
+    
+    return undefined;
+  };
+
+  const initialData: Partial<ProductFormData> | undefined = React.useMemo(() => {
+    if (!product) return undefined;
+    
+    return {
+      // Basic Information
+      nameEn: product.name_en,
+      nameAr: product.name_ar,
+      categoryId: product.category?.id?.toString() || product.category_id?.toString(),
+      vendorId: product.vendor?.id?.toString() || product.vendor_id?.toString(),
+      shortDescriptionEn: product.short_description_en || "",
+      shortDescriptionAr: product.short_description_ar || "",
     longDescriptionEn: product.long_description_en || "",
     longDescriptionAr: product.long_description_ar || "",
     pricingType: product.pricing_type,
     isActive: product.is_active,
     
-    // Transform pricing data
-    singlePricing: product.pricing_type === 'single' && product.pricing?.[0] ? {
-      cost: parseFloat(product.pricing[0].cost),
-      price: parseFloat(product.pricing[0].price),
-      isSale: !!product.pricing[0].sale_price,
-      salePrice: product.pricing[0].sale_price ? parseFloat(product.pricing[0].sale_price) : undefined,
-    } : undefined,
+    // Attributes (for variant products)
+    attributes: product.pricing_type === 'variant' ? transformProductAttributes() : undefined,
     
-    // Transform weight/dimensions data
-    isWeightVariantBased: false,
-    singleWeightDimensions: product.weight?.[0] ? {
-      weight: product.weight[0].weight ? parseFloat(product.weight[0].weight) : undefined,
-      length: product.weight[0].length ? parseFloat(product.weight[0].length) : undefined,
-      width: product.weight[0].width ? parseFloat(product.weight[0].width) : undefined,
-      height: product.weight[0].height ? parseFloat(product.weight[0].height) : undefined,
-    } : undefined,
+    // Pricing
+    singlePricing: product.pricing_type === 'single' ? transformSinglePricing() : undefined,
+    variantPricing: product.pricing_type === 'variant' ? transformVariantPricing() : undefined,
     
-    // Transform media data
-    isMediaVariantBased: false,
-    singleMedia: product.media
-      ?.sort((a, b) => a.sort_order - b.sort_order) // Sort by sort_order from backend
-      .map((m, index: number) => ({
-        id: m.id.toString(),
-        file: null, // Existing media loaded from URL
-        preview: m.url,
-        type: m.type,
-        order: m.sort_order, // Use sort_order from backend
-        isPrimary: m.is_primary,
-      })) || [],
+    // Weight & Dimensions
+    isWeightVariantBased: isWeightVariantBased(),
+    singleWeightDimensions: !isWeightVariantBased() ? transformSingleWeight() : undefined,
+    variantWeightDimensions: isWeightVariantBased() ? transformVariantWeightDimensions() : undefined,
     
-    // Transform stock data (only if stock exists)
-    variants: product.stock && product.stock.length > 0 ? product.stock.map((s) => ({
-      id: s.id.toString(),
-      attributeValues: {}, // Would need combination data from backend
-      stock: s.stock_quantity || 0,
-    })) : undefined,
+    // Media
+    isMediaVariantBased: isMediaVariantBased(),
+    singleMedia: !isMediaVariantBased() ? transformSingleMedia() : [],
+    variantMedia: isMediaVariantBased() ? transformVariantMedia() : undefined,
     
-    // TODO: Transform attributes, variant pricing, variant media, variant weights when backend provides proper structure
-  } : undefined;
+    // Stock/Variants
+    variants: transformVariants(),
+  };
+  }, [product, attributesData]);
 
   const handleSubmit = async (data: ProductFormData) => {
     try {
-      // Build payload with only changed values
       const productPayload: Record<string, any> = {};
 
-      // ========== BASIC INFORMATION (flat structure) ==========
+      // ========== BASIC INFORMATION ==========
       if (initialData?.nameEn !== data.nameEn) productPayload.name_en = data.nameEn;
       if (initialData?.nameAr !== data.nameAr) productPayload.name_ar = data.nameAr;
       if (initialData?.shortDescriptionEn !== data.shortDescriptionEn) productPayload.short_description_en = data.shortDescriptionEn || undefined;
@@ -123,52 +388,159 @@ export default function EditProductPage() {
       if (initialData?.isActive !== data.isActive) productPayload.is_active = data.isActive;
 
       // ========== MEDIA MANAGEMENT ==========
-      const mediaManagement: any = {};
-      const deleteMedia: any[] = [];
-      const reorderMedia: any[] = [];
-      let setPrimaryMediaId: number | undefined;
-
-      if (!data.isMediaVariantBased && data.singleMedia && initialData?.singleMedia) {
-        const currentMediaIds = new Set(data.singleMedia.map(m => parseInt(m.id)));
-        const initialMediaIds = new Set(initialData.singleMedia.map(m => parseInt(m.id)));
-
+      const deleteMediaIds: number[] = [];
+      const reorderMedia: { media_id: number; sort_order: number }[] = [];
+      let setPrimaryMedia: { media_id: number; is_variant_media: boolean } | undefined;
+      
+      // Check for deleted/changed single media
+      if (!data.isMediaVariantBased && initialData?.singleMedia) {
+        const currentMediaIds = new Set(data.singleMedia?.map(m => parseInt(m.id)) || []);
+        
         // Find deleted media
         initialData.singleMedia.forEach(initialMedia => {
           const mediaId = parseInt(initialMedia.id);
-          if (!currentMediaIds.has(mediaId)) {
-            deleteMedia.push({ media_id: mediaId, is_variant: false });
+          if (!isNaN(mediaId) && !currentMediaIds.has(mediaId)) {
+            deleteMediaIds.push(mediaId);
           }
         });
-
-        // Check for reordering or primary changes
-        data.singleMedia.forEach((media, index) => {
+        
+        // Check for reorder and primary changes
+        data.singleMedia?.forEach(media => {
           const mediaId = parseInt(media.id);
-          const initialMedia = initialData.singleMedia?.find(m => parseInt(m.id) === mediaId);
+          if (isNaN(mediaId) || media.id.startsWith('media-')) return; // Skip new media
           
-          if (initialMedia) {
-            // Check if order changed
+          const initialMedia = initialData.singleMedia?.find(m => m.id === media.id);
+          if (!initialMedia) return;
+          
+          // Check order change
+          if (initialMedia.order !== media.order) {
+            reorderMedia.push({ media_id: mediaId, sort_order: media.order });
+          }
+          
+          // Check primary change (only if changing from non-primary to primary)
+          if (media.isPrimary && !initialMedia.isPrimary) {
+            setPrimaryMedia = { media_id: mediaId, is_variant_media: false };
+          }
+        });
+      }
+      
+      // Check for deleted/changed variant media
+      if (data.isMediaVariantBased && initialData?.variantMedia) {
+        const currentMediaIds = new Set<number>();
+        data.variantMedia?.forEach(vm => {
+          vm.media.forEach(m => {
+            const mediaId = parseInt(m.id);
+            if (!isNaN(mediaId) && !m.id.startsWith('media-')) {
+              currentMediaIds.add(mediaId);
+            }
+          });
+        });
+        
+        // Find deleted media
+        initialData.variantMedia.forEach(vm => {
+          vm.media.forEach(m => {
+            const mediaId = parseInt(m.id);
+            if (!isNaN(mediaId) && !currentMediaIds.has(mediaId)) {
+              deleteMediaIds.push(mediaId);
+            }
+          });
+        });
+        
+        // Check for reorder and primary changes in variant media
+        data.variantMedia?.forEach(vm => {
+          vm.media.forEach(media => {
+            const mediaId = parseInt(media.id);
+            if (isNaN(mediaId) || media.id.startsWith('media-')) return; // Skip new media
+            
+            // Find initial media
+            let initialMedia: any;
+            initialData.variantMedia?.forEach(ivm => {
+              const found = ivm.media.find(m => m.id === media.id);
+              if (found) initialMedia = found;
+            });
+            if (!initialMedia) return;
+            
+            // Check order change
             if (initialMedia.order !== media.order) {
               reorderMedia.push({ media_id: mediaId, sort_order: media.order });
             }
             
-            // Check if primary status changed
+            // Check primary change
             if (media.isPrimary && !initialMedia.isPrimary) {
-              setPrimaryMediaId = mediaId;
+              setPrimaryMedia = { media_id: mediaId, is_variant_media: true };
             }
-          }
+          });
         });
       }
-
-      // Add media management to payload if there are changes
-      if (deleteMedia.length > 0) mediaManagement.delete_media = deleteMedia;
-      if (reorderMedia.length > 0) mediaManagement.reorder_media = reorderMedia;
-      if (setPrimaryMediaId) {
-        mediaManagement.set_primary_media_id = setPrimaryMediaId;
-        mediaManagement.is_variant_media = false;
+      
+      // Build media_management payload
+      const mediaManagement: Record<string, any> = {};
+      if (deleteMediaIds.length > 0) {
+        mediaManagement.delete_media_ids = deleteMediaIds;
+      }
+      if (reorderMedia.length > 0) {
+        mediaManagement.reorder_media = reorderMedia;
+      }
+      if (setPrimaryMedia) {
+        mediaManagement.set_primary_media_id = setPrimaryMedia.media_id;
+        mediaManagement.is_variant_media = setPrimaryMedia.is_variant_media;
       }
       
       if (Object.keys(mediaManagement).length > 0) {
         productPayload.media_management = mediaManagement;
+      }
+
+      // ========== ATTRIBUTES MANAGEMENT ==========
+      if (data.pricingType === 'variant' && data.attributes) {
+        const initialAttrsMap = new Map(
+          (initialData?.attributes || []).map(a => [a.id, a])
+        );
+        const currentAttrsMap = new Map(
+          data.attributes.map(a => [a.id, a])
+        );
+        
+        const addAttributes: any[] = [];
+        const updateAttributes: any[] = [];
+        const deleteAttributeIds: number[] = [];
+        
+        // Find new and updated attributes
+        data.attributes.forEach(attr => {
+          const initialAttr = initialAttrsMap.get(attr.id);
+          if (!initialAttr) {
+            // New attribute
+            addAttributes.push({
+              attribute_id: parseInt(attr.id),
+              controls_pricing: attr.controlsPricing || false,
+              controls_media: attr.controlsMedia || false,
+              controls_weight: attr.controlsWeightDimensions || false,
+            });
+          } else {
+            // Check if attribute controls changed
+            if (
+              initialAttr.controlsPricing !== attr.controlsPricing ||
+              initialAttr.controlsMedia !== attr.controlsMedia ||
+              initialAttr.controlsWeightDimensions !== attr.controlsWeightDimensions
+            ) {
+              updateAttributes.push({
+                attribute_id: parseInt(attr.id),
+                controls_pricing: attr.controlsPricing || false,
+                controls_media: attr.controlsMedia || false,
+                controls_weight: attr.controlsWeightDimensions || false,
+              });
+            }
+          }
+        });
+        
+        // Find deleted attributes
+        (initialData?.attributes || []).forEach(initialAttr => {
+          if (!currentAttrsMap.has(initialAttr.id)) {
+            deleteAttributeIds.push(parseInt(initialAttr.id));
+          }
+        });
+        
+        if (addAttributes.length > 0) productPayload.add_attributes = addAttributes;
+        if (updateAttributes.length > 0) productPayload.update_attributes = updateAttributes;
+        if (deleteAttributeIds.length > 0) productPayload.delete_attribute_ids = deleteAttributeIds;
       }
 
       // ========== PRICING ==========
@@ -184,6 +556,46 @@ export default function EditProductPage() {
             price: data.singlePricing.price,
             sale_price: data.singlePricing.salePrice,
           };
+        }
+      } else if (data.pricingType === 'variant' && data.variantPricing) {
+        // Only include price groups that have changed
+        const changedPriceGroups: any[] = [];
+        
+        data.variantPricing.forEach(vp => {
+          // Find matching initial pricing by key or attribute values
+          const initialVp = initialData?.variantPricing?.find(ivp => {
+            if (ivp.key === vp.key) return true;
+            // Also check by attribute values match
+            if (!ivp.attributeValues || !vp.attributeValues) return false;
+            const keys = Object.keys(vp.attributeValues);
+            return keys.every(k => ivp.attributeValues[k] === vp.attributeValues[k]);
+          });
+          
+          // Check if pricing changed
+          const hasChanged = !initialVp || 
+            initialVp.cost !== vp.cost ||
+            initialVp.price !== vp.price ||
+            initialVp.salePrice !== vp.salePrice;
+          
+          if (hasChanged) {
+            const combination: Record<string, number> = {};
+            Object.entries(vp.attributeValues || {}).forEach(([attrId, attrValueId]) => {
+              if (attrValueId) {
+                combination[attrId] = parseInt(attrValueId);
+              }
+            });
+            
+            changedPriceGroups.push({
+              combination,
+              cost: vp.cost,
+              price: vp.price,
+              sale_price: vp.salePrice,
+            });
+          }
+        });
+        
+        if (changedPriceGroups.length > 0) {
+          productPayload.price_groups = changedPriceGroups;
         }
       }
 
@@ -203,9 +615,82 @@ export default function EditProductPage() {
             height: data.singleWeightDimensions.height,
           };
         }
+      } else if (data.isWeightVariantBased && data.variantWeightDimensions) {
+        // Only include weight groups that have changed
+        const changedWeightGroups: any[] = [];
+        
+        data.variantWeightDimensions.forEach(vw => {
+          // Find matching initial weight by key or attribute values
+          const initialVw = initialData?.variantWeightDimensions?.find(ivw => {
+            if (ivw.key === vw.key) return true;
+            if (!ivw.attributeValues || !vw.attributeValues) return false;
+            const keys = Object.keys(vw.attributeValues);
+            return keys.every(k => ivw.attributeValues[k] === vw.attributeValues[k]);
+          });
+          
+          // Check if weight changed
+          const hasChanged = !initialVw ||
+            initialVw.weight !== vw.weight ||
+            initialVw.length !== vw.length ||
+            initialVw.width !== vw.width ||
+            initialVw.height !== vw.height;
+          
+          if (hasChanged) {
+            const combination: Record<string, number> = {};
+            Object.entries(vw.attributeValues || {}).forEach(([attrId, attrValueId]) => {
+              if (attrValueId) {
+                combination[attrId] = parseInt(attrValueId);
+              }
+            });
+            
+            changedWeightGroups.push({
+              combination,
+              weight: vw.weight,
+              length: vw.length,
+              width: vw.width,
+              height: vw.height,
+            });
+          }
+        });
+        
+        if (changedWeightGroups.length > 0) {
+          productPayload.weight_groups = changedWeightGroups;
+        }
       }
 
-      // Step 1: Update product with all changes including media management
+      // ========== STOCK ==========
+      if (data.pricingType === 'single') {
+        // Single stock - check if there's a stock change
+        const singleVariant = data.variants?.[0];
+        const initialVariant = initialData?.variants?.[0];
+        if (singleVariant && singleVariant.stock !== initialVariant?.stock) {
+          productPayload.stock_quantity = singleVariant.stock;
+        }
+      } else if (data.pricingType === 'variant' && data.variants) {
+        // Only include variant stocks that have changed
+        const changedVariantStocks: any[] = [];
+        
+        data.variants.forEach(v => {
+          if (!v.id) return; // Skip new variants without IDs
+          
+          // Find matching initial variant
+          const initialV = initialData?.variants?.find(iv => iv.id === v.id);
+          
+          // Check if stock changed
+          if (!initialV || initialV.stock !== v.stock) {
+            changedVariantStocks.push({
+              variant_id: parseInt(v.id),
+              quantity: v.stock,
+            });
+          }
+        });
+        
+        if (changedVariantStocks.length > 0) {
+          productPayload.variant_stocks = changedVariantStocks;
+        }
+      }
+
+      // Step 1: Update product with PATCH request
       if (Object.keys(productPayload).length > 0) {
         await productService.updateProduct(productId, productPayload);
       }
@@ -218,7 +703,6 @@ export default function EditProductPage() {
             await productService.uploadProductMedia(
               productId,
               media.file!,
-              media.type,
               media.order,
               media.isPrimary
             );
@@ -226,21 +710,43 @@ export default function EditProductPage() {
         }
       }
 
-      if (data.isMediaVariantBased && data.variantMedia) {
-        for (const variantMedia of data.variantMedia) {
-          const newMedia = variantMedia.media.filter(m => m.file !== null);
-          if (newMedia.length > 0) {
-            const attributeValueId = parseInt(Object.values(variantMedia.attributeValues)[0]);
-            for (const media of newMedia) {
-              await productService.uploadVariantMedia(
-                productId,
-                attributeValueId,
-                media.file!,
-                media.type,
-                media.order,
-                media.isPrimary
-              );
-            }
+      // For variant media uploads
+      if (data.isMediaVariantBased && data.variantMedia && product?.variants) {
+        for (const variantMediaData of data.variantMedia) {
+          const newMedia = variantMediaData.media.filter(m => m.file !== null);
+          if (newMedia.length === 0) continue;
+
+          const mediaAttrValueIds = Object.values(variantMediaData.attributeValues || {})
+            .filter(id => id && id !== '')
+            .map(id => parseInt(id, 10))
+            .filter(id => !isNaN(id));
+          
+          if (mediaAttrValueIds.length === 0) {
+            console.warn('Skipping variant media upload: no valid attribute value IDs');
+            continue;
+          }
+          
+          const matchingVariant = product.variants.find((variant: any) => {
+            const variantAttrValueIds = (variant.combinations || [])
+              .map((c: any) => c.attribute_value_id);
+            return mediaAttrValueIds.every(mediaAttrId => 
+              variantAttrValueIds.includes(mediaAttrId)
+            );
+          });
+          
+          if (!matchingVariant) {
+            console.warn('Could not find matching variant for media:', mediaAttrValueIds);
+            continue;
+          }
+          
+          for (const media of newMedia) {
+            await productService.uploadVariantMedia(
+              productId,
+              matchingVariant.id,
+              media.file!,
+              media.order,
+              media.isPrimary
+            );
           }
         }
       }
