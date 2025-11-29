@@ -32,14 +32,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="bg-primary" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning>
       <body
         className={`${lato.variable} ${almarai.variable} antialiased`}
       >
         <QueryProvider>
           <AuthProvider>
             <ProtectedRoute>
-              <div className="flex h-screen bg-primary">
+              <div className="flex h-screen bg-primary/10">
                 <AppSidebar
                   groups={sidebarConfig.groups}
                   header={sidebarConfig.header}

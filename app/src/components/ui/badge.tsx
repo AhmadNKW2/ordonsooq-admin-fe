@@ -9,7 +9,7 @@ interface BadgeProps {
 }
 
 const variantStyles: Record<BadgeVariant, string> = {
-  default: 'bg-fourth text-fourth border-fourth/40',
+  default: 'bg-primary text-primary border-primary/40',
   success: 'bg-success/15 text-success border-success/40',
   danger: 'bg-danger/15 text-danger border-danger/40',
 };

@@ -5,9 +5,9 @@ export const sidebarConfig = {
     title: 'TH30 Admin',
     subtitle: 'Dashboard v1.0',
     logo: (
-      <div className="w-8 h-8 bg-fourth rounded-lg flex items-center justify-center">
+      <div className="w-8 h-8 bg-primary rounded-r1 flex items-center justify-center">
         <svg
-          className="w-5 h-5 text-secondary"
+          className="w-5 h-5 text-white"
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"

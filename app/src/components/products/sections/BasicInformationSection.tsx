@@ -15,7 +15,6 @@ interface BasicInformationSectionProps {
         shortDescriptionAr?: string;
         longDescriptionEn?: string;
         longDescriptionAr?: string;
-        pricingType?: "single" | "variant";
         isActive?: boolean;
     };
     errors: { [key: string]: string };
@@ -33,7 +32,7 @@ export const BasicInformationSection: React.FC<BasicInformationSectionProps> = (
 }) => {
     return (
         <Card>
-            <h2 className="text-xl font-semibold text-gray-900">
+            <h2 className="text-xl font-semibold ">
                 Basic Information
             </h2>
 
@@ -113,8 +112,8 @@ export const BasicInformationSection: React.FC<BasicInformationSectionProps> = (
                 />
             </div>
 
-            {/* Category, Vendor, Pricing Type */}
-            <div className="grid grid-cols-3 gap-5">
+            {/* Category, Vendor */}
+            <div className="grid grid-cols-2 gap-5">
                 <Select
                     id="categoryId"
                     label="Category"
@@ -143,18 +142,6 @@ export const BasicInformationSection: React.FC<BasicInformationSectionProps> = (
                     ]}
                     search={true}
                     error={errors.vendorId}
-                />
-
-                <Select
-                    id="pricingType"
-                    label="Pricing Type"
-                    value={formData.pricingType || "single"}
-                    onChange={(value) => onChange("pricingType", value as string)}
-                    options={[
-                        { value: "single", label: "Single Price" },
-                        { value: "variant", label: "Variant Price" },
-                    ]}
-                    search={false}
                 />
             </div>
 

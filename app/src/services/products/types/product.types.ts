@@ -59,6 +59,24 @@ export const attributeSchema = z.object({
 export type AttributeValue = z.infer<typeof attributeValueSchema>;
 export type Attribute = z.infer<typeof attributeSchema>;
 
+// Primary Image Schema
+export const primaryImageSchema = z.object({
+  id: z.number(),
+  url: z.string(),
+  type: z.string(),
+  alt_text: z.string().optional().nullable(),
+});
+
+export type PrimaryImage = z.infer<typeof primaryImageSchema>;
+
+// Stock Summary Schema
+export const stockSummarySchema = z.object({
+  total_quantity: z.number(),
+  in_stock: z.boolean(),
+});
+
+export type StockSummary = z.infer<typeof stockSummarySchema>;
+
 // Product Schema for validation (matches backend)
 export const productSchema = z.object({
   id: z.number(),
@@ -68,13 +86,18 @@ export const productSchema = z.object({
   short_description_ar: z.string().optional().nullable(),
   long_description_en: z.string().optional().nullable(),
   long_description_ar: z.string().optional().nullable(),
-  pricing_type: z.enum(["single", "variant"]),
   category_id: z.number(),
+  category: categorySchema.optional().nullable(),
   vendor_id: z.number().optional().nullable(),
+  vendor: vendorSchema.optional().nullable(),
   sku: z.string(),
   is_active: z.boolean(),
-  average_rating: z.number().optional().nullable(),
+  average_rating: z.union([z.number(), z.string()]).optional().nullable(),
   total_ratings: z.number().optional().nullable(),
+  primary_image: primaryImageSchema.optional().nullable(),
+  price: z.string().optional().nullable(),
+  sale_price: z.string().optional().nullable(),
+  stock: stockSummarySchema.optional().nullable(),
   created_at: z.string().or(z.date()).optional(),
   updated_at: z.string().or(z.date()).optional(),
 });
@@ -238,6 +261,39 @@ export interface VariantInput {
   stock_quantity: number;
 }
 
+// ==================== CREATE/UPDATE SHARED TYPES ====================
+
+// Price item with optional combination
+export interface PriceInput {
+  combination?: Record<string, number>; // { "attr_id": value_id } - optional for simple products
+  cost: number;
+  price: number;
+  sale_price?: number;
+}
+
+// Weight item with optional combination
+export interface WeightInputWithCombination {
+  combination?: Record<string, number>; // { "attr_id": value_id } - optional for simple products
+  weight?: number;
+  length?: number;
+  width?: number;
+  height?: number;
+}
+
+// Stock item with optional combination
+export interface StockInputWithCombination {
+  combination?: Record<string, number>; // { "attr_id": value_id } - optional for simple products
+  quantity: number;
+}
+
+// New Media Input format (references uploaded media by ID)
+export interface MediaInputDto {
+  media_id: number;        // ID from /api/media/upload
+  is_primary?: boolean;    // Default: false
+  sort_order?: number;     // Default: 0
+  combination?: Record<string, number>; // For variant media
+}
+
 // ==================== CREATE PRODUCT DTO ====================
 export interface CreateProductDto {
   // Basic product info
@@ -248,7 +304,6 @@ export interface CreateProductDto {
   short_description_ar: string;
   long_description_en: string;
   long_description_ar: string;
-  pricing_type: 'single' | 'variant';
   category_id: number;
   vendor_id?: number;
   is_active?: boolean;
@@ -256,23 +311,14 @@ export interface CreateProductDto {
   // Attributes (for variant products)
   attributes?: ProductAttributeInput[];
 
-  // Price groups (for variant products - grouped by pricing-controlling attributes)
-  price_groups?: PriceGroupInput[];
-
-  // Weight groups (for variant products - grouped by weight-controlling attributes)
-  weight_groups?: WeightGroupInput[];
-
   // Variants array (for variant products - all combinations with stock)
   variants?: VariantInput[];
 
-  // Single product pricing (for single pricing type)
-  single_pricing?: SinglePricingInput;
-
-  // Single product weight (for single pricing type or non-variant-based weight)
-  product_weight?: WeightInput;
-
-  // Single product stock (for single pricing type)
-  stock_quantity?: number;
+  // NEW format: prices, weights, stocks, media arrays
+  prices?: PriceInput[];
+  weights?: WeightInputWithCombination[];
+  stocks?: StockInputWithCombination[];
+  media?: MediaInputDto[];
 }
 
 // ==================== UPDATE PRODUCT DTOs ====================
@@ -364,27 +410,16 @@ export interface UpdateProductDto {
   short_description_ar?: string;
   long_description_en?: string;
   long_description_ar?: string;
-  pricing_type?: 'single' | 'variant';
   category_id?: number;
   vendor_id?: number;
   is_active?: boolean;
 
-  // Media Management
-  media_management?: MediaManagementDto;
+  // Attributes (for variant products)
+  attributes?: ProductAttributeInput[];
 
-  // Attributes
-  add_attributes?: AddProductAttributeInputDto[];
-  update_attributes?: UpdateProductAttributeInputDto[];
-  delete_attribute_ids?: number[];
-
-  // Pricing
-  single_pricing?: UpdateSinglePricingDto;
-  variant_pricing?: UpdateVariantPricingDto[];
-
-  // Weight
-  product_weight?: UpdateWeightDto;
-  variant_weights?: UpdateVariantWeightDto[];
-
-  // Stock
-  stock?: UpdateStockInputDto[];
+  // NEW format: prices, weights, stocks, media arrays (same as create)
+  prices?: PriceInput[];
+  weights?: WeightInputWithCombination[];
+  stocks?: StockInputWithCombination[];
+  media?: MediaInputDto[];
 }

@@ -236,7 +236,7 @@ export const Select = React.forwardRef<HTMLDivElement, SelectProps>(
               className={`${selectClasses} ${disabled ? 'opacity-50' : 'cursor-pointer'} flex items-center justify-start text-center`}
               {...props}
             >
-              <span className={hasValue ? 'text-third' : 'text-transparent'}>
+              <span className={hasValue ? '' : 'text-transparent'}>
                 {displayValue || 'placeholder'}
               </span>
             </div>
@@ -276,7 +276,7 @@ export const Select = React.forwardRef<HTMLDivElement, SelectProps>(
                     return (
                       <div
                         key={val}
-                        className="inline-flex items-center bg-fourth/10 text-fourth rounded-full px-2.5 py-1 text-sm font-medium"
+                        className="inline-flex items-center bg-primary/10 text-primary rounded-full px-2.5 py-1 text-sm font-medium"
                         onClick={(e) => {
                           e.stopPropagation();
                         }}
@@ -287,7 +287,7 @@ export const Select = React.forwardRef<HTMLDivElement, SelectProps>(
                             e.stopPropagation();
                             handleSelect(val);
                           }}
-                          className="ml-1.5 text-fourth hover:text-fourth/80 font-bold"
+                          className="ml-1.5 text-primary hover:text-primary/80 font-bold"
                         >
                           ×
                         </button>
@@ -296,7 +296,7 @@ export const Select = React.forwardRef<HTMLDivElement, SelectProps>(
                   })}
                 </div>
               ) : (
-                <span className={hasValue ? 'text-third' : 'text-transparent'}>
+                <span className={hasValue ? '' : 'text-transparent'}>
                   {displayValue || 'placeholder'}
                 </span>
               )}
@@ -310,7 +310,7 @@ export const Select = React.forwardRef<HTMLDivElement, SelectProps>(
           role="listbox"
           aria-multiselectable={multiple}
           // --- FIX 2: Change fixed to absolute to anchor to parent ---
-          className={`absolute z-50 mt-1 bg-secondary border-2 border-primary overflow-hidden rounded-rounded1 shadow-lg transition-all duration-200 origin-top ${isOpen
+          className={`absolute z-50 mt-1 bg-white border-2 border-primary/20 overflow-hidden rounded-r1 shadow-s1 transition-all duration-200 origin-top ${isOpen
             ? 'opacity-100 scale-y-100 visible'
             : 'opacity-0 scale-y-95 invisible'
             }`}
@@ -324,7 +324,7 @@ export const Select = React.forwardRef<HTMLDivElement, SelectProps>(
         >
           {/* Search Input */}
           {search && (
-            <div className="p-2 border-b-2 border-primary">
+            <div className="p-2 border-b-2 border-primary/20">
               <div className="relative">
                 <Search className={`absolute left-3 top-1/2 -translate-y-1/2 ${FIELD_ICON_CLASSES} pointer-events-none`} />
                 <Input
@@ -343,7 +343,7 @@ export const Select = React.forwardRef<HTMLDivElement, SelectProps>(
 
           <div className="overflow-y-auto max-h-60">
             {filteredOptions.length === 0 ? (
-              <div className="px-4 py-3 text-gray-500 text-sm">
+              <div className="px-4 py-3  text-sm">
                 {search && searchQuery ? 'No results found' : 'No options available'}
               </div>
             ) : (
@@ -360,11 +360,11 @@ export const Select = React.forwardRef<HTMLDivElement, SelectProps>(
                     onKeyDown={(e) => !option.disabled && handleOptionKeyDown(e, option.value, index)}
                     className={`cursor-pointer transition-colors flex items-center gap-2 px-4 py-3 ${option.disabled
                       ? 'opacity-50 cursor-not-allowed'
-                      : 'hover:bg-primary focus:bg-primary focus:outline-none'
-                      } ${isSelected ? 'bg-primary text-fourth font-medium' : 'text-third'}`}
+                      : 'hover:bg-primary/20 focus:bg-primary/20 focus:outline-none'
+                      } ${isSelected ? 'bg-primary/20 text-primary font-medium' : ''}`}
                   >
                     {multiple && (
-                      <div className={`w-4 h-4 border-2 rounded flex items-center justify-center shrink-0 ${isSelected ? 'bg-fourth border-fourth' : 'border-primary'
+                      <div className={`w-4 h-4 border-2 rounded flex items-center justify-center shrink-0 ${isSelected ? 'bg-primary border-primary' : 'border-primary/20'
                         }`}>
                         {isSelected && (
                           <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">

@@ -34,7 +34,7 @@ const PaginationButton: React.FC<PaginationButtonProps> = ({ onClick, disabled, 
   <button
     onClick={onClick}
     disabled={disabled}
-    className="w-8 h-8 p-1 flex justify-center items-center rounded-rounded1 border border-sixth text-sixth hover:bg-sixth hover:text-white disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent transition-all duration-200"
+    className="w-8 h-8 p-1 flex justify-center items-center rounded-r1 border border-primary2 text-primary2 hover:bg-primary2 hover:text-white disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent transition-all duration-200"
     title={title}
   >
     {icon}
@@ -58,7 +58,7 @@ const PageNumber: React.FC<PageNumberProps> = ({ page, isActive, currentPage, on
       onClick={() => onPageChange(pageNumber)}
       variant={isActive ? "solid" : "outline"}
       isSquare
-      color={isActive ? 'var(--color-fifth)' : 'var(--color-sixth)'}
+      color={isActive ? 'var(--color-secondary)' : 'var(--color-primary2)'}
     >
       {pageNumber}
     </Button>
@@ -107,7 +107,7 @@ export const Pagination: React.FC<PaginationProps> = ({
         {/* Left: Rows per page */}
         {showPageSize && onPageSizeChange && (
           <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-500 whitespace-nowrap">
+            <span className="text-sm  whitespace-nowrap">
               Rows per page:
             </span>
             <div className="w-18"> {/* Slightly wider to fit "100" cleanly */}
@@ -178,7 +178,7 @@ export const Pagination: React.FC<PaginationProps> = ({
 
         {/* Right: Go to page */}
         <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-500 whitespace-nowrap">
+          <span className="text-sm  whitespace-nowrap">
             Go to page:
           </span>
           <Input

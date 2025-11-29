@@ -34,8 +34,8 @@ export const DeleteConfirmationModal: React.FC<
         <div className="flex items-center justify-center w-12 h-12 bg-red-100 rounded-full">
           <AlertTriangle className="w-6 h-6 text-red-600" />
         </div>
-        <h2 className="text-black text-xl font-semibold">Are you sure?</h2>
-        <p className="text-gray-700 text-center">This action cannot be undone. All values associated with this field will be lost.</p>
+        <h2 className=" text-xl font-semibold">Are you sure?</h2>
+        <p className=" text-center">This action cannot be undone. All values associated with this field will be lost.</p>
         {/* Footer */}
         <div className="flex gap-5">
           <Button

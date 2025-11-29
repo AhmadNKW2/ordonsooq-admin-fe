@@ -25,6 +25,12 @@ import {
     rectSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import {
+    generateCombinations,
+    getControllingAttributes,
+    getVariantData,
+} from "../../../services/products/utils/variant-combinations";
+import { Upload } from "lucide-react";
 
 interface MediaSectionProps {
     attributes: Attribute[];
@@ -50,90 +56,34 @@ export const MediaSection: React.FC<MediaSectionProps> = ({
     errors = {},
 }) => {
     const [previewImage, setPreviewImage] = useState<string | null>(null);
-    const mediaAttributes = attributes.filter((attr) => attr.controlsMedia);
+    // Filter attributes that control media AND have values
+    const mediaAttributes = getControllingAttributes(attributes, 'controlsMedia');
 
     // Generate all combinations for media attributes
-    const generateMediaCombinations = (): Array<{
-        key: string;
-        label: string;
-        attributeValues: { [attrId: string]: string };
-    }> => {
-        if (mediaAttributes.length === 0) return [];
+    const combinations = generateCombinations(mediaAttributes);
 
-        const generateCombos = (
-            attrs: Attribute[],
-            current: { [attrId: string]: string } = {},
-            index: number = 0
-        ): Array<{ key: string; label: string; attributeValues: { [attrId: string]: string } }> => {
-            if (index === attrs.length) {
-                const label = Object.entries(current)
-                    .map(([attrId, valueId]) => {
-                        const attr = attrs.find((a) => a.id === attrId);
-                        const val = attr?.values.find((v) => v.id === valueId);
-                        return `${attr?.name}: ${val?.value}`;
-                    })
-                    .join(" / ");
-
-                return [{ key: Object.values(current).join("-"), label, attributeValues: { ...current } }];
-            }
-
-            const results: Array<{
-                key: string;
-                label: string;
-                attributeValues: { [attrId: string]: string };
-            }> = [];
-            const currentAttr = attrs[index];
-
-            for (const value of currentAttr.values) {
-                results.push(
-                    ...generateCombos(
-                        attrs,
-                        { ...current, [currentAttr.id]: value.id },
-                        index + 1
-                    )
-                );
-            }
-
-            return results;
-        };
-
-        return generateCombos(mediaAttributes);
+    // Check if any media across the product has isPrimary set
+    const hasAnyPrimaryMedia = () => {
+        const hasPrimaryInSingle = singleMedia.some((m) => m.isPrimary);
+        const hasPrimaryInVariants = variantMedia.some((vm) => vm.media.some((m) => m.isPrimary));
+        return hasPrimaryInSingle || hasPrimaryInVariants;
     };
 
     const handleSingleMediaAdd = (files: FileList | null) => {
-        console.log('=== DEBUG: handleSingleMediaAdd called ===');
-        console.log('files:', files);
-        console.log('files?.length:', files?.length);
-        
-        if (!files || files.length === 0) {
-            console.log('No files to add, returning');
-            return;
-        }
+        if (!files || files.length === 0) return;
 
-        const newMediaItems: MediaItem[] = Array.from(files).map((file, index) => {
-            console.log(`Creating media item for file ${index}:`, file);
-            console.log('file instanceof File:', file instanceof File);
-            console.log('file.name:', file.name);
-            console.log('file.size:', file.size);
-            console.log('file.type:', file.type);
-            
-            return {
-                id: `media-${Date.now()}-${index}`,
-                file: file,
-                preview: URL.createObjectURL(file),
-                type: file.type.startsWith("video") ? "video" : "image",
-                isPrimary: singleMedia.length === 0 && index === 0,
-                order: singleMedia.length + index,
-            };
-        });
+        const shouldSetFirstAsPrimary = !hasAnyPrimaryMedia() && singleMedia.length === 0;
 
-        console.log('newMediaItems:', newMediaItems);
-        console.log('Current singleMedia:', singleMedia);
-        
-        const updatedMedia = [...singleMedia, ...newMediaItems];
-        console.log('Updated media array:', updatedMedia);
-        
-        onChangeSingle(updatedMedia);
+        const newMediaItems: MediaItem[] = Array.from(files).map((file, index) => ({
+            id: `media-${Date.now()}-${index}`,
+            file: file,
+            preview: URL.createObjectURL(file),
+            type: file.type.startsWith("video") ? "video" : "image",
+            isPrimary: shouldSetFirstAsPrimary && index === 0,
+            order: singleMedia.length + index,
+        }));
+
+        onChangeSingle([...singleMedia, ...newMediaItems]);
     };
 
     const handleSingleMediaRemove = (mediaId: string) => {
@@ -141,16 +91,57 @@ export const MediaSection: React.FC<MediaSectionProps> = ({
         if (mediaToRemove) {
             URL.revokeObjectURL(mediaToRemove.preview);
         }
-        const filtered = singleMedia.filter((m) => m.id !== mediaId);
+        let filtered = singleMedia.filter((m) => m.id !== mediaId);
+
+        // If the removed media was primary, find a new primary
+        if (mediaToRemove?.isPrimary) {
+            // First try to set the first remaining single media as primary
+            if (filtered.length > 0) {
+                const sortedByOrder = [...filtered].sort((a, b) => a.order - b.order);
+                const firstItemId = sortedByOrder[0].id;
+                filtered = filtered.map((m) => ({
+                    ...m,
+                    isPrimary: m.id === firstItemId,
+                }));
+            } else {
+                // If no single media left, set the first variant media as primary
+                if (variantMedia.length > 0) {
+                    const firstVariantWithMedia = variantMedia.find((vm) => vm.media.length > 0);
+                    if (firstVariantWithMedia) {
+                        const sortedMedia = [...firstVariantWithMedia.media].sort((a, b) => a.order - b.order);
+                        const firstMediaId = sortedMedia[0].id;
+                        const updatedVariantMedia = variantMedia.map((vm) => ({
+                            ...vm,
+                            media: vm.media.map((m) => ({
+                                ...m,
+                                isPrimary: vm.key === firstVariantWithMedia.key && m.id === firstMediaId,
+                            })),
+                        }));
+                        onChangeVariant(updatedVariantMedia);
+                    }
+                }
+            }
+        }
+
         onChangeSingle(filtered);
     };
 
     const handleSingleMediaSetPrimary = (mediaId: string) => {
+        // Set the selected media as primary and clear all others in single media
         const updated = singleMedia.map((m) => ({
             ...m,
             isPrimary: m.id === mediaId,
         }));
         onChangeSingle(updated);
+
+        // Also clear primary from all variant media to ensure only one primary across the product
+        if (variantMedia.length > 0) {
+            const clearedVariantMedia = variantMedia.map((vm) => ({
+                ...vm,
+                media: vm.media.map((m) => ({ ...m, isPrimary: false })),
+            }));
+            onChangeVariant(clearedVariantMedia);
+        }
     };
 
     const handleSingleMediaReorder = (fromIndex: number, toIndex: number) => {
@@ -165,19 +156,20 @@ export const MediaSection: React.FC<MediaSectionProps> = ({
     const handleVariantMediaAdd = (key: string, files: FileList | null) => {
         if (!files || files.length === 0) return;
 
-        const combinations = generateMediaCombinations();
         const combo = combinations.find((c) => c.key === key);
         if (!combo) return;
 
         const existing = variantMedia.find((vm) => vm.key === key);
         const currentMedia = existing?.media || [];
 
+        const shouldSetFirstAsPrimary = !hasAnyPrimaryMedia() && currentMedia.length === 0;
+
         const newMediaItems: MediaItem[] = Array.from(files).map((file, index) => ({
             id: `media-${Date.now()}-${index}`,
             file: file,
             preview: URL.createObjectURL(file),
             type: file.type.startsWith("video") ? "video" : "image",
-            isPrimary: currentMedia.length === 0 && index === 0,
+            isPrimary: shouldSetFirstAsPrimary && index === 0,
             order: currentMedia.length + index,
         }));
 
@@ -200,18 +192,58 @@ export const MediaSection: React.FC<MediaSectionProps> = ({
             URL.revokeObjectURL(mediaToRemove.preview);
         }
 
-        const filtered = existing.media.filter((m) => m.id !== mediaId);
+        let filtered = existing.media.filter((m) => m.id !== mediaId);
+        let newVariantMediaList = variantMedia.filter((vm) => vm.key !== key);
 
         if (filtered.length === 0) {
-            onChangeVariant(variantMedia.filter((vm) => vm.key !== key));
+            // If this variant has no more media, remove it from the list
+            // But first check if we need to reassign primary
+            if (mediaToRemove?.isPrimary) {
+                // Try to find another media to set as primary
+                // First check single media
+                if (singleMedia.length > 0) {
+                    const sortedByOrder = [...singleMedia].sort((a, b) => a.order - b.order);
+                    const firstItemId = sortedByOrder[0].id;
+                    const updatedSingleMedia = singleMedia.map((m) => ({
+                        ...m,
+                        isPrimary: m.id === firstItemId,
+                    }));
+                    onChangeSingle(updatedSingleMedia);
+                } else {
+                    // Check other variants for media
+                    const otherVariantWithMedia = newVariantMediaList.find((vm) => vm.media.length > 0);
+                    if (otherVariantWithMedia) {
+                        const sortedMedia = [...otherVariantWithMedia.media].sort((a, b) => a.order - b.order);
+                        const firstMediaId = sortedMedia[0].id;
+                        newVariantMediaList = newVariantMediaList.map((vm) => ({
+                            ...vm,
+                            media: vm.media.map((m) => ({
+                                ...m,
+                                isPrimary: vm.key === otherVariantWithMedia.key && m.id === firstMediaId,
+                            })),
+                        }));
+                    }
+                }
+            }
+            onChangeVariant(newVariantMediaList);
         } else {
+            // If the removed media was primary, find a new primary
+            if (mediaToRemove?.isPrimary) {
+                // Set the first remaining item in this variant as primary
+                const sortedByOrder = [...filtered].sort((a, b) => a.order - b.order);
+                const firstItemId = sortedByOrder[0].id;
+                filtered = filtered.map((m) => ({
+                    ...m,
+                    isPrimary: m.id === firstItemId,
+                }));
+            }
+
             const updated: VariantMedia = {
                 ...existing,
                 media: filtered,
             };
 
-            const newVariantMedia = variantMedia.filter((vm) => vm.key !== key);
-            onChangeVariant([...newVariantMedia, updated]);
+            onChangeVariant([...newVariantMediaList, updated]);
         }
     };
 
@@ -219,16 +251,21 @@ export const MediaSection: React.FC<MediaSectionProps> = ({
         const existing = variantMedia.find((vm) => vm.key === key);
         if (!existing) return;
 
-        const updated: VariantMedia = {
-            ...existing,
-            media: existing.media.map((m) => ({
+        // Clear primary from all variant media and set the selected one as primary
+        const updatedVariantMedia = variantMedia.map((vm) => ({
+            ...vm,
+            media: vm.media.map((m) => ({
                 ...m,
-                isPrimary: m.id === mediaId,
+                isPrimary: vm.key === key && m.id === mediaId,
             })),
-        };
+        }));
+        onChangeVariant(updatedVariantMedia);
 
-        const newVariantMedia = variantMedia.filter((vm) => vm.key !== key);
-        onChangeVariant([...newVariantMedia, updated]);
+        // Also clear primary from single media to ensure only one primary across the product
+        if (singleMedia.length > 0) {
+            const clearedSingleMedia = singleMedia.map((m) => ({ ...m, isPrimary: false }));
+            onChangeSingle(clearedSingleMedia);
+        }
     };
 
     const handleVariantMediaReorder = (key: string, fromIndex: number, toIndex: number) => {
@@ -250,54 +287,10 @@ export const MediaSection: React.FC<MediaSectionProps> = ({
         onChangeVariant([...newVariantMedia, updated]);
     };
 
-    // Find existing media data that best matches the given attribute values
-    // This preserves data when attributes controlling media change
-    const findMatchingMedia = (attributeValues: { [attrId: string]: string }): VariantMedia | undefined => {
-        // First try exact key match
-        const key = Object.values(attributeValues).join("-");
-        const exactMatch = variantMedia.find((vm) => vm.key === key);
-        if (exactMatch) return exactMatch;
-
-        // Try to find a match where attribute values overlap
-        let bestMatch: VariantMedia | undefined;
-        let bestMatchScore = 0;
-
-        for (const vm of variantMedia) {
-            if (!vm.attributeValues) continue;
-            
-            let matchScore = 0;
-            let allMatch = true;
-            
-            for (const [attrId, valueId] of Object.entries(attributeValues)) {
-                if (vm.attributeValues[attrId] === valueId) {
-                    matchScore++;
-                } else if (vm.attributeValues[attrId] !== undefined) {
-                    allMatch = false;
-                    break;
-                }
-            }
-            
-            if (allMatch && matchScore > bestMatchScore) {
-                bestMatchScore = matchScore;
-                bestMatch = vm;
-            }
-        }
-
-        return bestMatch;
-    };
-
-    const getVariantMedia = (key: string, attributeValues?: { [attrId: string]: string }): MediaItem[] => {
-        // First try exact key match
-        const exactMatch = variantMedia.find((vm) => vm.key === key);
-        if (exactMatch) return exactMatch.media || [];
-        
-        // Fall back to attribute-based matching
-        if (attributeValues) {
-            const match = findMatchingMedia(attributeValues);
-            return match?.media || [];
-        }
-        
-        return [];
+    // Get variant media using shared utility
+    const getMedia = (key: string, attributeValues?: { [attrId: string]: string }): MediaItem[] => {
+        const match = getVariantData(key, variantMedia, attributeValues);
+        return match?.media || [];
     };
 
     // Single mode (not variant-based)
@@ -306,12 +299,12 @@ export const MediaSection: React.FC<MediaSectionProps> = ({
             <Card className={errors['singleMedia'] ? "border-danger" : ""}>
                 <div className="flex flex-col gap-2" id="singleMedia">
                     <div className="flex items-center justify-between">
-                        <h2 className="text-xl font-semibold text-gray-900">
+                        <h2 className="text-xl font-semibold ">
                             Media Management
                         </h2>
                     </div>
                     {hasAttributeControllingMedia && mediaAttributes.length === 0 && (
-                        <p className="text-sm text-gray-600">
+                        <p className="text-sm ">
                             No attributes are controlling media. These images apply to all variants.
                         </p>
                     )}
@@ -335,12 +328,12 @@ export const MediaSection: React.FC<MediaSectionProps> = ({
                     variant="transparent"
                 >
                     {previewImage && (
-                        <div className="w-188 h-188 relative rounded-rounded1">
+                        <div className="w-188 h-188 relative rounded-r1">
                             <Image
                                 src={previewImage}
                                 alt="Preview"
                                 fill
-                                className="object-cover rounded-rounded1"
+                                className="object-cover rounded-r1"
                             />
                         </div>
                     )}
@@ -350,18 +343,16 @@ export const MediaSection: React.FC<MediaSectionProps> = ({
     }
 
     // Variant-based mode
-    const combinations = generateMediaCombinations();
-
     if (combinations.length === 0) {
         return (
             <Card>
                 <div className="flex items-center justify-between">
-                    <h2 className="text-xl font-semibold text-gray-900">
+                    <h2 className="text-xl font-semibold ">
                         Media Management
                     </h2>
                 </div>
-                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                    <p className="text-gray-600">
+                <div className=" border border-gray-200 rounded-r1 p-4">
+                    <p className="">
                         Please select attribute values to configure media.
                     </p>
                 </div>
@@ -372,25 +363,25 @@ export const MediaSection: React.FC<MediaSectionProps> = ({
     return (
         <Card>
             <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold text-gray-900">
+                <h2 className="text-xl font-semibold ">
                     Media Management - Variant Based
                 </h2>
             </div>
 
-            <p className="text-sm text-gray-600">
+            <p className="text-sm ">
                 Upload media for each variant based on{" "}
                 <strong>{mediaAttributes.map((a) => a.name).join(", ")}</strong>
             </p>
 
             {combinations.map((combo) => {
-                const media = getVariantMedia(combo.key, combo.attributeValues);
+                const media = getMedia(combo.key, combo.attributeValues);
 
                 return (
-                    <div
+                    <Card
                         key={combo.key}
-                        className="bg-gray-50 p-4 rounded-rounded1 border border-gray-200 flex flex-col gap-5"
+                        variant="nested"
                     >
-                        <h4 className="font-medium text-gray-900">{combo.label}</h4>
+                        <h4 className="font-medium ">{combo.label}</h4>
 
                         <MediaUploadArea
                             media={media}
@@ -404,14 +395,14 @@ export const MediaSection: React.FC<MediaSectionProps> = ({
                             onReorder={(from, to) => handleVariantMediaReorder(combo.key, from, to)}
                             onPreview={setPreviewImage}
                         />
-                    </div>
+                    </Card>
                 );
             })}
 
             <Modal
                 isOpen={!!previewImage}
                 onClose={() => setPreviewImage(null)}
-                className="max-w-4xl shadow-none"
+                className="max-w-4xl"
                 variant="transparent"
             >
                 {previewImage && (
@@ -420,7 +411,7 @@ export const MediaSection: React.FC<MediaSectionProps> = ({
                             src={previewImage}
                             alt="Preview"
                             fill
-                            className="object-contain rounded-rounded1"
+                            className="object-contain rounded-r1"
                         />
                     </div>
                 )}
@@ -460,21 +451,21 @@ const SortableMediaItem = ({ item, onRemove, onSetPrimary, onPreview }: Sortable
             style={style}
             {...attributes}
             {...listeners}
-            className="w-40 h-40 relative group border-2 rounded-lg overflow-hidden border-gray-200 touch-none"
+            className="w-40 h-40 relative group border-2 rounded-r1 overflow-hidden border-primary/20 touch-none"
         >
             {item.type === "image" ? (
                 <Image
                     src={item.preview}
                     alt=""
                     fill
-                    className="object-cover"
+                    className="object-cover rounded-r1"
                 />
             ) : (
                 <video src={item.preview} className="object-cover w-full h-full" />
             )}
 
             {item.isPrimary && (
-                <div className="absolute top-2 left-2 bg-fourth text-white text-xs px-2 py-1 rounded z-10">
+                <div className="absolute top-2 left-2 bg-primary text-white text-xs px-2 py-1 rounded z-10">
                     Primary
                 </div>
             )}
@@ -487,7 +478,7 @@ const SortableMediaItem = ({ item, onRemove, onSetPrimary, onPreview }: Sortable
                             e.stopPropagation();
                             onSetPrimary(item.id);
                         }}
-                        className="bg-white text-gray-900 px-3 py-1 rounded text-sm hover:bg-gray-100 w-24"
+                        className="bg-white  px-3 py-1 rounded text-sm hover: w-24"
                     >
                         Set Primary
                     </button>
@@ -499,7 +490,7 @@ const SortableMediaItem = ({ item, onRemove, onSetPrimary, onPreview }: Sortable
                             e.stopPropagation();
                             onPreview(item.preview);
                         }}
-                        className="bg-white text-gray-900 px-3 py-1 rounded text-sm hover:bg-gray-100 w-24"
+                        className="bg-white  px-3 py-1 rounded text-sm hover: w-24"
                     >
                         Preview
                     </button>
@@ -586,9 +577,9 @@ const MediaUploadArea: React.FC<MediaUploadAreaProps> = ({
                 }}
                 onDragLeave={() => setDragOver(false)}
                 onDrop={handleDrop}
-                className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${dragOver
-                    ? "border-primary bg-primary/5"
-                    : "border-gray-300 hover:border-primary"
+                className={`border-2 border-dashed rounded-r1 p-8 text-center transition-colors ${dragOver
+                    ? "border-primary bg-primary/10"
+                    : "border-gray-300 hover:border-secondary hover:bg-secondary/10"
                     }`}
             >
                 <input
@@ -600,28 +591,16 @@ const MediaUploadArea: React.FC<MediaUploadAreaProps> = ({
                     className="hidden"
                 />
 
-                <svg
-                    className="mx-auto h-12 w-12 text-gray-400"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                >
-                    <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-                    />
-                </svg>
+                <Upload className="mx-auto mb-3 bg-primary/10 p-2 w-10 h-10 rounded-r2 text-primary" />
 
                 <div>
                     <Button
                         onClick={() => fileInputRef.current?.click()}
-                        className="bg-fourth hover:bg-fourth/90"
+                        color="var(--color-primary)"
                     >
                         Choose Files
                     </Button>
-                    <p className="text-sm text-gray-500 mt-2">
+                    <p className="text-sm text-primary mt-2">
                         or drag and drop images/videos here
                     </p>
                 </div>

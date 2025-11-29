@@ -15,13 +15,13 @@ interface ButtonProps {
 export const Button: React.FC<ButtonProps> = ({ children, onClick, variant = 'solid', color, disabled = false, className = '', type = 'button', isSquare = false }) => {
 
   const defaultVariantClasses = {
-    solid: 'bg-fifth active:bg-fifth/75 hover:bg-fifth/80 text-white',
-    outline: 'border-2 border-sixth text-sixth hover:bg-sixth hover:text-white active:bg-sixth active:text-white',
+    solid: 'bg-secondary active:bg-secondary/75 hover:bg-secondary/80 text-white',
+    outline: 'bg-white border-2 border-primary2 text-primary2 hover:bg-primary2 hover:text-white active:bg-primary2 active:text-white',
   };
 
   const customVariantClasses = {
     solid: 'bg-[var(--button-color)] text-white hover:bg-[var(--button-color)] hover:opacity-80 active:bg-[var(--button-color)] active:opacity-70',
-    outline: 'border-2 border-[var(--button-color)] text-[var(--button-color)] hover:bg-[var(--button-color)] hover:text-white',
+    outline: 'bg-white border-2 border-[var(--button-color)] text-[var(--button-color)] hover:bg-[var(--button-color)] hover:text-white',
   };
 
   const variantClasses = color ? customVariantClasses : defaultVariantClasses;
@@ -35,7 +35,7 @@ export const Button: React.FC<ButtonProps> = ({ children, onClick, variant = 'so
       type={type}
       onClick={onClick}
       disabled={disabled}
-      className={`text-nowrap ${sizeClasses} rounded-rounded1 font-medium text-[16px] transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${variantClasses[variant]} ${className}`}
+      className={`text-nowrap ${sizeClasses} rounded-r1 font-medium text-[16px] transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${variantClasses[variant]} ${className}`}
       style={buttonStyle}
     >
       {children}

@@ -4,9 +4,6 @@
 
 import { z } from "zod";
 
-// Pricing Type
-export type PricingType = "single" | "variant";
-
 // Attribute Types
 export interface AttributeValue {
   id: string;
@@ -94,7 +91,6 @@ export const productFormSchema = z.object({
   shortDescriptionAr: z.string().optional(),
   longDescriptionEn: z.string().optional(),
   longDescriptionAr: z.string().optional(),
-  pricingType: z.enum(["single", "variant"]),
   isActive: z.boolean().default(true),
 
   // Attributes

@@ -26,10 +26,10 @@ export const Checkbox: React.FC<CheckboxProps> = ({
 
   const inputClasses = `
     peer appearance-none h-[21px] w-[21px] outline-none inline-block align-top relative m-0 cursor-pointer
-    border border-[#BBC1E1] bg-white rounded-[7px] transition-all duration-300
-    checked:bg-fifth checked:border-fifth
-    hover:enabled:border-fifth
-    focus:ring-2 focus:ring-fifth/30
+    border border-[#BBC1E1] bg-white rounded-r2 transition-all duration-300
+    checked:bg-secondary checked:border-secondary
+    hover:enabled:border-secondary
+    focus:ring-2 focus:ring-secondary/30
     disabled:bg-[#F6F8FF] disabled:cursor-not-allowed disabled:opacity-90
     disabled:checked:bg-[#E1E6F9] disabled:checked:border-[#BBC1E1]
     

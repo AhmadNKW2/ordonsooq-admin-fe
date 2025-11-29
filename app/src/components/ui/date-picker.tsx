@@ -166,7 +166,7 @@ export const DatePicker = React.forwardRef<HTMLDivElement, DatePickerProps>(
             className={`${getFieldClasses(error, hasValue, false, true, className)} cursor-pointer ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
             {...props}
           >
-            <span className={hasValue ? 'text-third' : 'text-transparent'}>
+            <span className={hasValue ? '' : 'text-transparent'}>
               {formatDate(selectedDate) || 'placeholder'}
             </span>
           </div>
@@ -176,7 +176,7 @@ export const DatePicker = React.forwardRef<HTMLDivElement, DatePickerProps>(
         <div
           role="dialog"
           aria-label="Calendar"
-          className={`absolute z-20 w-80 mt-1 bg-secondary border-2 border-primary rounded-rounded1 shadow-lg transition-all duration-200 origin-top ${
+          className={`absolute z-20 w-80 mt-1 bg-white border-2 border-primary/20 rounded-r1 shadow-s1 transition-all duration-200 origin-top ${
             isOpen
               ? 'opacity-100 scale-y-100 visible'
               : 'opacity-0 scale-y-95 invisible'
@@ -188,28 +188,28 @@ export const DatePicker = React.forwardRef<HTMLDivElement, DatePickerProps>(
               <button
                 type="button"
                 onClick={goToPreviousMonth}
-                className="p-2 hover:bg-primary rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-fifth"
+                className="p-2 hover:bg-primary/20 rounded-r1 transition-colors focus:outline-none focus:ring-2 focus:ring-secondary"
                 aria-label="Previous month"
               >
-                <ChevronLeft className="h-5 w-5 text-third" />
+                <ChevronLeft className="h-5 w-5 " />
               </button>
-              <div className="text-third font-semibold">
+              <div className=" font-semibold">
                 {MONTHS[viewDate.getMonth()]} {viewDate.getFullYear()}
               </div>
               <button
                 type="button"
                 onClick={goToNextMonth}
-                className="p-2 hover:bg-primary rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-fifth"
+                className="p-2 hover:bg-primary/20 rounded-r1 transition-colors focus:outline-none focus:ring-2 focus:ring-secondary"
                 aria-label="Next month"
               >
-                <ChevronRight className="h-5 w-5 text-third" />
+                <ChevronRight className="h-5 w-5 " />
               </button>
             </div>
 
             {/* Days of Week */}
             <div className="grid grid-cols-7 gap-1 mb-2">
               {DAYS.map((day) => (
-                <div key={day} className="text-center text-sm font-medium text-gray-500 py-2">
+                <div key={day} className="text-center text-sm font-medium  py-2">
                   {day}
                 </div>
               ))}
@@ -232,14 +232,14 @@ export const DatePicker = React.forwardRef<HTMLDivElement, DatePickerProps>(
                     type="button"
                     onClick={() => !disabled && handleDateSelect(date)}
                     disabled={disabled}
-                    className={`aspect-square rounded-lg text-sm font-medium transition-all focus:outline-none focus:ring-2 focus:ring-fifth ${
+                    className={`aspect-square rounded-r1 text-sm font-medium transition-all focus:outline-none focus:ring-2 focus:ring-secondary ${
                       disabled
-                        ? 'text-gray-300 cursor-not-allowed'
+                        ? ' cursor-not-allowed'
                         : selected
-                        ? 'bg-fifth text-white'
+                        ? 'bg-secondary text-white'
                         : today
-                        ? 'bg-primary border-2 border-fifth text-fifth'
-                        : 'text-third hover:bg-primary'
+                        ? 'bg-primary/20 border-2 border-secondary text-secondary'
+                        : ' hover:bg-primary/20'
                     }`}
                     aria-label={formatDate(date)}
                     aria-selected={selected}

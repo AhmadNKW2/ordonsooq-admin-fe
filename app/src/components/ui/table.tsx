@@ -1,18 +1,44 @@
 import React from 'react';
 import { ArrowUpDown, ArrowUp, ArrowDown, Inbox } from 'lucide-react';
 
+// Context to communicate empty state from TableBody to Table
+const TableEmptyContext = React.createContext<{
+  isEmpty: boolean;
+  setIsEmpty: (value: boolean) => void;
+}>({ isEmpty: false, setIsEmpty: () => {} });
+
 interface TableProps {
   children: React.ReactNode;
   className?: string;
+  emptyMessage?: string;
 }
 
-export const Table: React.FC<TableProps> = ({ children, className = '' }) => {
+export const Table: React.FC<TableProps> = ({ children, className = '', emptyMessage = "No data available" }) => {
+  const [isEmpty, setIsEmpty] = React.useState(false);
+
   return (
-    <div className="w-full overflow-x-auto overflow-y-visible rounded-rounded1 border border-primary shadow-shadow1">
-      <table className={`w-full border-collapse table-layout-fixed bg-white ${className}`} style={{ tableLayout: 'fixed' }}>
-        {children}
-      </table>
-    </div>
+    <TableEmptyContext.Provider value={{ isEmpty, setIsEmpty }}>
+      {isEmpty ? (
+        <div className="w-full rounded-r1 border border-primary/20 shadow-s1 bg-white">
+          <div className="flex flex-col items-center justify-center py-20 px-6">
+            <div className="bg-primary/10 w-24 h-24 rounded-full flex items-center justify-center mb-6 shadow-s1 ring-4 ring-white">
+              <Inbox className="w-10 h-10 text-primary" strokeWidth={1.5} />
+            </div>
+            <h3 className="text-xl font-bold  mb-2 tracking-tight">{emptyMessage}</h3>
+            <p className=" text-base max-w-sm mx-auto leading-relaxed text-center">
+              It looks like there are no items here yet. <br />
+              New data will appear here once available.
+            </p>
+          </div>
+        </div>
+      ) : (
+        <div className="w-full overflow-x-auto overflow-y-visible rounded-r1 border border-primary/20 shadow-s1">
+          <table className={`w-full border-collapse table-layout-fixed bg-white ${className}`} style={{ tableLayout: 'fixed' }}>
+            {children}
+          </table>
+        </div>
+      )}
+    </TableEmptyContext.Provider>
   );
 };
 
@@ -23,7 +49,7 @@ interface TableHeaderProps {
 
 export const TableHeader: React.FC<TableHeaderProps> = ({ children, className = '' }) => {
   return (
-    <thead className={`rounded-rounded1 bg-fourth p-3 text-white ${className}`}>
+    <thead className={`rounded-r1 bg-primary p-3 text-white ${className}`}>
       {children}
     </thead>
   );
@@ -32,31 +58,19 @@ export const TableHeader: React.FC<TableHeaderProps> = ({ children, className = 
 interface TableBodyProps {
   children: React.ReactNode;
   className?: string;
-  emptyMessage?: string;
 }
 
-export const TableBody: React.FC<TableBodyProps> = ({ children, className = '', emptyMessage = "No data available" }) => {
-  const isEmpty = React.Children.count(children) === 0;
+export const TableBody: React.FC<TableBodyProps> = ({ children, className = '' }) => {
+  const { setIsEmpty } = React.useContext(TableEmptyContext);
+  const childCount = React.Children.count(children);
+
+  React.useEffect(() => {
+    setIsEmpty(childCount === 0);
+  }, [childCount, setIsEmpty]);
 
   return (
     <tbody className={`${className}`}>
-      {isEmpty ? (
-        <tr>
-          <td colSpan={100} className="h-96 text-center">
-            <div className="flex flex-col items-center justify-center text-gray-500">
-              <div className="bg-gray-50 p-4 rounded-full mb-3">
-                <Inbox className="w-10 h-10 text-gray-400" />
-              </div>
-              <p className="text-lg font-medium text-gray-900">{emptyMessage}</p>
-              <p className="text-sm text-gray-500 mt-1">
-                There are no items to display at the moment.
-              </p>
-            </div>
-          </td>
-        </tr>
-      ) : (
-        children
-      )}
+      {children}
     </tbody>
   );
 };
@@ -73,7 +87,7 @@ export const TableRow = React.forwardRef<HTMLTableRowElement, TableRowProps>(
     return (
       <tr
         ref={ref}
-        className={`transition-all duration-200 border-b border-fifth last:border-b-0 ${onClick ? 'cursor-pointer' : ''} ${className}`}
+        className={`transition-all duration-200 border-b border-secondary last:border-b-0 ${onClick ? 'cursor-pointer' : ''} ${className}`}
         onClick={onClick}
         style={{ height: '65px', ...style }}
       >
@@ -115,7 +129,7 @@ export const TableHead: React.FC<TableHeadProps> = ({
 
   return (
     <th
-      className={`px-6 py-2 text-left text-sm font-semibold tracking-wider ${sortable ? 'cursor-pointer select-none hover:bg-fourth/90' : ''} ${className}`}
+      className={`px-6 py-2 text-left text-sm font-semibold tracking-wider ${sortable ? 'cursor-pointer select-none hover:bg-primary/90' : ''} ${className}`}
       style={{ width }}
       onClick={handleClick}
     >
@@ -141,7 +155,7 @@ interface TableCellProps {
 
 export const TableCell: React.FC<TableCellProps> = ({ children, className = '', width }) => {
   return (
-    <td className={`px-6 py-2 text-sm text-gray-900 text-start overflow-visible ${className}`} style={{ width }}>
+    <td className={`px-6 py-2 text-sm  text-start overflow-visible ${className}`} style={{ width }}>
       {children}
     </td>
   );

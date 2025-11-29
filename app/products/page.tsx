@@ -7,9 +7,11 @@
 
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { useProducts, useDeleteProduct } from "../src/services/products/hooks/use-products";
 import { useCategories } from "../src/services/categories/hooks/use-categories";
-import { Plus, RefreshCw, Package, AlertCircle, Star, DollarSign, Search, X } from "lucide-react";
+import { useVendors } from "../src/services/vendors/hooks/use-vendors";
+import { Plus, RefreshCw, Package, AlertCircle, Star, X } from "lucide-react";
 import { Pagination } from "../src/components/ui/pagination";
 import { Card } from "../src/components/ui/card";
 import { Button } from "../src/components/ui/button";
@@ -40,6 +42,7 @@ export default function ProductsPage() {
   const { data, isLoading, isError, error, refetch } =
     useProducts(queryParams);
   const { data: categoriesData } = useCategories();
+  const { data: vendorsData } = useVendors();
   const deleteProduct = useDeleteProduct();
 
   // Create a category lookup map for O(1) lookups
@@ -47,6 +50,12 @@ export default function ProductsPage() {
     if (!categoriesData) return new Map();
     return new Map(categoriesData.map(cat => [cat.id, cat.name]));
   }, [categoriesData]);
+
+  // Create a vendor lookup map for O(1) lookups
+  const vendorMap = useMemo(() => {
+    if (!vendorsData) return new Map();
+    return new Map(vendorsData.map(vendor => [vendor.id, vendor.name]));
+  }, [vendorsData]);
 
   const handleFilterChange = (filters: ProductFilters) => {
     setQueryParams((prev) => ({
@@ -122,11 +131,6 @@ export default function ProductsPage() {
     return "Inactive";
   };
 
-  const formatPrice = (price: number | string) => {
-    const numPrice = typeof price === 'number' ? price : parseFloat(price);
-    return numPrice.toFixed(2);
-  };
-
   const formatRating = (rating?: number | string | null) => {
     if (!rating) return "0.0";
     const numRating = typeof rating === 'number' ? rating : parseFloat(rating);
@@ -146,10 +150,10 @@ export default function ProductsPage() {
                   <AlertCircle className="h-8 w-8 text-danger" />
                 </div>
               </div>
-              <h3 className="text-xl font-bold text-third">
+              <h3 className="text-xl font-bold ">
                 Error Loading Products
               </h3>
-              <p className="text-gray-600 max-w-md mx-auto">{error.message}</p>
+              <p className=" max-w-md mx-auto">{error.message}</p>
               <Button onClick={() => refetch()}>
                 <RefreshCw className="mr-2 h-4 w-4" />
                 Try Again
@@ -166,12 +170,12 @@ export default function ProductsPage() {
       {/* Header */}
       <div className="w-full justify-between items-center flex gap-5">
         <div className="flex items-center gap-5">
-          <div className="rounded-rounded1 bg-fourth to-fourth p-3">
+          <div className="rounded-r1 bg-primary to-primary p-3">
             <Package className="h-6 w-6 text-white" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold text-third tracking-tight">Products</h1>
-            <p className="text-gray-600 mt-1">
+            <h1 className="text-3xl font-bold  tracking-tight">Products</h1>
+            <p className=" mt-1">
               Manage your product inventory
             </p>
           </div>
@@ -181,51 +185,54 @@ export default function ProductsPage() {
         </Button>
       </div>
 
-      {/* Filters */}
-      <Card>
-        <h2 className="text-lg font-semibold text-third">Filters</h2>
-        <div className="flex items-center gap-5">
-          <div className="relative flex-1 max-w-sm">
-            <Input
-              value={searchTerm}
-              onChange={(e) => handleSearchChange(e.target.value)}
-              label="Search"
-              variant="search"
-            />
-          </div>
+      {/* Filters - Only show when there are products or when filters are active */}
+      {(products.length > 0 || hasActiveFilters) && (
+        <Card>
+          <h2 className="text-lg font-semibold ">Filters</h2>
+          <div className="flex items-center gap-5">
+            <div className="relative flex-1 max-w-sm">
+              <Input
+                value={searchTerm}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                label="Search"
+                variant="search"
+              />
+            </div>
 
-          {hasActiveFilters && (
-            <Button
-              variant="outline"
-              onClick={handleClearFilters}
-              className="h-9"
-            >
-              <X className="mr-2 h-4 w-4" />
-              Clear filters
-            </Button>
-          )}
-        </div>
-      </Card>
+            {hasActiveFilters && (
+              <Button
+                variant="outline"
+                onClick={handleClearFilters}
+                className="h-9"
+              >
+                <X className="mr-2 h-4 w-4" />
+                Clear filters
+              </Button>
+            )}
+          </div>
+        </Card>
+      )}
 
       {/* Products Table */}
       {isLoading ? (
         <div className="flex flex-col items-center justify-center py-16">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-secondary"></div>
-          <div className="text-gray-600 font-medium">Loading products...</div>
+          <div className="animate-spin rounded-full h-12 w-12"></div>
+          <div className=" font-medium">Loading products...</div>
         </div>
       ) : products.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16">
-          <div className="text-gray-600 font-medium text-lg">No products found</div>
-          <div className="text-gray-400 text-sm">Try adjusting your filters or add new products</div>
+          <div className=" font-medium text-lg">No products found</div>
+          <div className=" text-sm">Try adjusting your filters or add new products</div>
         </div>
       ) : (
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead>Product ID</TableHead>
+              <TableHead>Image</TableHead>
               <TableHead>Product Name</TableHead>
-              <TableHead>SKU</TableHead>
               <TableHead>Category</TableHead>
-              <TableHead>Price</TableHead>
+              <TableHead>Vendor</TableHead>
               <TableHead>Stock</TableHead>
               <TableHead>Rating</TableHead>
               <TableHead>Status</TableHead>
@@ -235,37 +242,51 @@ export default function ProductsPage() {
           <TableBody>
             {products.map((product) => (
               <TableRow key={product.id}>
-                <TableCell className="font-semibold text-third max-w-xs">
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1 min-w-0">
-                      <div className="truncate">{product.name_en}</div>
-                    </div>
-                  </div>
-                </TableCell>
-                <TableCell className="font-mono text-xs text-gray-600">
-                  {product.sku || <span className="text-gray-400">—</span>}
+                <TableCell className="font-mono text-sm">
+                  {product.id}
                 </TableCell>
                 <TableCell>
-                  <div className="text-gray-700">
-                    {categoryMap.get(product.category_id) || <span className="text-gray-400">Category {product.category_id}</span>}
+                  <div className="w-20 h-20 relative rounded-r1 overflow-hidden bg-primary/20 border border-primary/30">
+                    {product.primary_image?.url ? (
+                      <Image
+                        src={product.primary_image.url}
+                        alt={product.primary_image.alt_text || product.name_en}
+                        fill
+                        className="object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <Package className="h-6 w-6 text-gray-400" />
+                      </div>
+                    )}
                   </div>
                 </TableCell>
-                <TableCell className="text-right">
-                  <div className="flex items-center gap-1 font-semibold text-third">
-                    <DollarSign className="h-4 w-4 text-gray-500" />
-                    <span className="text-gray-400">—</span>
+                <TableCell className="font-semibold max-w-xs">
+                  <div className="flex flex-col">
+                    <span className="truncate">{product.name_en}</span>
+                    <span className="text-sm text-gray-500 truncate">{product.name_ar}</span>
                   </div>
                 </TableCell>
                 <TableCell>
-                  <span className="text-gray-400">—</span>
+                  <div>
+                    {product.category?.name || categoryMap.get(product.category_id) || <span className="text-gray-400">—</span>}
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <div>
+                    {product.vendor?.name || (product.vendor_id && vendorMap.get(product.vendor_id)) || <span className="text-gray-400">—</span>}
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <span className="font-medium">{product.stock?.total_quantity ?? <span className="text-gray-400">—</span>}</span>
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center justify-start gap-1">
-                    <Star className="h-4 w-4 text-fifth fill-fifth" />
-                    <span className="font-semibold text-third">{formatRating(product.average_rating)}</span>
-                    {product.total_ratings && (
-                      <span className="text-xs text-gray-400">({product.total_ratings})</span>
-                    )}
+                    <Star className="h-4 w-4 text-yellow-400 fill-yellow-400" />
+                    <span className="font-semibold">{formatRating(product.average_rating)}</span>
+                    {product.total_ratings ? (
+                      <span className="text-xs text-gray-500">({product.total_ratings})</span>
+                    ) : null}
                   </div>
                 </TableCell>
                 <TableCell>
@@ -307,8 +328,8 @@ export default function ProductsPage() {
         </Table>
       )}
 
-      {/* Pagination */}
-      {data?.data.pagination && (
+      {/* Pagination - Only show when there are products */}
+      {products.length > 0 && data?.data.pagination && (
         <Pagination
           pagination={{
             currentPage: data.data.pagination.page,

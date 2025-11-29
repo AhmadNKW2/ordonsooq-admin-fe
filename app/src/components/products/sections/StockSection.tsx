@@ -17,24 +17,46 @@ import {
 interface StockSectionProps {
     attributes: Attribute[];
     variants: VariantCombination[];
-    pricingType: "single" | "variant";
     onChange: (variants: VariantCombination[]) => void;
     errors: Record<string, string>;
 }
 
+// Stat Card Component
+interface StatCardProps {
+    label: string;
+    value: number;
+    valueClassName?: string;
+}
+
+const StatCard: React.FC<StatCardProps> = ({ label, value, valueClassName = "" }) => (
+    <Card variant="nested">
+        <p className="text-sm ">{label}</p>
+        <p className={`text-2xl font-bold ${valueClassName}`}>{value}</p>
+    </Card>
+);
+
+// Stock Status Helper
+const getStockStatus = (stock: number): { label: string; className: string } => {
+    if (stock === 0) return { label: "Out of Stock", className: "text-danger" };
+    if (stock < 10) return { label: "Low Stock", className: "" };
+    return { label: "In Stock", className: "text-primary" };
+};
+
 export const StockSection: React.FC<StockSectionProps> = ({
     attributes,
     variants,
-    pricingType,
     onChange,
     errors,
 }) => {
     const [searchQuery, setSearchQuery] = useState("");
 
+    // Filter attributes that have values
+    const attributesWithValues = attributes.filter(attr => attr.values && attr.values.length > 0);
+
     // Generate all possible variant combinations
     const generateAllCombinations = (): VariantCombination[] => {
-        if (pricingType === "single" || attributes.length === 0) {
-            // For single pricing or no attributes, we only have one "variant"
+        if (attributesWithValues.length === 0) {
+            // For no attributes with values, we only have one "variant"
             const existing = variants.find(v => v.id === 'single');
             return [
                 {
@@ -83,7 +105,7 @@ export const StockSection: React.FC<StockSectionProps> = ({
             return results;
         };
 
-        return generateCombos(attributes);
+        return generateCombos(attributesWithValues);
     };
 
     // Update variants when attributes change
@@ -91,18 +113,18 @@ export const StockSection: React.FC<StockSectionProps> = ({
         const allCombinations = generateAllCombinations();
         onChange(allCombinations);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [attributes.length, pricingType]);
+    }, [attributesWithValues.length]);
 
     const allCombinations = generateAllCombinations();
 
     const getVariantLabel = (variant: VariantCombination): string => {
-        if (pricingType === "single") {
+        if (attributesWithValues.length === 0) {
             return "Single Product";
         }
 
         return Object.entries(variant.attributeValues)
             .map(([attrId, valueId]) => {
-                const attr = attributes.find((a) => a.id === attrId);
+                const attr = attributesWithValues.find((a) => a.id === attrId);
                 const val = attr?.values.find((v) => v.id === valueId);
                 return `${attr?.name}: ${val?.value}`;
             })
@@ -135,7 +157,7 @@ export const StockSection: React.FC<StockSectionProps> = ({
     return (
         <Card>
             <div>
-                <h2 className="text-xl font-semibold text-gray-900">
+                <h2 className="text-xl font-semibold ">
                     Stock Management
                 </h2>
                 {errors['variants'] && (
@@ -145,24 +167,10 @@ export const StockSection: React.FC<StockSectionProps> = ({
 
             {/* Summary Stats */}
             <div className="grid grid-cols-4 gap-5">
-                <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                    <p className="text-sm text-gray-600">Total Variants</p>
-                    <p className="text-2xl font-bold text-gray-900">
-                        {allCombinations.length}
-                    </p>
-                </div>
-                <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                    <p className="text-sm text-gray-600">Total Stock</p>
-                    <p className="text-2xl font-bold text-gray-900">{totalStock}</p>
-                </div>
-                <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                    <p className="text-sm text-gray-600">Low Stock</p>
-                    <p className="text-2xl font-bold text-primary">{lowStockCount}</p>
-                </div>
-                <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                    <p className="text-sm text-gray-600">Out of Stock</p>
-                    <p className="text-2xl font-bold text-danger">{outOfStockCount}</p>
-                </div>
+                <StatCard label="Total Variants" value={allCombinations.length} />
+                <StatCard label="Total Stock" value={totalStock} />
+                <StatCard label="Low Stock" value={lowStockCount} valueClassName="" />
+                <StatCard label="Out of Stock" value={outOfStockCount} valueClassName="text-danger" />
             </div>
 
             {/* Search */}
@@ -194,18 +202,7 @@ export const StockSection: React.FC<StockSectionProps> = ({
                     {filteredCombinations.map((variant) => {
                         const label = getVariantLabel(variant);
                         const variantIndex = variants.findIndex(v => v.id === variant.id);
-                        const status =
-                            variant.stock === 0
-                                ? "Out of Stock"
-                                : variant.stock < 10
-                                    ? "Low Stock"
-                                    : "In Stock";
-                        const statusColor =
-                            variant.stock === 0
-                                ? "text-danger"
-                                : variant.stock < 10
-                                    ? "text-primary"
-                                    : "text-fourth";
+                        const stockStatus = getStockStatus(variant.stock);
 
                         return (
                             <TableRow key={variant.id}>
@@ -231,8 +228,8 @@ export const StockSection: React.FC<StockSectionProps> = ({
                                         />
                                     </div>
                                 </TableCell>
-                                <TableCell className={`font-medium ${statusColor}`}>
-                                    {status}
+                                <TableCell className={`font-medium ${stockStatus.className}`}>
+                                    {stockStatus.label}
                                 </TableCell>
                             </TableRow>
                         );
@@ -241,7 +238,7 @@ export const StockSection: React.FC<StockSectionProps> = ({
             </Table>
 
             {filteredCombinations.length === 0 && searchQuery && (
-                <div className="text-center py-8 text-gray-500">
+                <div className="text-center py-8 ">
                     No variants found matching &quot;{searchQuery}&quot;
                 </div>
             )}

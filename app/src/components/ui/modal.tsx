@@ -100,7 +100,7 @@ export const Modal: React.FC<ModalProps> = ({
     >
       <div
         className={`
-          relative max-md:max-h-[90vh] rounded-rounded1 shadow-2xl
+          relative max-md:max-h-[90vh] rounded-r1 shadow-s1
           flex flex-col justify-center items-center gap-5
           transition-all duration-200 ease-out
           ${variant === 'default' ? 'p-5' : ''}

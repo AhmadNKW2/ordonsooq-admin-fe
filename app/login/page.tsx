@@ -42,25 +42,25 @@ export default function LoginPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center ">
         <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
+          <div className="inline-block animate-spin rounded-full h-12 w-12"></div>
+          <p className="mt-4 ">Loading...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+    <div className="min-h-screen flex items-center justify-center  px-4">
       <Card className="w-full max-w-md p-8">
         <div className="text-center">
-          <h1 className="text-3xl font-bold text-gray-900">Admin Login</h1>
-          <p className="text-gray-600 mt-2">Sign in to your account</p>
+          <h1 className="text-3xl font-bold ">Admin Login</h1>
+          <p className=" mt-2">Sign in to your account</p>
         </div>
 
         {error && (
-          <div className="mb-6 p-4 bg-danger/10 border border-danger rounded-lg flex items-start gap-3">
+          <div className="mb-6 p-4 bg-danger/10 border border-danger rounded-r1 flex items-start gap-3">
             <AlertCircle className="h-5 w-5 text-danger shrink-0 mt-0.5" />
             <p className="text-sm text-danger">{error}</p>
           </div>
@@ -98,7 +98,7 @@ export default function LoginPage() {
           </Button>
         </form>
 
-        <div className="text-center text-sm text-gray-600">
+        <div className="text-center text-sm ">
           <p>Ordonsooq Admin Dashboard</p>
         </div>
       </Card>

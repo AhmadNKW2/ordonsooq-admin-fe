@@ -173,13 +173,13 @@ class ProductService extends BaseService<Product> {
   }
 
   /**
-   * Update a product (PATCH - partial update)
+   * Update a product (PUT - full update)
    */
   async updateProduct(
     id: string | number,
     data: UpdateProductDto
   ): Promise<ApiResponse<Product>> {
-    return this.patch(id, data);
+    return this.update(id, data);
   }
 
   /**

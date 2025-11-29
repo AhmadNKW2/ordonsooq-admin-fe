@@ -43,6 +43,8 @@ export function useProducts(
   return useQuery({
     queryKey: queryKeys.products.list(params),
     queryFn: () => productService.getProducts(params),
+    refetchOnMount: true,
+    staleTime: 0,
     ...options,
   });
 }

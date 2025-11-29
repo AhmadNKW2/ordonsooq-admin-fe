@@ -10,7 +10,7 @@ import { Card } from "@/components/ui";
 
 interface AttributesSectionProps {
     attributes: Attribute[];
-    onChange: (attributes: Attribute[], resetType?: 'pricing' | 'weight' | 'media') => void;
+    onChange: (attributes: Attribute[], resetType?: 'pricing' | 'weight' | 'media' | 'stock' | 'all') => void;
     availableAttributes?: Array<{ id: string; name: string; displayName: string; values: Array<{ id: string; value: string; displayValue: string }> }>;
     errors?: Record<string, string>;
 }
@@ -50,12 +50,14 @@ export const AttributesSection: React.FC<AttributesSectionProps> = ({
             controlsMedia: false,
         };
 
-        onChange([...attributes, newAttribute]);
+        onChange([...attributes, newAttribute], 'stock');
         setSelectedPredefined("");
     };
 
     const handleRemoveAttribute = (attributeId: string) => {
-        onChange(attributes.filter((attr) => attr.id !== attributeId));
+        // When removing an attribute, clear all variant data (pricing, weights, media, stock)
+        // because the existing combinations become invalid
+        onChange(attributes.filter((attr) => attr.id !== attributeId), 'all');
     };
 
     const handleAddValue = (attributeId: string, value: string, valueId?: string) => {
@@ -112,16 +114,6 @@ export const AttributesSection: React.FC<AttributesSectionProps> = ({
         const attr = attributes.find(a => a.id === attributeId);
         if (!attr) return;
 
-        // Determine if we're turning ON a control (false -> true)
-        let isTogglingOn = false;
-        if (controlType === "pricing" && !attr.controlsPricing) {
-            isTogglingOn = true;
-        } else if (controlType === "weightDimensions" && !attr.controlsWeightDimensions) {
-            isTogglingOn = true;
-        } else if (controlType === "media" && !attr.controlsMedia) {
-            isTogglingOn = true;
-        }
-
         const updated = attributes.map((a) => {
             if (a.id === attributeId) {
                 return {
@@ -141,10 +133,13 @@ export const AttributesSection: React.FC<AttributesSectionProps> = ({
             return a;
         });
 
-        // Pass reset type when toggling ON
-        const resetType = isTogglingOn 
-            ? (controlType === "pricing" ? "pricing" : controlType === "weightDimensions" ? "weight" : "media")
-            : undefined;
+        // Always pass reset type when toggling the control (both ON and OFF)
+        // because the variant combinations change
+        const resetType = controlType === "pricing" 
+            ? "pricing" 
+            : controlType === "weightDimensions" 
+                ? "weight" 
+                : "media";
         
         onChange(updated, resetType);
     };
@@ -155,7 +150,7 @@ export const AttributesSection: React.FC<AttributesSectionProps> = ({
         <Card>
             <div className="flex items-center justify-between">
                 <div>
-                    <h2 className="text-xl font-semibold text-gray-900">
+                    <h2 className="text-xl font-semibold ">
                         Attributes Configuration
                     </h2>
                     {errors['attributes'] && (
@@ -163,14 +158,14 @@ export const AttributesSection: React.FC<AttributesSectionProps> = ({
                     )}
                 </div>
                 {totalCombinations > 0 && (
-                    <div className="bg-primary/10 text-fifth px-4 py-2 rounded-lg">
+                    <div className="text-primary px-4 py-2 rounded-r1">
                         <span className="font-semibold">{totalCombinations}</span> variant
                         {totalCombinations !== 1 ? "s" : ""} will be created
                     </div>
                 )}
             </div>
 
-            <h3 className="text-base font-medium text-gray-900">
+            <h3 className="text-base font-medium ">
                 Add Attribute
             </h3>
 
@@ -196,7 +191,7 @@ export const AttributesSection: React.FC<AttributesSectionProps> = ({
                     <Button
                         onClick={handleAddAttribute}
                         disabled={!selectedPredefined}
-                        className="bg-fourth hover:bg-fourth/90"
+                        className="bg-primary hover:bg-primary/90"
                     >
                         Add Attribute
                     </Button>
@@ -281,14 +276,14 @@ const AttributeCard: React.FC<AttributeCardProps> = ({
     };
 
     return (
-        <div className="bg-white p-5 rounded-rounded1 border-2 border-primary flex flex-col gap-5">
+        <div className="bg-white p-5 rounded-r1 border-2 border-primary/20 flex flex-col gap-5">
             <div className="flex items-start justify-between">
                 <div className="flex items-center gap-1">
                     <div className="flex justify-center items-center gap-5">
-                        <h4 className="text-lg font-semibold text-gray-900">
+                        <h4 className="text-lg font-semibold ">
                             {attribute.name}
                         </h4>
-                        <h4 className="text-lg text-gray-500">
+                        <h4 className="text-lg ">
                             {attribute.values.length} value(s)
                         </h4>
                     </div>
@@ -334,7 +329,7 @@ const AttributeCard: React.FC<AttributeCardProps> = ({
                 )}
             </div>
             <div className="flex flex-col gap-2">
-                <p className="text-sm font-medium text-gray-700">
+                <p className="text-sm font-medium ">
                     This attribute controls:
                 </p>
                 <div className="flex flex-wrap gap-5">

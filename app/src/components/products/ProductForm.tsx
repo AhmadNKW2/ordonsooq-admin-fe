@@ -6,6 +6,7 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "../ui/button";
 import {
   ProductFormData,
@@ -46,6 +47,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
   vendors = [],
   attributes = [],
 }) => {
+  const router = useRouter();
   const [formData, setFormData] = useState<Partial<ProductFormData>>({
     nameEn: "",
     nameAr: "",
@@ -55,7 +57,6 @@ export const ProductForm: React.FC<ProductFormProps> = ({
     shortDescriptionAr: "",
     longDescriptionEn: "",
     longDescriptionAr: "",
-    pricingType: "single",
     isActive: true,
     attributes: [],
     singlePricing: undefined,
@@ -89,7 +90,6 @@ export const ProductForm: React.FC<ProductFormProps> = ({
         shortDescriptionAr: "",
         longDescriptionEn: "",
         longDescriptionAr: "",
-        pricingType: "single",
         isActive: true,
         attributes: [],
         singlePricing: undefined,
@@ -104,7 +104,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
         ...initialData,
       });
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isEditMode, initialDataJson]);
 
   const validationSchema = useMemo<ValidationSchema>(() => {
@@ -119,12 +119,16 @@ export const ProductForm: React.FC<ProductFormProps> = ({
       vendorId: ['required'],
     };
 
+    const pricingAttributes = formData.attributes?.filter(a => a.controlsPricing) || [];
+    const isVariantPricing = pricingAttributes.length > 0;
+
     // Conditional Validation: Pricing
-    if (formData.pricingType === 'single') {
+    if (!isVariantPricing) {
       schema['singlePricing.cost'] = ['required', 'isNum'];
       schema['singlePricing.price'] = ['required', 'isNum'];
-      
-      if (formData.singlePricing?.isSale) {
+
+      // isSale defaults to true, so require salePrice unless explicitly set to false
+      if (formData.singlePricing?.isSale !== false) {
         schema['singlePricing.salePrice'] = ['required', 'isNum'];
       }
     } else {
@@ -132,9 +136,10 @@ export const ProductForm: React.FC<ProductFormProps> = ({
       schema['variants'] = ['required'];
       schema['variantPricing.$.cost'] = ['required', 'isNum'];
       schema['variantPricing.$.price'] = ['required', 'isNum'];
-      
+
       formData.variantPricing?.forEach((vp, index) => {
-        if (vp.isSale) {
+        // isSale defaults to true, so require salePrice unless explicitly set to false
+        if (vp.isSale !== false) {
           schema[`variantPricing.${index}.salePrice`] = ['required', 'isNum'];
         }
       });
@@ -164,7 +169,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
 
     return schema;
   }, [
-    formData.pricingType,
+    formData.attributes,
     formData.singlePricing?.isSale,
     formData.variantPricing,
     formData.isWeightVariantBased,
@@ -181,7 +186,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
     console.log('formData.variantMedia:', formData.variantMedia);
     console.log('formData.singleMedia:', formData.singleMedia);
     console.log('validationSchema:', validationSchema);
-    
+
     const isValid = validateForm(formData);
     console.log('isValid:', isValid);
     console.log('errors after validation:', errors);
@@ -217,23 +222,17 @@ export const ProductForm: React.FC<ProductFormProps> = ({
         });
       }
     }
-    
+
     setFormData((prev) => {
       const newData = { ...prev, [field]: value };
-      
-      // Reset variant flags if switching to single pricing
-      if (field === 'pricingType' && value === 'single') {
-          newData.isWeightVariantBased = false;
-          newData.isMediaVariantBased = false;
-      }
-      
+
       // DEBUG: Log updated form data for media fields
       if (field === 'singleMedia' || field === 'variantMedia' || field === 'isMediaVariantBased') {
         console.log('=== DEBUG: Updated formData ===');
         console.log('newData.singleMedia:', newData.singleMedia);
         console.log('newData.singleMedia?.length:', newData.singleMedia?.length);
       }
-      
+
       return newData;
     });
     handleValidationChange(field, value);
@@ -253,18 +252,43 @@ export const ProductForm: React.FC<ProductFormProps> = ({
   };
 
   return (
-    <div className="mx-auto px-50 py-8 flex flex-col gap-5">
-      <div className="">
-        <h1 className="text-3xl font-bold text-gray-900">
-          {isEditMode ? "Edit Product" : "Create New Product"}
-        </h1>
-        <p className="text-gray-600 mt-2">
-          {isEditMode
-            ? "Update product information and variants"
-            : "Fill in the details to create a new product"}
-        </p>
-      </div>
+    <div className="mx-auto px-5 py-8 flex flex-col gap-5">
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold ">
+            {isEditMode ? "Edit Product" : "Create New Product"}
+          </h1>
+          <p className=" mt-2">
+            {isEditMode
+              ? "Update product information and variants"
+              : "Fill in the details to create a new product"}
+          </p>
+        </div>
 
+        <div className="flex gap-5">
+          {/* Cancel Button */}
+          <Button
+            onClick={() => router.push('/products')}
+            disabled={isSubmitting}
+            variant="solid"
+            color="var(--color-primary2)"
+          >
+            Cancel
+          </Button>
+
+          {/* Submit Button */}
+          <Button
+            onClick={handleSubmit}
+            disabled={isSubmitting}
+          >
+            {isSubmitting
+              ? "Submitting..."
+              : isEditMode
+                ? "Update Product"
+                : "Create Product"}
+          </Button>
+        </div>
+      </div>
       {/* Basic Information */}
       <BasicInformationSection
         formData={{
@@ -276,7 +300,6 @@ export const ProductForm: React.FC<ProductFormProps> = ({
           shortDescriptionAr: formData.shortDescriptionAr,
           longDescriptionEn: formData.longDescriptionEn,
           longDescriptionAr: formData.longDescriptionAr,
-          pricingType: formData.pricingType,
           isActive: formData.isActive,
         }}
         errors={errors}
@@ -285,43 +308,67 @@ export const ProductForm: React.FC<ProductFormProps> = ({
         onChange={handleFieldChange}
       />
 
-      {/* Attributes Configuration */}
-      {formData.pricingType === "variant" && (
-        <AttributesSection
-          attributes={formData.attributes || []}
-          availableAttributes={attributes}
-          onChange={(attributes: Attribute[], resetType?: 'pricing' | 'weight' | 'media') => {
-            const hasWeight = attributes.some(a => a.controlsWeightDimensions);
-            const hasMedia = attributes.some(a => a.controlsMedia);
-            
-            setFormData(prev => {
-              const updates: Partial<ProductFormData> = {
-                ...prev,
-                attributes,
-                isWeightVariantBased: hasWeight,
-                isMediaVariantBased: hasMedia,
-              };
-              
-              // Reset data when control changes from false to true
-              if (resetType === 'pricing') {
-                updates.variantPricing = [];
-              } else if (resetType === 'weight') {
-                updates.variantWeightDimensions = [];
-              } else if (resetType === 'media') {
-                updates.variantMedia = [];
-              }
-              
-              return updates as ProductFormData;
-            });
-            handleValidationChange("attributes", attributes);
-          }}
-          errors={errors}
-        />
-      )}
+      {/* Attributes Configuration - Always visible */}
+      <AttributesSection
+        attributes={formData.attributes || []}
+        availableAttributes={attributes}
+        onChange={(attributes: Attribute[], resetType?: 'pricing' | 'weight' | 'media' | 'stock' | 'all') => {
+          const hasWeight = attributes.some(a => a.controlsWeightDimensions);
+          const hasMedia = attributes.some(a => a.controlsMedia);
+          const hasAttributes = attributes.length > 0;
+
+          setFormData(prev => {
+            const updates: Partial<ProductFormData> = {
+              ...prev,
+              attributes,
+              isWeightVariantBased: hasAttributes ? hasWeight : false,
+              isMediaVariantBased: hasAttributes ? hasMedia : false,
+            };
+
+            // If switching to single (no attributes), reset all variant data
+            if (!hasAttributes) {
+              updates.variantPricing = [];
+              updates.variantWeightDimensions = [];
+              updates.variantMedia = [];
+              updates.variants = [];
+              updates.singlePricing = prev.singlePricing;
+              updates.singleWeightDimensions = prev.singleWeightDimensions;
+              updates.singleMedia = prev.singleMedia || [];
+            }
+
+            // Reset ALL variant data when an attribute is removed
+            // because existing combinations become invalid
+            if (resetType === 'all') {
+              updates.variantPricing = [];
+              updates.singleWeightDimensions = undefined;
+              updates.variantWeightDimensions = [];
+              updates.singleMedia = [];
+              updates.variantMedia = [];
+              updates.variants = [];
+            } else if (resetType === 'pricing') {
+              // Reset data when control changes (both toggling ON and OFF)
+              // This ensures variant combinations are recalculated with fresh data
+              updates.variantPricing = [];
+            } else if (resetType === 'weight') {
+              updates.singleWeightDimensions = undefined;
+              updates.variantWeightDimensions = [];
+            } else if (resetType === 'media') {
+              updates.singleMedia = [];
+              updates.variantMedia = [];
+            } else if (resetType === 'stock') {
+              // Reset stock/variants when attributes or their values change
+              updates.variants = [];
+            }
+
+            return updates as ProductFormData;
+          });
+          handleValidationChange("attributes", attributes);
+        }}
+        errors={errors}
+      />
 
       {/* Pricing Configuration */}
       <PricingSection
-        pricingType={formData.pricingType || "single"}
         attributes={formData.attributes || []}
         singlePricing={formData.singlePricing}
         variantPricing={formData.variantPricing || []}
@@ -377,28 +424,11 @@ export const ProductForm: React.FC<ProductFormProps> = ({
       <StockSection
         attributes={formData.attributes || []}
         variants={formData.variants || []}
-        pricingType={formData.pricingType || "single"}
         onChange={(variants: VariantCombination[]) =>
           handleFieldChange("variants", variants)
         }
         errors={errors}
       />
-
-      {/* Submit Buttons */}
-      <Card>
-        <div className="flex items-center justify-end gap-5">
-          <Button
-            onClick={handleSubmit}
-            disabled={isSubmitting}
-          >
-            {isSubmitting
-              ? "Submitting..."
-              : isEditMode
-                ? "Update Product"
-                : "Create Product"}
-          </Button>
-        </div>
-      </Card>
     </div>
   );
 };

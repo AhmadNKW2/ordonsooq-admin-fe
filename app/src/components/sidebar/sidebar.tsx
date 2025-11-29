@@ -28,8 +28,8 @@ export function Sidebar({ children }: SidebarProps) {
     <SidebarContext.Provider value={{}}>
       <aside
         className="
-          relative h-screen bg-secondary border-r border-gray-200 
-          flex flex-col w-64
+          relative h-screen bg-white border-r border-primary/20 
+          flex flex-col w-70
         "
       >
         {children}
@@ -97,7 +97,7 @@ export function SidebarGroup({
         onClick={() => setIsOpen(!isOpen)}
         className="
           w-full flex items-center justify-between px-3 py-2 mb-1
-          text-sm font-semibold text-gray-500 hover:text-third
+          text-sm font-semibold  hover:
           transition-colors duration-200 group
         "
       >
@@ -159,11 +159,11 @@ export function SidebarLink({
       href={href}
       onClick={onClick}
       className={`
-        group relative flex items-center gap-5 px-3 py-2.5 mb-1 rounded-lg
+        group relative flex items-center gap-5 px-3 py-2.5 mb-1 rounded-r1
         transition-all duration-200 ease-in-out
         ${isActive
-          ? 'bg-fourth text-secondary shadow-md'
-          : 'text-gray-600 hover:bg-gray-50 hover:text-third'
+          ? 'bg-primary text-white shadow-s1'
+          : ' hover: hover:'
         }
       `}
     >
@@ -171,7 +171,7 @@ export function SidebarLink({
         className={`
           flex items-center justify-center w-5 h-5
           transition-transform duration-200 group-hover:scale-110
-          ${isActive ? 'text-secondary' : ''}
+          ${isActive ? 'text-white' : ''}
         `}
       >
         {icon}
@@ -180,7 +180,7 @@ export function SidebarLink({
       <span
         className={`
           flex-1 font-medium text-sm transition-all duration-200
-          ${isActive ? 'text-secondary' : ''}
+          ${isActive ? 'text-white' : ''}
         `}
       >
         {label}
@@ -192,8 +192,8 @@ export function SidebarLink({
             px-2 py-0.5 text-xs font-semibold rounded-full
             transition-all duration-200
             ${isActive
-              ? 'bg-secondary text-fourth'
-              : 'bg-fourth2 text-fourth'
+              ? 'bg-white text-primary'
+              : 'bg-primary2 text-primary'
             }
           `}
         >

@@ -59,8 +59,8 @@ export function AppSidebar({ groups, header, footer }: AppSidebarProps) {
           <div className="flex items-center gap-5">
             {header.logo}
             <div>
-              <h1 className="text-lg font-bold text-third">{header.title}</h1>
-              <p className="text-xs text-gray-500">{header.subtitle}</p>
+              <h1 className="text-lg font-bold ">{header.title}</h1>
+              <p className="text-xs ">{header.subtitle}</p>
             </div>
           </div>
         </SidebarHeader>
@@ -103,23 +103,23 @@ export function AppSidebar({ groups, header, footer }: AppSidebarProps) {
                 className="w-10 h-10 rounded-full object-cover"
               />
             ) : (
-              <div className="w-10 h-10 rounded-full bg-fourth flex items-center justify-center text-secondary font-bold">
+              <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-bold">
                 {(user?.name || footer.userName).charAt(0).toUpperCase()}
               </div>
             )}
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-third truncate">
+              <p className="text-sm font-semibold  truncate">
                 {user?.name || footer.userName}
               </p>
-              <p className="text-xs text-gray-500 truncate">{user?.email || footer.userEmail}</p>
+              <p className="text-xs  truncate">{user?.email || footer.userEmail}</p>
             </div>
             <button
               onClick={handleLogout}
-              className="p-2 hover:bg-gray-50 rounded-lg transition-colors duration-200"
+              className="p-2 hover: rounded-r1 transition-colors duration-200"
               title="Logout"
             >
                 <svg
-                  className="w-5 h-5 text-gray-600"
+                  className="w-5 h-5 "
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"

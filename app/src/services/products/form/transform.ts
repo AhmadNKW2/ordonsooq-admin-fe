@@ -3,10 +3,10 @@
  */
 
 import { ProductFormData, MediaItem } from "../types/product-form.types";
-import { CreateProductDto, PriceGroupInput, WeightGroupInput, VariantInput } from "../types/product.types";
+import { CreateProductDto, VariantInput, MediaInputDto } from "../types/product.types";
 
 /**
- * Media upload data structure
+ * Media upload data structure - contains files that need to be uploaded
  */
 export interface MediaUploadData {
   singleMedia?: MediaItem[];
@@ -17,12 +17,28 @@ export interface MediaUploadData {
 }
 
 /**
+ * Uploaded media reference - after upload, contains media IDs
+ */
+export interface UploadedMediaReference {
+  mediaId: number;
+  isPrimary: boolean;
+  sortOrder: number;
+  combination?: Record<string, number>;
+}
+
+/**
  * Transform frontend ProductFormData to CreateProductDto (without media)
- * and extract media data for separate upload
+ * and extract media files for separate upload
+ * 
+ * The flow is:
+ * 1. Call this function to get DTO and media files
+ * 2. Upload media files via mediaService.uploadMedia()
+ * 3. Call addMediaToDto() to add media IDs to the DTO
+ * 4. Send the complete DTO to create/update product
  */
 export function transformFormDataToDto(
   data: ProductFormData
-): { dto: CreateProductDto; mediaData: MediaUploadData } {
+): { dto: CreateProductDto; mediaFiles: MediaUploadData } {
   const dto: CreateProductDto = {
     name_en: data.nameEn,
     name_ar: data.nameAr,
@@ -30,7 +46,6 @@ export function transformFormDataToDto(
     short_description_ar: data.shortDescriptionAr || '',
     long_description_en: data.longDescriptionEn || '',
     long_description_ar: data.longDescriptionAr || '',
-    pricing_type: data.pricingType,
     category_id: parseInt(data.categoryId),
     is_active: data.isActive,
   };
@@ -38,9 +53,8 @@ export function transformFormDataToDto(
   // Optional fields
   if (data.vendorId) dto.vendor_id = parseInt(data.vendorId);
 
-  // Variant product fields
-  if (data.pricingType === "variant" && data.attributes && data.attributes.length > 0) {
-    // Attributes
+  // Attributes
+  if (data.attributes && data.attributes.length > 0) {
     dto.attributes = data.attributes.map((attr) => ({
       attribute_id: parseInt(attr.id),
       controls_pricing: attr.controlsPricing,
@@ -48,67 +62,110 @@ export function transformFormDataToDto(
       controls_weight: attr.controlsWeightDimensions,
     }));
 
-    // Price groups (grouped by pricing-controlling attributes)
-    dto.price_groups = buildPriceGroups(data);
-
-    // Weight groups (grouped by weight-controlling attributes)
-    if (data.isWeightVariantBased && data.variantWeightDimensions) {
-      dto.weight_groups = buildWeightGroups(data);
-    }
-
     // Variants (all combinations with stock)
     dto.variants = buildVariantsArray(data);
   }
 
-  // Single Pricing (for single pricing type)
-  if (data.pricingType === "single" && data.singlePricing) {
-    dto.single_pricing = {
-      cost: data.singlePricing.cost,
-      price: data.singlePricing.price,
-      sale_price: data.singlePricing.isSale ? data.singlePricing.salePrice : undefined,
-    };
+  // ========== PRICING ==========
+  if (!data.attributes || data.attributes.length === 0) {
+    // Single pricing - no combination
+    if (data.singlePricing) {
+      dto.prices = [{
+        cost: data.singlePricing.cost,
+        price: data.singlePricing.price,
+        sale_price: data.singlePricing.isSale ? data.singlePricing.salePrice : undefined,
+      }];
+    }
+  } else {
+    // Variant pricing - with combinations
+    dto.prices = buildPrices(data);
   }
 
-  // Single Weight (for single pricing type or non-variant weight)
+  // ========== WEIGHT & DIMENSIONS ==========
   if (!data.isWeightVariantBased && data.singleWeightDimensions) {
     const weight = data.singleWeightDimensions;
     if (weight.weight) {
-      dto.product_weight = {
+      dto.weights = [{
         weight: weight.weight,
         length: weight.length,
         width: weight.width,
         height: weight.height,
-      };
+      }];
     }
+  } else if (data.isWeightVariantBased && data.variantWeightDimensions) {
+    dto.weights = buildWeights(data);
   }
 
-  // Single Stock (for single pricing type)
-  if (data.pricingType === "single" && data.variants && data.variants.length > 0) {
-    const singleVariant = data.variants.find(v => v.id === 'single');
-    if (singleVariant) {
-      dto.stock_quantity = singleVariant.stock;
+  // ========== STOCK ==========
+  if (!data.attributes || data.attributes.length === 0) {
+    // Single stock - no combination
+    if (data.variants && data.variants.length > 0) {
+      const singleVariant = data.variants.find(v => v.id === 'single');
+      if (singleVariant) {
+        dto.stocks = [{
+          quantity: singleVariant.stock,
+        }];
+      }
     }
+  } else if (data.variants && data.variants.length > 0) {
+    // Variant stocks - with combinations
+    dto.stocks = buildStocks(data);
   }
 
   // Extract media data for separate upload
-  const mediaData: MediaUploadData = {};
+  const mediaFiles: MediaUploadData = {};
   
   if (!data.isMediaVariantBased && data.singleMedia && data.singleMedia.length > 0) {
-    mediaData.singleMedia = data.singleMedia;
+    mediaFiles.singleMedia = data.singleMedia;
   }
 
   if (data.isMediaVariantBased && data.variantMedia && data.variantMedia.length > 0) {
-    mediaData.variantMedia = data.variantMedia;
+    mediaFiles.variantMedia = data.variantMedia;
   }
 
-  return { dto, mediaData };
+  return { dto, mediaFiles };
 }
 
 /**
- * Build price_groups array from form data
+ * Build media array for the DTO from uploaded media references
+ * Call this after uploading media files to get the media_id references
+ */
+export function buildMediaArray(
+  uploadedMedia: UploadedMediaReference[]
+): MediaInputDto[] {
+  return uploadedMedia.map(media => ({
+    media_id: media.mediaId,
+    is_primary: media.isPrimary,
+    sort_order: media.sortOrder,
+    combination: media.combination,
+  }));
+}
+
+interface PriceItem {
+  combination?: Record<string, number>;
+  cost: number;
+  price: number;
+  sale_price?: number;
+}
+
+interface WeightItem {
+  combination?: Record<string, number>;
+  weight: number;
+  length?: number;
+  width?: number;
+  height?: number;
+}
+
+interface StockItem {
+  combination?: Record<string, number>;
+  quantity: number;
+}
+
+/**
+ * Build prices array from form data
  * Groups by pricing-controlling attributes only
  */
-function buildPriceGroups(data: ProductFormData): PriceGroupInput[] {
+function buildPrices(data: ProductFormData): PriceItem[] {
   if (!data.variantPricing || data.variantPricing.length === 0) {
     return [];
   }
@@ -118,8 +175,8 @@ function buildPriceGroups(data: ProductFormData): PriceGroupInput[] {
     .filter(attr => attr.controlsPricing)
     .map(attr => attr.id);
 
-  // Build unique price groups based on pricing-controlling attributes
-  const priceGroupMap = new Map<string, PriceGroupInput>();
+  // Build unique prices based on pricing-controlling attributes
+  const priceMap = new Map<string, PriceItem>();
 
   for (const pricing of data.variantPricing) {
     // Build combination object with only pricing-controlling attributes
@@ -140,24 +197,24 @@ function buildPriceGroups(data: ProductFormData): PriceGroupInput[] {
       .join('|');
 
     // Only add if not already exists
-    if (!priceGroupMap.has(key) && Object.keys(combination).length > 0) {
-      priceGroupMap.set(key, {
+    if (!priceMap.has(key) && Object.keys(combination).length > 0) {
+      priceMap.set(key, {
         combination,
         cost: pricing.cost,
         price: pricing.price,
-        sale_price: pricing.isSale ? pricing.salePrice : null,
+        sale_price: pricing.isSale ? pricing.salePrice : undefined,
       });
     }
   }
 
-  return Array.from(priceGroupMap.values());
+  return Array.from(priceMap.values());
 }
 
 /**
- * Build weight_groups array from form data
+ * Build weights array from form data
  * Groups by weight-controlling attributes only
  */
-function buildWeightGroups(data: ProductFormData): WeightGroupInput[] {
+function buildWeights(data: ProductFormData): WeightItem[] {
   if (!data.variantWeightDimensions || data.variantWeightDimensions.length === 0) {
     return [];
   }
@@ -167,7 +224,7 @@ function buildWeightGroups(data: ProductFormData): WeightGroupInput[] {
     .filter(attr => attr.controlsWeightDimensions)
     .map(attr => attr.id);
 
-  const weightGroups: WeightGroupInput[] = [];
+  const weights: WeightItem[] = [];
 
   for (const weight of data.variantWeightDimensions) {
     // Build combination object with only weight-controlling attributes
@@ -182,7 +239,7 @@ function buildWeightGroups(data: ProductFormData): WeightGroupInput[] {
     }
 
     if (Object.keys(combination).length > 0 && weight.weight) {
-      weightGroups.push({
+      weights.push({
         combination,
         weight: weight.weight,
         length: weight.length,
@@ -192,7 +249,39 @@ function buildWeightGroups(data: ProductFormData): WeightGroupInput[] {
     }
   }
 
-  return weightGroups;
+  return weights;
+}
+
+/**
+ * Build stocks array from form data
+ * Each stock contains combination and quantity
+ */
+function buildStocks(data: ProductFormData): StockItem[] {
+  if (!data.variants || data.variants.length === 0) {
+    return [];
+  }
+
+  const stocks: StockItem[] = [];
+
+  for (const variant of data.variants) {
+    // Build combination from all attribute values
+    const combination: Record<string, number> = {};
+    
+    for (const [attrId, valueId] of Object.entries(variant.attributeValues)) {
+      if (valueId && valueId !== '') {
+        combination[attrId] = parseInt(valueId, 10);
+      }
+    }
+
+    if (Object.keys(combination).length > 0) {
+      stocks.push({
+        combination,
+        quantity: variant.stock || 0,
+      });
+    }
+  }
+
+  return stocks;
 }
 
 /**

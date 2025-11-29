@@ -17,8 +17,8 @@ export const IconButton: React.FC<IconButtonProps> = ({
   title,
 }) => {
   const variantConfig = {
-    view: { icon: Eye, styles: 'text-fifth hover:bg-fifth/15 hover:text-fifth active:bg-fifth/20' },
-    edit: { icon: Edit, styles: 'text-fourth hover:bg-fourth/15 hover:text-fourth active:bg-fourth/20' },
+    view: { icon: Eye, styles: 'text-secondary hover:bg-secondary/15 hover:text-secondary active:bg-secondary/20' },
+    edit: { icon: Edit, styles: 'text-primary hover:bg-primary/15 hover:text-primary active:bg-primary/20' },
     delete: { icon: Trash2, styles: 'text-danger hover:bg-danger/15 hover:text-danger active:bg-danger/20' },
     check: { icon: Check, styles: 'text-success hover:bg-success/15 active:bg-success/20' },
     logout: { icon: LogOut, styles: 'text-[#4a5565] hover:bg-[#4a5565]/10 hover:text-[#4a5565] active:bg-[#4a5565]/15' },

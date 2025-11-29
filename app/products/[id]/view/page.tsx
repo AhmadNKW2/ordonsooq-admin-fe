@@ -62,8 +62,8 @@ export default function ViewProductPage() {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-fourth mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading product...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 ">Loading product...</p>
         </div>
       </div>
     );
@@ -80,10 +80,10 @@ export default function ViewProductPage() {
                   <AlertCircle className="h-8 w-8 text-danger" />
                 </div>
               </div>
-              <h3 className="text-xl font-bold text-third mb-2">
+              <h3 className="text-xl font-bold  mb-2">
                 Error Loading Product
               </h3>
-              <p className="text-gray-600 mb-6">{(productErrorData as any)?.message || "Failed to load product"}</p>
+              <p className=" mb-6">{(productErrorData as any)?.message || "Failed to load product"}</p>
               <div className="flex gap-3 justify-center">
                 <Button onClick={() => refetchProduct()}>
                   <RefreshCw className="mr-2 h-4 w-4" />
@@ -106,8 +106,8 @@ export default function ViewProductPage() {
         <div className="mx-auto max-w-2xl">
           <Card>
             <div className="p-12 text-center">
-              <h3 className="text-xl font-bold text-third mb-2">Product Not Found</h3>
-              <p className="text-gray-600 mb-6">The product you&apos;re looking for doesn&apos;t exist.</p>
+              <h3 className="text-xl font-bold  mb-2">Product Not Found</h3>
+              <p className=" mb-6">The product you&apos;re looking for doesn&apos;t exist.</p>
               <Button onClick={() => router.push("/products")}>
                 Back to Products
               </Button>
@@ -132,12 +132,12 @@ export default function ViewProductPage() {
             </Button>
             <div>
               <div className="flex items-center gap-3">
-                <h1 className="text-3xl font-bold text-third">{product.name_en}</h1>
+                <h1 className="text-3xl font-bold ">{product.name_en}</h1>
                 <Badge variant={product.is_active ? "success" : "danger"}>
                   {product.is_active ? "Active" : "Inactive"}
                 </Badge>
               </div>
-              <p className="text-gray-600 mt-1">{product.name_ar}</p>
+              <p className=" mt-1">{product.name_ar}</p>
             </div>
           </div>
           <Button onClick={() => router.push(`/products/${productId}`)}>
@@ -149,35 +149,31 @@ export default function ViewProductPage() {
         {/* Basic Information */}
         <Card>
           <div className="flex items-center gap-3 mb-4">
-            <div className="rounded-lg bg-fourth p-2">
+            <div className="rounded-r1 bg-primary p-2">
               <Package className="h-5 w-5 text-white" />
             </div>
-            <h2 className="text-xl font-semibold text-third">Basic Information</h2>
+            <h2 className="text-xl font-semibold ">Basic Information</h2>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="text-sm font-medium text-gray-600">Product ID</label>
-              <p className="text-third font-semibold">#{product.id}</p>
+              <label className="text-sm font-medium ">Product ID</label>
+              <p className=" font-semibold">#{product.id}</p>
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-600">SKU</label>
-              <p className="text-third font-semibold font-mono">{product.sku || "N/A"}</p>
+              <label className="text-sm font-medium ">SKU</label>
+              <p className=" font-semibold font-mono">{product.sku || "N/A"}</p>
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-600">Category</label>
-              <p className="text-third font-semibold">{getCategoryName(product.category_id)}</p>
+              <label className="text-sm font-medium ">Category</label>
+              <p className=" font-semibold">{getCategoryName(product.category_id)}</p>
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-600">Vendor</label>
-              <p className="text-third font-semibold">{getVendorName(product.vendor_id)}</p>
+              <label className="text-sm font-medium ">Vendor</label>
+              <p className=" font-semibold">{getVendorName(product.vendor_id)}</p>
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-600">Pricing Type</label>
-              <p className="text-third font-semibold capitalize">{product.pricing_type}</p>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-600">Status</label>
+              <label className="text-sm font-medium ">Status</label>
               <Badge variant={product.is_active ? "success" : "danger"}>
                 {product.is_active ? "Active" : "Inactive"}
               </Badge>
@@ -188,30 +184,30 @@ export default function ViewProductPage() {
         {/* Descriptions */}
         {(product.short_description_en || product.short_description_ar || product.long_description_en || product.long_description_ar) && (
           <Card>
-            <h2 className="text-xl font-semibold text-third mb-4">Descriptions</h2>
+            <h2 className="text-xl font-semibold  mb-4">Descriptions</h2>
 
             {product.short_description_en && (
               <div>
-                <label className="text-sm font-medium text-gray-600">Short Description (English)</label>
-                <p className="text-third mt-1">{product.short_description_en}</p>
+                <label className="text-sm font-medium ">Short Description (English)</label>
+                <p className=" mt-1">{product.short_description_en}</p>
               </div>
             )}
             {product.short_description_ar && (
               <div>
-                <label className="text-sm font-medium text-gray-600">Short Description (Arabic)</label>
-                <p className="text-third mt-1 text-right" dir="rtl">{product.short_description_ar}</p>
+                <label className="text-sm font-medium ">Short Description (Arabic)</label>
+                <p className=" mt-1 text-right" dir="rtl">{product.short_description_ar}</p>
               </div>
             )}
             {product.long_description_en && (
               <div>
-                <label className="text-sm font-medium text-gray-600">Long Description (English)</label>
-                <p className="text-third mt-1 whitespace-pre-wrap">{product.long_description_en}</p>
+                <label className="text-sm font-medium ">Long Description (English)</label>
+                <p className=" mt-1 whitespace-pre-wrap">{product.long_description_en}</p>
               </div>
             )}
             {product.long_description_ar && (
               <div>
-                <label className="text-sm font-medium text-gray-600">Long Description (Arabic)</label>
-                <p className="text-third mt-1 whitespace-pre-wrap text-right" dir="rtl">{product.long_description_ar}</p>
+                <label className="text-sm font-medium ">Long Description (Arabic)</label>
+                <p className=" mt-1 whitespace-pre-wrap text-right" dir="rtl">{product.long_description_ar}</p>
               </div>
             )}
           </Card>
@@ -221,26 +217,26 @@ export default function ViewProductPage() {
         {(product.average_rating || product.total_ratings) && (
           <Card>
             <div className="flex items-center gap-3 mb-4">
-              <div className="rounded-lg bg-fourth p-2">
+              <div className="rounded-r1 bg-primary p-2">
                 <Star className="h-5 w-5 text-white" />
               </div>
-              <h2 className="text-xl font-semibold text-third">Customer Ratings</h2>
+              <h2 className="text-xl font-semibold ">Customer Ratings</h2>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="text-sm font-medium text-gray-600">Average Rating</label>
+                <label className="text-sm font-medium ">Average Rating</label>
                 <div className="flex items-center gap-2 mt-1">
-                  <Star className="h-5 w-5 text-fourth fill-fourth" />
-                  <p className="text-2xl font-bold text-third">
+                  <Star className="h-5 w-5 text-primary fill-primary" />
+                  <p className="text-2xl font-bold ">
                     {product.average_rating?.toFixed(1) || "0.0"}
                   </p>
-                  <span className="text-gray-500">out of 5</span>
+                  <span className="">out of 5</span>
                 </div>
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-600">Total Ratings</label>
-                <p className="text-2xl font-bold text-third mt-1">
+                <label className="text-sm font-medium ">Total Ratings</label>
+                <p className="text-2xl font-bold  mt-1">
                   {product.total_ratings || 0}
                 </p>
               </div>
@@ -251,17 +247,16 @@ export default function ViewProductPage() {
         {/* Pricing Placeholder */}
         <Card>
           <div className="flex items-center gap-3 mb-4">
-            <div className="rounded-lg bg-fourth p-2">
+            <div className="rounded-r1 bg-primary p-2">
               <DollarSign className="h-5 w-5 text-white" />
             </div>
-            <h2 className="text-xl font-semibold text-third">Pricing Information</h2>
+            <h2 className="text-xl font-semibold ">Pricing Information</h2>
           </div>
           <div className="text-center py-8">
-            <p className="text-gray-500">
-              Pricing data will be loaded from <code className="bg-gray-100 px-2 py-1 rounded text-sm">GET /products/{productId}/pricing</code>
+            <p className="">
+              Pricing data will be loaded from <code className=" px-2 py-1 rounded text-sm">GET /products/{productId}/pricing</code>
             </p>
-            <p className="text-gray-400 text-sm mt-2">
-              {product.pricing_type === "single" ? "Single pricing model" : "Variant-based pricing"}
+            <p className=" text-sm mt-2">
             </p>
           </div>
         </Card>
@@ -269,14 +264,14 @@ export default function ViewProductPage() {
         {/* Weight & Dimensions Placeholder */}
         <Card>
           <div className="flex items-center gap-3 mb-4">
-            <div className="rounded-lg bg-fourth p-2">
+            <div className="rounded-r1 bg-primary p-2">
               <Truck className="h-5 w-5 text-white" />
             </div>
-            <h2 className="text-xl font-semibold text-third">Weight & Dimensions</h2>
+            <h2 className="text-xl font-semibold ">Weight & Dimensions</h2>
           </div>
           <div className="text-center py-8">
-            <p className="text-gray-500">
-              Weight data will be loaded from <code className="bg-gray-100 px-2 py-1 rounded text-sm">GET /products/{productId}/weight</code>
+            <p className="">
+              Weight data will be loaded from <code className=" px-2 py-1 rounded text-sm">GET /products/{productId}/weight</code>
             </p>
           </div>
         </Card>
@@ -284,14 +279,14 @@ export default function ViewProductPage() {
         {/* Media Placeholder */}
         <Card>
           <div className="flex items-center gap-3 mb-4">
-            <div className="rounded-lg bg-fourth p-2">
+            <div className="rounded-r1 bg-primary p-2">
               <ImageIcon className="h-5 w-5 text-white" />
             </div>
-            <h2 className="text-xl font-semibold text-third">Product Media</h2>
+            <h2 className="text-xl font-semibold ">Product Media</h2>
           </div>
           <div className="text-center py-8">
-            <p className="text-gray-500">
-              Media files will be loaded from <code className="bg-gray-100 px-2 py-1 rounded text-sm">GET /products/{productId}/media</code>
+            <p className="">
+              Media files will be loaded from <code className=" px-2 py-1 rounded text-sm">GET /products/{productId}/media</code>
             </p>
           </div>
         </Card>
@@ -299,14 +294,14 @@ export default function ViewProductPage() {
         {/* Variants/Stock Placeholder */}
         <Card>
           <div className="flex items-center gap-3 mb-4">
-            <div className="rounded-lg bg-fourth p-2">
+            <div className="rounded-r1 bg-primary p-2">
               <Grid className="h-5 w-5 text-white" />
             </div>
-            <h2 className="text-xl font-semibold text-third">Stock & Variants</h2>
+            <h2 className="text-xl font-semibold ">Stock & Variants</h2>
           </div>
           <div className="text-center py-8">
-            <p className="text-gray-500">
-              Stock data will be loaded from <code className="bg-gray-100 px-2 py-1 rounded text-sm">GET /products/{productId}/stock</code>
+            <p className="">
+              Stock data will be loaded from <code className=" px-2 py-1 rounded text-sm">GET /products/{productId}/stock</code>
             </p>
           </div>
         </Card>
@@ -314,20 +309,20 @@ export default function ViewProductPage() {
         {/* Timestamps */}
         <Card>
           <div className="flex items-center gap-3 mb-4">
-            <div className="rounded-lg bg-fourth p-2">
+            <div className="rounded-r1 bg-primary p-2">
               <Calendar className="h-5 w-5 text-white" />
             </div>
-            <h2 className="text-xl font-semibold text-third">Timestamps</h2>
+            <h2 className="text-xl font-semibold ">Timestamps</h2>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="text-sm font-medium text-gray-600">Created At</label>
-              <p className="text-third font-semibold">{formatDate(product.created_at)}</p>
+              <label className="text-sm font-medium ">Created At</label>
+              <p className=" font-semibold">{formatDate(product.created_at)}</p>
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-600">Last Updated</label>
-              <p className="text-third font-semibold">{formatDate(product.updated_at)}</p>
+              <label className="text-sm font-medium ">Last Updated</label>
+              <p className=" font-semibold">{formatDate(product.updated_at)}</p>
             </div>
           </div>
         </Card>

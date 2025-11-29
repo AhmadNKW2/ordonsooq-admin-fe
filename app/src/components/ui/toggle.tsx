@@ -27,7 +27,7 @@ export const Toggle: React.FC<ToggleProps> = ({
         disabled ? "opacity-50 cursor-not-allowed" : ""
       } ${className}`}
     >
-      {label && <span className="text-sm font-medium text-gray-700">{label}</span>}
+      {label && <span className="text-sm font-medium ">{label}</span>}
       <div className="relative">
         <input
           type="checkbox"
@@ -38,11 +38,11 @@ export const Toggle: React.FC<ToggleProps> = ({
         />
         <div
           className={`w-14 h-7 rounded-full transition-colors ${
-            checked ? "bg-fourth" : "bg-gray-300"
+            checked ? "bg-primary" : ""
           } ${disabled ? "cursor-not-allowed" : ""}`}
         >
           <div
-            className={`w-6 h-6 bg-white rounded-full shadow-md transform transition-transform ${
+            className={`w-6 h-6 bg-white rounded-full shadow-s1 transform transition-transform ${
               checked ? "translate-x-7 mt-0.5" : "translate-x-0.5 mt-0.5"
             }`}
           />

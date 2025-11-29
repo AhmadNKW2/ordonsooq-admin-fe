@@ -2,17 +2,14 @@
 @import "tailwindcss";
 
 :root {
-  --color-primary: #EDEEFE;
+  --color-primary: #694dc5;
+  --color-primary2: #9e94c7;
+  --color-overflow1: #9d80ff;
+  --color-overflow2: #bba6ff;
 
-  --color-secondary: #FFFFFF;
 
-  --color-third: #000000;
+  --color-secondary: #F6C029;
 
-  --color-fourth: #6d4bdd;
-
-  --color-fifth: #F6C029;
-
-  --color-sixth: #c2adff;
 
   --color-success: #86da4e;
   --color-success2: #80ff2b;
@@ -22,21 +19,15 @@
 
   --shadow1: rgba(33, 35, 38, 0.1) 0px 10px 10px -10px;
   --rounded1: 16px;
+  --rounded2: 8px;
 }
 
 @theme inline {
 
   --color-primary: var(--color-primary);
+  --color-primary2: var(--color-primary2);
 
   --color-secondary: var(--color-secondary);
-
-  --color-third: var(--color-third);
-
-  --color-fourth: var(--color-fourth);
-
-  --color-fifth: var(--color-fifth);
-
-  --color-sixth: var(--color-sixth);
 
   --color-success: var(--color-success);
   --color-success2: var(--color-success2);
@@ -44,19 +35,20 @@
   --color-danger: var(--color-danger);
   --color-danger2: var(--color-danger2);
 
-  --shadow-shadow1: var(--shadow1);
+  --shadow-s1: var(--shadow1);
 
-  --radius-rounded1: var(--rounded1);
+  --radius-r1: var(--rounded1);
+  --radius-r2: var(--rounded2);
 }
 
 @layer utilities {
-  .divide-fifth {
+  .divide-secondary {
     @apply divide-y;
-    border-bottom-color: var(--color-fifth) !important;
+    border-bottom-color: var(--color-secondary) !important;
   }
 
-  .divide-fifth>* {
-    border-bottom-color: var(--color-fifth) !important;
+  .divide-secondary>* {
+    border-bottom-color: var(--color-secondary) !important;
   }
 }
 
@@ -69,10 +61,6 @@
     font-family: 'Lato', 'Almarai', sans-serif;
   }
 
-  body {
-    color: var(--color-white2);
-  }
-
   [disabled] {
     cursor: not-allowed;
   }
@@ -81,20 +69,14 @@
     cursor: pointer;
   }
 
-  input:disabled {
-    cursor: not-allowed;
-  }
-
   h2 {
     font-size: 18px;
     font-weight: 500;
-    color: white;
   }
 
   h3 {
     font-size: 16px;
     font-weight: 500;
-    color: white;
   }
 
   *::-webkit-scrollbar {
@@ -107,12 +89,12 @@
   }
 
   *::-webkit-scrollbar-thumb {
-    background-color: var(--color-primary3);
+    background-color: var(--color-overflow1);
     border-radius: 33px;
   }
 
   *::-webkit-scrollbar-thumb:hover {
-    background-color: var(--color-secondary2);
+    background-color: var(--color-overflow2);
   }
 
   /* Prefer Almarai for Arabic text and RTL content */
@@ -139,4 +121,3 @@
     background-color: rgba(0, 0, 0, 0.2);
   }
 }
-

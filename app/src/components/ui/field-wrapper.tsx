@@ -58,7 +58,7 @@ export const FieldWrapper: React.FC<FieldWrapperProps> = ({
                     <button
                         type="button"
                         onClick={onClear}
-                        className={`absolute ${isRtl ? (rightIcon ? 'left-9' : leftIcon ? 'left-9' : 'left-3') : (rightIcon ? 'right-9' : 'right-3')} top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors z-10`}
+                        className={`absolute ${isRtl ? (rightIcon ? 'left-9' : leftIcon ? 'left-9' : 'left-3') : (rightIcon ? 'right-9' : 'right-3')} top-1/2 -translate-y-1/2  hover: transition-colors z-10`}
                     >
                         <X className="h-4 w-4" />
                     </button>
@@ -66,10 +66,10 @@ export const FieldWrapper: React.FC<FieldWrapperProps> = ({
 
                 {label && (
                     <label
-                        className={`absolute ${labelLeftOffset} px-1 bg-secondary font-medium transition-all duration-200 pointer-events-none z-10 ${showLabel
-                            ? 'top-0 -translate-y-1/2 text-third text-xs'
-                            : 'top-1/2 -translate-y-1/2 text-fourth/60 text-sm'
-                            } ${error && showLabel ? 'text-danger' : ''} peer-autofill:top-0 peer-autofill:-translate-y-1/2 peer-autofill:text-third peer-autofill:text-xs`}
+                        className={`absolute ${labelLeftOffset} px-1 bg-white font-medium transition-all duration-200 pointer-events-none z-10 ${showLabel
+                            ? 'top-0 -translate-y-1/2  text-xs'
+                            : 'top-1/2 -translate-y-1/2 text-primary/60 text-sm'
+                            } ${error && showLabel ? 'text-danger' : ''} peer-autofill:top-0 peer-autofill:-translate-y-1/2 peer-autofill: peer-autofill:text-xs`}
                     >
                         {label}
                     </label>
@@ -82,13 +82,13 @@ export const FieldWrapper: React.FC<FieldWrapperProps> = ({
 };
 
 // Shared field styles constant
-export const FIELD_BASE_CLASSES = 'border-2 rounded-rounded1 placeholder-fourth/60 bg-secondary focus:outline-none focus:border-fifth transition-[border-color,background-color] disabled:cursor-not-allowed aria-disabled:cursor-not-allowed [&:-webkit-autofill]:bg-secondary [&:-webkit-autofill]:text-third [&:-webkit-autofill]:shadow-[0_0_0px_1000px_theme(colors.secondary)_inset]';
+export const FIELD_BASE_CLASSES = 'border-2 rounded-r1 placeholder-primary/60 bg-white focus:outline-none focus:border-secondary transition-[border-color,background-color] disabled:cursor-not-allowed aria-disabled:cursor-not-allowed [&:-webkit-autofill]:bg-white [&:-webkit-autofill]: [&:-webkit-autofill]:shadow-[0_0_0px_1000px_theme(colors.secondary)_inset]';
 
 // Shared icon styles for consistent appearance across all field components
-export const FIELD_ICON_CLASSES = 'h-4 w-4 text-fourth/60';
+export const FIELD_ICON_CLASSES = 'h-4 w-4 text-primary/60';
 
 // Shared right icon color for consistency across all inputs
-export const FIELD_RIGHT_ICON_COLOR = 'text-fourth/60';
+export const FIELD_RIGHT_ICON_COLOR = 'text-primary/60';
 
 // Get right icon position based on size
 export const getRightIconPosition = (size: 'default' | 'sm') => {
@@ -107,7 +107,7 @@ export const getFieldClassesBySize = (
 ) => {
     const hasLeftIcon = isSearchVariant;
     const hasRightIcon = isNum;
-    const borderColor = error ? 'border-danger!' : 'border-primary';
+    const borderColor = error ? 'border-danger!' : 'border-primary/20';
 
     if (size === 'sm') {
         const rightPadding = hasRightIcon ? 'pr-7' : 'pr-2';

@@ -7,6 +7,11 @@ import {
     VariantWeightDimensions,
 } from "../../../services/products/types/product-form.types";
 import { Card } from "@/components/ui";
+import {
+    generateCombinations,
+    getControllingAttributes,
+    getVariantData,
+} from "../../../services/products/utils/variant-combinations";
 
 interface WeightDimensionsSectionProps {
     attributes: Attribute[];
@@ -20,6 +25,82 @@ interface WeightDimensionsSectionProps {
     errors: Record<string, string>;
 }
 
+// Helper component for weight/dimensions inputs grid
+interface WeightInputsProps {
+    weight: number | undefined;
+    length: number | undefined;
+    width: number | undefined;
+    height: number | undefined;
+    onWeightChange: (value: string) => void;
+    onLengthChange: (value: string) => void;
+    onWidthChange: (value: string) => void;
+    onHeightChange: (value: string) => void;
+    weightError?: string;
+    lengthError?: string;
+    widthError?: string;
+    heightError?: string;
+    idPrefix: string;
+}
+
+const WeightInputs: React.FC<WeightInputsProps> = ({
+    weight,
+    length,
+    width,
+    height,
+    onWeightChange,
+    onLengthChange,
+    onWidthChange,
+    onHeightChange,
+    weightError,
+    lengthError,
+    widthError,
+    heightError,
+    idPrefix,
+}) => (
+    <div className="grid grid-cols-4 gap-5">
+        <Input
+            id={`${idPrefix}.weight`}
+            label="Weight (kg)"
+            type="number"
+            min="0"
+            step="0.1"
+            value={weight || ""}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => onWeightChange(e.target.value)}
+            error={weightError}
+        />
+        <Input
+            id={`${idPrefix}.length`}
+            label="Length (cm)"
+            type="number"
+            min="0"
+            step="0.1"
+            value={length || ""}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => onLengthChange(e.target.value)}
+            error={lengthError}
+        />
+        <Input
+            id={`${idPrefix}.width`}
+            label="Width (cm)"
+            type="number"
+            min="0"
+            step="0.1"
+            value={width || ""}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => onWidthChange(e.target.value)}
+            error={widthError}
+        />
+        <Input
+            id={`${idPrefix}.height`}
+            label="Height (cm)"
+            type="number"
+            min="0"
+            step="0.1"
+            value={height || ""}
+            onChange={(e: React.ChangeEvent<HTMLInputElement>) => onHeightChange(e.target.value)}
+            error={heightError}
+        />
+    </div>
+);
+
 export const WeightDimensionsSection: React.FC<WeightDimensionsSectionProps> = ({
     attributes,
     isWeightVariantBased,
@@ -31,55 +112,11 @@ export const WeightDimensionsSection: React.FC<WeightDimensionsSectionProps> = (
     hasAttributeControllingWeight,
     errors,
 }) => {
-    const weightAttributes = attributes.filter((attr) => attr.controlsWeightDimensions);
+    // Filter attributes that control weight AND have values
+    const weightAttributes = getControllingAttributes(attributes, 'controlsWeightDimensions');
 
     // Generate all combinations for weight attributes
-    const generateWeightCombinations = (): Array<{
-        key: string;
-        label: string;
-        attributeValues: { [attrId: string]: string };
-    }> => {
-        if (weightAttributes.length === 0) return [];
-
-        const generateCombos = (
-            attrs: Attribute[],
-            current: { [attrId: string]: string } = {},
-            index: number = 0
-        ): Array<{ key: string; label: string; attributeValues: { [attrId: string]: string } }> => {
-            if (index === attrs.length) {
-                const label = Object.entries(current)
-                    .map(([attrId, valueId]) => {
-                        const attr = attrs.find((a) => a.id === attrId);
-                        const val = attr?.values.find((v) => v.id === valueId);
-                        return `${attr?.name}: ${val?.value}`;
-                    })
-                    .join(" / ");
-
-                return [{ key: Object.values(current).join("-"), label, attributeValues: { ...current } }];
-            }
-
-            const results: Array<{
-                key: string;
-                label: string;
-                attributeValues: { [attrId: string]: string };
-            }> = [];
-            const currentAttr = attrs[index];
-
-            for (const value of currentAttr.values) {
-                results.push(
-                    ...generateCombos(
-                        attrs,
-                        { ...current, [currentAttr.id]: value.id },
-                        index + 1
-                    )
-                );
-            }
-
-            return results;
-        };
-
-        return generateCombos(weightAttributes);
-    };
+    const combinations = generateCombinations(weightAttributes);
 
     const handleSingleChange = (field: keyof WeightDimensions, value: string) => {
         const numValue = parseFloat(value) || undefined;
@@ -94,7 +131,6 @@ export const WeightDimensionsSection: React.FC<WeightDimensionsSectionProps> = (
         field: keyof Omit<VariantWeightDimensions, "attributeValues" | "key">,
         value: string
     ) => {
-        const combinations = generateWeightCombinations();
         const combo = combinations.find((c) => c.key === key);
         if (!combo) return;
 
@@ -115,53 +151,9 @@ export const WeightDimensionsSection: React.FC<WeightDimensionsSectionProps> = (
         onChangeVariant([...newVariantWeight, updated]);
     };
 
-    // Find existing weight data that best matches the given attribute values
-    // This preserves data when attributes controlling weight change
-    const findMatchingWeight = (attributeValues: { [attrId: string]: string }): VariantWeightDimensions | undefined => {
-        // First try exact key match
-        const key = Object.values(attributeValues).join("-");
-        const exactMatch = variantWeightDimensions.find((vw) => vw.key === key);
-        if (exactMatch) return exactMatch;
-
-        // Try to find a match where attribute values overlap
-        let bestMatch: VariantWeightDimensions | undefined;
-        let bestMatchScore = 0;
-
-        for (const vw of variantWeightDimensions) {
-            if (!vw.attributeValues) continue;
-            
-            let matchScore = 0;
-            let allMatch = true;
-            
-            for (const [attrId, valueId] of Object.entries(attributeValues)) {
-                if (vw.attributeValues[attrId] === valueId) {
-                    matchScore++;
-                } else if (vw.attributeValues[attrId] !== undefined) {
-                    allMatch = false;
-                    break;
-                }
-            }
-            
-            if (allMatch && matchScore > bestMatchScore) {
-                bestMatchScore = matchScore;
-                bestMatch = vw;
-            }
-        }
-
-        return bestMatch;
-    };
-
-    const getVariantWeight = (key: string, attributeValues?: { [attrId: string]: string }): VariantWeightDimensions | undefined => {
-        // First try exact key match
-        const exactMatch = variantWeightDimensions.find((vw) => vw.key === key);
-        if (exactMatch) return exactMatch;
-        
-        // Fall back to attribute-based matching
-        if (attributeValues) {
-            return findMatchingWeight(attributeValues);
-        }
-        
-        return undefined;
+    // Get variant weight using shared utility
+    const getWeight = (key: string, attributeValues?: { [attrId: string]: string }): VariantWeightDimensions | undefined => {
+        return getVariantData(key, variantWeightDimensions, attributeValues);
     };
 
     // Single mode (not variant-based)
@@ -170,87 +162,47 @@ export const WeightDimensionsSection: React.FC<WeightDimensionsSectionProps> = (
             <Card>
                 <div className="flex flex-col gap-2">
                     <div className="flex items-center justify-between">
-                        <h2 className="text-xl font-semibold text-gray-900">
+                        <h2 className="text-xl font-semibold ">
                             Weight & Dimensions
                         </h2>
                     </div>
                     {hasAttributeControllingWeight && weightAttributes.length === 0 && (
-                        <p className="text-sm text-gray-600">
+                        <p className="text-sm ">
                             No attributes are controlling weight/dimensions. These values apply to all variants.
                         </p>
                     )}
                 </div>
 
-                <div className="grid grid-cols-4 gap-5">
-                    <Input
-                        id="singleWeightDimensions.weight"
-                        label="Weight (kg)"
-                        type="number"
-                        min="0"
-                        step="0.1"
-                        value={singleWeightDimensions?.weight || ""}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                            handleSingleChange("weight", e.target.value)
-                        }
-                        error={errors["singleWeightDimensions.weight"]}
-                    />
-
-                    <Input
-                        id="singleWeightDimensions.length"
-                        label="Length (cm)"
-                        type="number"
-                        min="0"
-                        step="0.1"
-                        value={singleWeightDimensions?.length || ""}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                            handleSingleChange("length", e.target.value)
-                        }
-                        error={errors["singleWeightDimensions.length"]}
-                    />
-
-                    <Input
-                        id="singleWeightDimensions.width"
-                        label="Width (cm)"
-                        type="number"
-                        min="0"
-                        step="0.1"
-                        value={singleWeightDimensions?.width || ""}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                            handleSingleChange("width", e.target.value)
-                        }
-                        error={errors["singleWeightDimensions.width"]}
-                    />
-
-                    <Input
-                        id="singleWeightDimensions.height"
-                        label="Height (cm)"
-                        type="number"
-                        min="0"
-                        step="0.1"
-                        value={singleWeightDimensions?.height || ""}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                            handleSingleChange("height", e.target.value)
-                        }
-                        error={errors["singleWeightDimensions.height"]}
-                    />
-                </div>
+                <WeightInputs
+                    weight={singleWeightDimensions?.weight}
+                    length={singleWeightDimensions?.length}
+                    width={singleWeightDimensions?.width}
+                    height={singleWeightDimensions?.height}
+                    onWeightChange={(value) => handleSingleChange("weight", value)}
+                    onLengthChange={(value) => handleSingleChange("length", value)}
+                    onWidthChange={(value) => handleSingleChange("width", value)}
+                    onHeightChange={(value) => handleSingleChange("height", value)}
+                    weightError={errors["singleWeightDimensions.weight"]}
+                    lengthError={errors["singleWeightDimensions.length"]}
+                    widthError={errors["singleWeightDimensions.width"]}
+                    heightError={errors["singleWeightDimensions.height"]}
+                    idPrefix="singleWeightDimensions"
+                />
             </Card>
         );
     }
 
     // Variant-based mode
-    const combinations = generateWeightCombinations();
-
     if (combinations.length === 0) {
         return (
             <Card>
                 <div className="flex items-center justify-between">
-                    <h2 className="text-xl font-semibold text-gray-900">
+                    <h2 className="text-xl font-semibold ">
                         Weight & Dimensions
                     </h2>
                 </div>
-                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                    <p className="text-gray-600">
+                <div className=" border border-gray-200 rounded-r1 p-4">
+                    <p className="">
                         Please select attribute values to configure weight and dimensions.
                     </p>
                 </div>
@@ -261,81 +213,43 @@ export const WeightDimensionsSection: React.FC<WeightDimensionsSectionProps> = (
     return (
         <Card>
             <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold text-gray-900">
+                <h2 className="text-xl font-semibold ">
                     Weight & Dimensions - Variant Based
                 </h2>
             </div>
 
-            <p className="text-sm text-gray-600">
+            <p className="text-sm ">
                 Configure weight and dimensions for each variant based on{" "}
                 <strong>{weightAttributes.map((a) => a.name).join(", ")}</strong>
             </p>
 
             {combinations.map((combo) => {
-                const weight = getVariantWeight(combo.key, combo.attributeValues);
+                const weight = getWeight(combo.key, combo.attributeValues);
                 const variantIndex = variantWeightDimensions.findIndex(vw => vw.key === combo.key);
 
                 return (
-                    <div
+                    <Card
                         key={combo.key}
-                        className="bg-gray-50 p-4 rounded-lg border border-gray-200"
+                        variant="nested"
                     >
-                        <h4 className="font-medium text-gray-900">{combo.label}</h4>
+                        <h4 className="font-medium ">{combo.label}</h4>
 
-                        <div className="grid grid-cols-4 gap-5">
-                            <Input
-                                id={`variantWeightDimensions.${variantIndex}.weight`}
-                                label="Weight (kg)"
-                                type="number"
-                                min="0"
-                                step="0.1"
-                                value={weight?.weight || ""}
-                                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                                    handleVariantChange(combo.key, "weight", e.target.value)
-                                }
-                                error={variantIndex >= 0 ? errors[`variantWeightDimensions.${variantIndex}.weight`] : undefined}
-                            />
-
-                            <Input
-                                id={`variantWeightDimensions.${variantIndex}.length`}
-                                label="Length (cm)"
-                                type="number"
-                                min="0"
-                                step="0.1"
-                                value={weight?.length || ""}
-                                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                                    handleVariantChange(combo.key, "length", e.target.value)
-                                }
-                                error={variantIndex >= 0 ? errors[`variantWeightDimensions.${variantIndex}.length`] : undefined}
-                            />
-
-                            <Input
-                                id={`variantWeightDimensions.${variantIndex}.width`}
-                                label="Width (cm)"
-                                type="number"
-                                min="0"
-                                step="0.1"
-                                value={weight?.width || ""}
-                                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                                    handleVariantChange(combo.key, "width", e.target.value)
-                                }
-                                error={variantIndex >= 0 ? errors[`variantWeightDimensions.${variantIndex}.width`] : undefined}
-                            />
-
-                            <Input
-                                id={`variantWeightDimensions.${variantIndex}.height`}
-                                label="Height (cm)"
-                                type="number"
-                                min="0"
-                                step="0.1"
-                                value={weight?.height || ""}
-                                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                                    handleVariantChange(combo.key, "height", e.target.value)
-                                }
-                                error={variantIndex >= 0 ? errors[`variantWeightDimensions.${variantIndex}.height`] : undefined}
-                            />
-                        </div>
-                    </div>
+                        <WeightInputs
+                            weight={weight?.weight}
+                            length={weight?.length}
+                            width={weight?.width}
+                            height={weight?.height}
+                            onWeightChange={(value) => handleVariantChange(combo.key, "weight", value)}
+                            onLengthChange={(value) => handleVariantChange(combo.key, "length", value)}
+                            onWidthChange={(value) => handleVariantChange(combo.key, "width", value)}
+                            onHeightChange={(value) => handleVariantChange(combo.key, "height", value)}
+                            weightError={variantIndex >= 0 ? errors[`variantWeightDimensions.${variantIndex}.weight`] : undefined}
+                            lengthError={variantIndex >= 0 ? errors[`variantWeightDimensions.${variantIndex}.length`] : undefined}
+                            widthError={variantIndex >= 0 ? errors[`variantWeightDimensions.${variantIndex}.width`] : undefined}
+                            heightError={variantIndex >= 0 ? errors[`variantWeightDimensions.${variantIndex}.height`] : undefined}
+                            idPrefix={`variantWeightDimensions.${variantIndex}`}
+                        />
+                    </Card>
                 );
             })}
         </Card>
