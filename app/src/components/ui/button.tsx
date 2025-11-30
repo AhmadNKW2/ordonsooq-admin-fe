@@ -16,12 +16,12 @@ export const Button: React.FC<ButtonProps> = ({ children, onClick, variant = 'so
 
   const defaultVariantClasses = {
     solid: 'bg-secondary active:bg-secondary/75 hover:bg-secondary/80 text-white',
-    outline: 'bg-white border-2 border-primary2 text-primary2 hover:bg-primary2 hover:text-white active:bg-primary2 active:text-white',
+    outline: 'bg-white border border-primary2 text-primary2 hover:bg-primary2 hover:text-white active:bg-primary2 active:text-white',
   };
 
   const customVariantClasses = {
     solid: 'bg-[var(--button-color)] text-white hover:bg-[var(--button-color)] hover:opacity-80 active:bg-[var(--button-color)] active:opacity-70',
-    outline: 'bg-white border-2 border-[var(--button-color)] text-[var(--button-color)] hover:bg-[var(--button-color)] hover:text-white',
+    outline: 'bg-white border border-[var(--button-color)] text-[var(--button-color)] hover:bg-[var(--button-color)] hover:text-white',
   };
 
   const variantClasses = color ? customVariantClasses : defaultVariantClasses;

@@ -47,7 +47,7 @@ export const Modal: React.FC<ModalProps> = ({
       // Wait for animation to complete before hiding
       const timer = setTimeout(() => {
         setIsVisible(false);
-      }, 200); // Match animation duration
+      }, 300); // Match animation duration
       return () => {
         clearTimeout(animTimer);
         clearTimeout(timer);
@@ -93,7 +93,7 @@ export const Modal: React.FC<ModalProps> = ({
       className={`
         fixed inset-0 z-50 flex items-center justify-center p-4 
         bg-black/50 backdrop-blur-sm
-        transition-opacity duration-200 ease-out
+        transition-opacity duration-300 ease-out
         ${isAnimating ? 'opacity-100' : 'opacity-0'}
       `}
       onClick={handleBackdropClick}
@@ -102,7 +102,7 @@ export const Modal: React.FC<ModalProps> = ({
         className={`
           relative max-md:max-h-[90vh] rounded-r1 shadow-s1
           flex flex-col justify-center items-center gap-5
-          transition-all duration-200 ease-out
+          transition-all duration-300 ease-out
           ${variant === 'default' ? 'p-5' : ''}
           ${isAnimating
             ? 'opacity-100 scale-100 translate-y-0'

@@ -148,13 +148,23 @@ export interface ProductStock {
   updated_at?: string | Date;
 }
 
-export interface ProductDetail extends Product {
-  category?: Category;
-  vendor?: Omit<Vendor, 'isActive' | 'createdAt' | 'updatedAt'> & {
-    is_active: boolean;
+export interface ProductDetail extends Omit<Product, 'vendor' | 'category' | 'stock'> {
+  category?: Category | null;
+  vendor?: {
+    id: number;
+    name: string;
+    description?: string | null;
+    email?: string | null;
+    phone?: string | null;
+    address?: string | null;
+    logo?: string | null;
+    is_active?: boolean;
+    isActive?: boolean;
     created_at?: string | Date;
     updated_at?: string | Date;
-  };
+    createdAt?: string | Date;
+    updatedAt?: string | Date;
+  } | null;
   media?: ProductMedia[];
   pricing?: ProductPricing[];
   weight?: ProductWeight[];

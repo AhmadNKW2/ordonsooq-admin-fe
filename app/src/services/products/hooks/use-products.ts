@@ -14,6 +14,7 @@ import { productService } from "../api/product.service";
 import { queryKeys } from "../../../lib/query-keys";
 import {
   Product,
+  ProductDetail,
   CreateProductDto,
   UpdateProductDto,
   ProductFilters,
@@ -56,9 +57,9 @@ export function useProduct(
   id: string | number,
   options?: Omit<
     UseQueryOptions<
-      ApiResponse<Product>,
+      ApiResponse<ProductDetail>,
       ApiError,
-      ApiResponse<Product>,
+      ApiResponse<ProductDetail>,
       ReturnType<typeof queryKeys.products.detail>
     >,
     "queryKey" | "queryFn"

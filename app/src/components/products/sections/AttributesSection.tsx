@@ -60,6 +60,16 @@ export const AttributesSection: React.FC<AttributesSectionProps> = ({
         onChange(attributes.filter((attr) => attr.id !== attributeId), 'all');
     };
 
+    const handleUpdateValues = (attributeId: string, newValues: AttributeValue[]) => {
+        const updated = attributes.map((attr) => {
+            if (attr.id === attributeId) {
+                return { ...attr, values: newValues };
+            }
+            return attr;
+        });
+        onChange(updated);
+    };
+
     const handleAddValue = (attributeId: string, value: string, valueId?: string) => {
         if (!value.trim()) return;
 
@@ -158,16 +168,12 @@ export const AttributesSection: React.FC<AttributesSectionProps> = ({
                     )}
                 </div>
                 {totalCombinations > 0 && (
-                    <div className="text-primary px-4 py-2 rounded-r1">
+                    <div className="text-primary rounded-r1">
                         <span className="font-semibold">{totalCombinations}</span> variant
                         {totalCombinations !== 1 ? "s" : ""} will be created
                     </div>
                 )}
             </div>
-
-            <h3 className="text-base font-medium ">
-                Add Attribute
-            </h3>
 
             <div className="flex gap-5">
                     <Select
@@ -211,6 +217,7 @@ export const AttributesSection: React.FC<AttributesSectionProps> = ({
                                 totalAttributes={attributes.length}
                                 onAddValue={handleAddValue}
                                 onRemoveValue={handleRemoveValue}
+                                onUpdateValues={handleUpdateValues}
                                 onRemove={handleRemoveAttribute}
                                 onToggleControl={handleToggleControl}
                                 availableAttr={availableAttr}
@@ -230,6 +237,7 @@ interface AttributeCardProps {
     totalAttributes: number;
     onAddValue: (attributeId: string, value: string, valueId?: string) => void;
     onRemoveValue: (attributeId: string, valueId: string) => void;
+    onUpdateValues: (attributeId: string, values: AttributeValue[]) => void;
     onRemove: (attributeId: string) => void;
     onToggleControl: (
         attributeId: string,
@@ -244,6 +252,7 @@ const AttributeCard: React.FC<AttributeCardProps> = ({
     totalAttributes,
     onAddValue,
     onRemoveValue,
+    onUpdateValues,
     onRemove,
     onToggleControl,
     availableAttr,
@@ -253,30 +262,30 @@ const AttributeCard: React.FC<AttributeCardProps> = ({
 
     const handleValuesChange = (values: string | string[]) => {
         const newValues = Array.isArray(values) ? values : [values];
-        const currentValues = attribute.values.map(v => v.value);
         
-        // Find added values
-        const addedValues = newValues.filter(v => !currentValues.includes(v));
-        // Find removed values
-        const removedValues = currentValues.filter(v => !newValues.includes(v));
-        
-        // Add new values with their proper IDs from availableAttr
-        addedValues.forEach(value => {
-            const valueObj = availableAttr?.values.find(v => v.value === value);
-            onAddValue(attribute.id, value, valueObj?.id);
-        });
-        
-        // Remove deselected values
-        removedValues.forEach(value => {
-            const valueObj = attribute.values.find(v => v.value === value);
-            if (valueObj) {
-                onRemoveValue(attribute.id, valueObj.id);
+        // Build the complete new values array with proper IDs and order
+        const updatedValues: AttributeValue[] = newValues.map((value, index) => {
+            // Check if this value already exists in the current attribute
+            const existingValue = attribute.values.find(v => v.value === value);
+            if (existingValue) {
+                return { ...existingValue, order: index };
             }
+            
+            // Get the ID from availableAttr for new values
+            const valueObj = availableAttr?.values.find(v => v.value === value);
+            return {
+                id: valueObj?.id || value,
+                value: value,
+                order: index,
+            };
         });
+        
+        // Call parent's handleUpdateValues to update all values at once
+        onUpdateValues(attribute.id, updatedValues);
     };
 
     return (
-        <div className="bg-white p-5 rounded-r1 border-2 border-primary/20 flex flex-col gap-5">
+        <Card variant="nested">
             <div className="flex items-start justify-between">
                 <div className="flex items-center gap-1">
                     <div className="flex justify-center items-center gap-5">
@@ -350,6 +359,6 @@ const AttributeCard: React.FC<AttributeCardProps> = ({
                     />
                 </div>
             </div>
-        </div>
+        </Card>
     );
 };

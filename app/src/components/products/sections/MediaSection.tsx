@@ -30,7 +30,7 @@ import {
     getControllingAttributes,
     getVariantData,
 } from "../../../services/products/utils/variant-combinations";
-import { Upload } from "lucide-react";
+import { Eye, Star, Upload } from "lucide-react";
 
 interface MediaSectionProps {
     attributes: Attribute[];
@@ -351,7 +351,7 @@ export const MediaSection: React.FC<MediaSectionProps> = ({
                         Media Management
                     </h2>
                 </div>
-                <div className=" border border-gray-200 rounded-r1 p-4">
+                <div className=" border border-b1 rounded-r1 p-4">
                     <p className="">
                         Please select attribute values to configure media.
                     </p>
@@ -451,7 +451,7 @@ const SortableMediaItem = ({ item, onRemove, onSetPrimary, onPreview }: Sortable
             style={style}
             {...attributes}
             {...listeners}
-            className="w-40 h-40 relative group border-2 rounded-r1 overflow-hidden border-primary/20 touch-none"
+            className="w-40 h-40 relative group border rounded-r1 overflow-hidden border-primary/20 touch-none"
         >
             {item.type === "image" ? (
                 <Image
@@ -470,7 +470,7 @@ const SortableMediaItem = ({ item, onRemove, onSetPrimary, onPreview }: Sortable
                 </div>
             )}
 
-            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-all flex flex-col items-center justify-center gap-2 z-20">
+            <div className="flex justify-center items-center gap-2  absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-all duration-300 z-20">
                 {!item.isPrimary && (
                     <button
                         onPointerDown={(e) => e.stopPropagation()}
@@ -478,9 +478,9 @@ const SortableMediaItem = ({ item, onRemove, onSetPrimary, onPreview }: Sortable
                             e.stopPropagation();
                             onSetPrimary(item.id);
                         }}
-                        className="bg-white  px-3 py-1 rounded text-sm hover: w-24"
+                        className="bg-secondary/50 p-3 rounded-r1 text-sm transition-all duration-300 ease-in-out hover:bg-secondary/75 active:bg-secondary/90 group/secondary"
                     >
-                        Set Primary
+                        <Star className="text-secondary group-hover/secondary:text-white transition-all duration-300" />
                     </button>
                 )}
                 {onPreview && (
@@ -490,9 +490,9 @@ const SortableMediaItem = ({ item, onRemove, onSetPrimary, onPreview }: Sortable
                             e.stopPropagation();
                             onPreview(item.preview);
                         }}
-                        className="bg-white  px-3 py-1 rounded text-sm hover: w-24"
+                        className="bg-primary/50 p-3 rounded-r1 text-sm transition-all duration-300 ease-in-out hover:bg-primary/75 active:bg-primary/90 group/preview"
                     >
-                        Preview
+                        <Eye className="text-primary3 group-hover/preview:text-white transition-all duration-300" />
                     </button>
                 )}
                 <button
@@ -577,10 +577,11 @@ const MediaUploadArea: React.FC<MediaUploadAreaProps> = ({
                 }}
                 onDragLeave={() => setDragOver(false)}
                 onDrop={handleDrop}
-                className={`border-2 border-dashed rounded-r1 p-8 text-center transition-colors ${dragOver
+                className={`border border-dashed rounded-r1 p-8 text-center transition-colors ${dragOver
                     ? "border-primary bg-primary/10"
-                    : "border-gray-300 hover:border-secondary hover:bg-secondary/10"
+                    : "border-primary/20 hover:border-primary hover:bg-primary/10 hover:cursor-pointer"
                     }`}
+                onClick={() => fileInputRef.current?.click()}
             >
                 <input
                     ref={fileInputRef}
@@ -595,7 +596,10 @@ const MediaUploadArea: React.FC<MediaUploadAreaProps> = ({
 
                 <div>
                     <Button
-                        onClick={() => fileInputRef.current?.click()}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            fileInputRef.current?.click();
+                        }}
                         color="var(--color-primary)"
                     >
                         Choose Files

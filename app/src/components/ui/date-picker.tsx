@@ -167,7 +167,7 @@ export const DatePicker = React.forwardRef<HTMLDivElement, DatePickerProps>(
             {...props}
           >
             <span className={hasValue ? '' : 'text-transparent'}>
-              {formatDate(selectedDate) || 'placeholder'}
+              {formatDate(selectedDate) || ''}
             </span>
           </div>
         </FieldWrapper>
@@ -176,7 +176,7 @@ export const DatePicker = React.forwardRef<HTMLDivElement, DatePickerProps>(
         <div
           role="dialog"
           aria-label="Calendar"
-          className={`absolute z-20 w-80 mt-1 bg-white border-2 border-primary/20 rounded-r1 shadow-s1 transition-all duration-200 origin-top ${
+          className={`absolute z-20 w-80 mt-1 bg-white border border-primary/20 rounded-r1 shadow-s1 transition-all duration-200 origin-top ${
             isOpen
               ? 'opacity-100 scale-y-100 visible'
               : 'opacity-0 scale-y-95 invisible'

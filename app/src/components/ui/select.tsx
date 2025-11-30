@@ -80,15 +80,22 @@ export const Select = React.forwardRef<HTMLDivElement, SelectProps>(
 
       if (isOpen) {
         document.addEventListener('mousedown', handleClickOutside);
-        // Focus search input when dropdown opens
-        if (search) {
-          setTimeout(() => searchInputRef.current?.focus(), 0);
-        }
       }
 
       return () => {
         document.removeEventListener('mousedown', handleClickOutside);
       };
+    }, [isOpen]);
+
+    // Auto-focus search input when dropdown opens
+    useEffect(() => {
+      if (isOpen && search) {
+        // Small delay to ensure dropdown transition completes and element is visible
+        const timer = setTimeout(() => {
+          searchInputRef.current?.focus();
+        }, 50);
+        return () => clearTimeout(timer);
+      }
     }, [isOpen, search]);
 
     const [menuWidth, setMenuWidth] = useState<string | number>('100%');
@@ -237,7 +244,7 @@ export const Select = React.forwardRef<HTMLDivElement, SelectProps>(
               {...props}
             >
               <span className={hasValue ? '' : 'text-transparent'}>
-                {displayValue || 'placeholder'}
+                {displayValue || ''}
               </span>
             </div>
             {/* Icon */}
@@ -266,7 +273,7 @@ export const Select = React.forwardRef<HTMLDivElement, SelectProps>(
               tabIndex={disabled ? -1 : 0}
               onClick={handleToggle}
               onKeyDown={handleKeyDown}
-              className={`${selectClasses} ${disabled ? '' : 'cursor-pointer'} ${multiple && hasValue ? 'py-1.5!' : ''}`}
+              className={`${selectClasses} ${disabled ? '' : 'cursor-pointer'} ${multiple && hasValue ? '' : ''}`}
               {...props}
             >
               {multiple && hasValue ? (
@@ -276,7 +283,7 @@ export const Select = React.forwardRef<HTMLDivElement, SelectProps>(
                     return (
                       <div
                         key={val}
-                        className="inline-flex items-center bg-primary/10 text-primary rounded-full px-2.5 py-1 text-sm font-medium"
+                        className="inline-flex items-center bg-primary/5 border border-primary/20 text-primary rounded-full px-2.5 py-1 text-sm font-medium"
                         onClick={(e) => {
                           e.stopPropagation();
                         }}
@@ -297,7 +304,7 @@ export const Select = React.forwardRef<HTMLDivElement, SelectProps>(
                 </div>
               ) : (
                 <span className={hasValue ? '' : 'text-transparent'}>
-                  {displayValue || 'placeholder'}
+                  {displayValue || ''}
                 </span>
               )}
             </div>
@@ -310,7 +317,7 @@ export const Select = React.forwardRef<HTMLDivElement, SelectProps>(
           role="listbox"
           aria-multiselectable={multiple}
           // --- FIX 2: Change fixed to absolute to anchor to parent ---
-          className={`absolute z-50 mt-1 bg-white border-2 border-primary/20 overflow-hidden rounded-r1 shadow-s1 transition-all duration-200 origin-top ${isOpen
+          className={`absolute z-50 mt-1 bg-white border border-primary/20 overflow-hidden rounded-r1 shadow-s1 transition-all duration-200 origin-top ${isOpen
             ? 'opacity-100 scale-y-100 visible'
             : 'opacity-0 scale-y-95 invisible'
             }`}
@@ -324,7 +331,7 @@ export const Select = React.forwardRef<HTMLDivElement, SelectProps>(
         >
           {/* Search Input */}
           {search && (
-            <div className="p-2 border-b-2 border-primary/20">
+            <div className="p-2 border-b border-primary/20">
               <div className="relative">
                 <Search className={`absolute left-3 top-1/2 -translate-y-1/2 ${FIELD_ICON_CLASSES} pointer-events-none`} />
                 <Input
@@ -364,7 +371,7 @@ export const Select = React.forwardRef<HTMLDivElement, SelectProps>(
                       } ${isSelected ? 'bg-primary/20 text-primary font-medium' : ''}`}
                   >
                     {multiple && (
-                      <div className={`w-4 h-4 border-2 rounded flex items-center justify-center shrink-0 ${isSelected ? 'bg-primary border-primary' : 'border-primary/20'
+                      <div className={`w-4 h-4 border rounded flex items-center justify-center shrink-0 ${isSelected ? 'bg-primary border-primary' : 'border-primary/20'
                         }`}>
                         {isSelected && (
                           <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">

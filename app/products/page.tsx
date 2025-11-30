@@ -8,7 +8,7 @@
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { useProducts, useDeleteProduct } from "../src/services/products/hooks/use-products";
+import { useProducts, useDeleteProduct, useProduct } from "../src/services/products/hooks/use-products";
 import { useCategories } from "../src/services/categories/hooks/use-categories";
 import { useVendors } from "../src/services/vendors/hooks/use-vendors";
 import { Plus, RefreshCw, Package, AlertCircle, Star, X } from "lucide-react";
@@ -28,6 +28,7 @@ import {
 } from "../src/components/ui/table";
 import { PAGINATION } from "../src/lib/constants";
 import { ProductFilters, Product } from "../src/services/products/types/product.types";
+import { ProductViewModal } from "../src/components/products/ProductViewModal";
 
 export default function ProductsPage() {
   const router = useRouter();
@@ -37,13 +38,19 @@ export default function ProductsPage() {
   });
 
   const [searchTerm, setSearchTerm] = useState("");
-  const [viewProduct, setViewProduct] = useState<Product | null>(null);
+  const [viewProductId, setViewProductId] = useState<number | null>(null);
 
   const { data, isLoading, isError, error, refetch } =
     useProducts(queryParams);
   const { data: categoriesData } = useCategories();
   const { data: vendorsData } = useVendors();
   const deleteProduct = useDeleteProduct();
+
+  // Fetch product details when viewing
+  const { data: viewProductData, isLoading: isLoadingViewProduct } = useProduct(
+    viewProductId || 0,
+    { enabled: !!viewProductId }
+  );
 
   // Create a category lookup map for O(1) lookups
   const categoryMap = useMemo(() => {
@@ -90,7 +97,11 @@ export default function ProductsPage() {
   };
 
   const handleView = (product: Product) => {
-    router.push(`/products/${product.id}/view`);
+    setViewProductId(product.id);
+  };
+
+  const handleCloseViewModal = () => {
+    setViewProductId(null);
   };
 
   const handleCreateNew = () => {
@@ -227,7 +238,7 @@ export default function ProductsPage() {
       ) : (
         <Table>
           <TableHeader>
-            <TableRow>
+            <TableRow isHeader>
               <TableHead>Product ID</TableHead>
               <TableHead>Image</TableHead>
               <TableHead>Product Name</TableHead>
@@ -344,6 +355,21 @@ export default function ProductsPage() {
           showPageSize={true}
         />
       )}
+
+      {/* Product View Modal */}
+      <ProductViewModal
+        isOpen={!!viewProductId}
+        onClose={handleCloseViewModal}
+        product={viewProductData?.data || null}
+        onEdit={() => {
+          handleCloseViewModal();
+          if (viewProductId) {
+            router.push(`/products/${viewProductId}`);
+          }
+        }}
+        categories={categoriesData?.map(c => ({ id: c.id, name: c.name })) || []}
+        vendors={vendorsData?.map(v => ({ id: v.id, name: v.name })) || []}
+      />
     </div>
   );
 }

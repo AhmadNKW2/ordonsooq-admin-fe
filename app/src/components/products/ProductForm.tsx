@@ -27,6 +27,7 @@ import { MediaSection } from "./sections/MediaSection";
 import { StockSection } from "./sections/StockSection";
 import { Card } from "../ui";
 import { useFormValidation, ValidationSchema } from "../../hooks/use-form-validation";
+import { Package } from "lucide-react";
 
 interface ProductFormProps {
   initialData?: Partial<ProductFormData>;
@@ -252,19 +253,26 @@ export const ProductForm: React.FC<ProductFormProps> = ({
   };
 
   return (
-    <div className="mx-auto px-5 py-8 flex flex-col gap-5">
+    <div className="mx-auto p-5 flex flex-col gap-5">
       <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold ">
-            {isEditMode ? "Edit Product" : "Create New Product"}
-          </h1>
-          <p className=" mt-2">
-            {isEditMode
-              ? "Update product information and variants"
-              : "Fill in the details to create a new product"}
-          </p>
-        </div>
+        <div className="flex justify-center items-center gap-5">
+          <div className="rounded-r1 bg-primary to-primary p-3">
+            <Package className="h-6 w-6 text-white" />
+          </div>
 
+          <div>
+            <h1 className="text-3xl font-bold ">
+              {isEditMode ? "Edit Product" : "Create New Product"}
+            </h1>
+
+            <p className=" mt-2">
+              {isEditMode
+                ? "Update product information and variants"
+                : "Fill in the details to create a new product"}
+            </p>
+          </div>
+
+        </div>
         <div className="flex gap-5">
           {/* Cancel Button */}
           <Button

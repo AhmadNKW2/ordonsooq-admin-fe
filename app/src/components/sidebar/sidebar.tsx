@@ -28,7 +28,7 @@ export function Sidebar({ children }: SidebarProps) {
     <SidebarContext.Provider value={{}}>
       <aside
         className="
-          relative h-screen bg-white border-r border-primary/20 
+          relative h-screen bg-white shadow-s1
           flex flex-col w-70
         "
       >
@@ -44,7 +44,7 @@ interface SidebarHeaderProps {
 
 export function SidebarHeader({ children }: SidebarHeaderProps) {
   return (
-    <div className="h-16 border-b border-gray-200 flex items-center justify-between px-4">
+    <div className="border-b border-b1 flex items-center justify-between px-4 py-5">
       {children}
     </div>
   );
@@ -68,7 +68,7 @@ interface SidebarFooterProps {
 
 export function SidebarFooter({ children }: SidebarFooterProps) {
   return (
-    <div className="border-t border-gray-200 p-4">
+    <div className="border-t border-b1 p-4">
       {children}
     </div>
   );
@@ -162,7 +162,7 @@ export function SidebarLink({
         group relative flex items-center gap-5 px-3 py-2.5 mb-1 rounded-r1
         transition-all duration-200 ease-in-out
         ${isActive
-          ? 'bg-primary text-white shadow-s1'
+          ? 'bg-primary text-white shadow-s2'
           : ' hover: hover:'
         }
       `}
@@ -209,5 +209,5 @@ interface SidebarDividerProps {
 }
 
 export function SidebarDivider({ className = '' }: SidebarDividerProps) {
-  return <div className={`my-4 border-t border-gray-200 ${className}`} />;
+  return <div className={`my-4 border-t border-b1 ${className}`} />;
 }

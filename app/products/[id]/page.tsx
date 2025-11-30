@@ -53,7 +53,7 @@ export default function EditProductPage() {
   })) || [];
 
   // Transform product data to form initial data
-  const product: ProductDetail | undefined = productData?.data;
+  const product: ProductDetail | undefined = productData?.data as ProductDetail | undefined;
   
   // Helper function to build attributeValues map from variant combinations
   const buildAttributeValuesMap = (combinations: any[]): { [attrId: string]: string } => {
@@ -68,17 +68,37 @@ export default function EditProductPage() {
     return map;
   };
 
-  // Helper function to build attributeValues map from groupValues
-  const buildAttributeValuesFromGroupValues = (groupValues: any[]): { [attrId: string]: string } => {
+  // Helper function to build attributeValues map from groupValues or combination
+  const buildAttributeValuesFromItem = (item: any): { [attrId: string]: string } => {
     const map: { [attrId: string]: string } = {};
-    groupValues?.forEach((gv: any) => {
-      const attrId = gv.attribute_id?.toString();
-      const valueId = gv.attribute_value_id?.toString();
-      if (attrId && valueId) {
-        map[attrId] = valueId;
+    
+    // First try groupValues format (array of { attribute_id, attribute_value_id })
+    if (item?.groupValues && Array.isArray(item.groupValues)) {
+      item.groupValues.forEach((gv: any) => {
+        const attrId = gv.attribute_id?.toString();
+        const valueId = gv.attribute_value_id?.toString();
+        if (attrId && valueId) {
+          map[attrId] = valueId;
+        }
+      });
+      return map;
+    }
+    
+    // Fallback to combination format (object { "attr_id": value_id })
+    if (item?.combination && typeof item.combination === 'object') {
+      for (const [attrId, valueId] of Object.entries(item.combination)) {
+        if (attrId && valueId !== undefined && valueId !== null) {
+          map[attrId] = valueId.toString();
+        }
       }
-    });
+    }
+    
     return map;
+  };
+
+  // Legacy function for backward compatibility - delegates to buildAttributeValuesFromItem
+  const buildAttributeValuesFromGroupValues = (groupValues: any[]): { [attrId: string]: string } => {
+    return buildAttributeValuesFromItem({ groupValues });
   };
 
   // Helper function to generate variant key from attributeValues
@@ -140,11 +160,11 @@ export default function EditProductPage() {
     // Only for variant products (products with attributes)
     if (!product?.attributes || product.attributes.length === 0) return undefined;
     
-    // Use prices array with groupValues for variant pricing
+    // Use prices array with groupValues or combination for variant pricing
     const prices = (product as any).prices;
     if (prices && prices.length > 0) {
       return prices.map((pg: any) => {
-        const attributeValues = buildAttributeValuesFromGroupValues(pg.groupValues || []);
+        const attributeValues = buildAttributeValuesFromItem(pg);
         const key = generateVariantKey(attributeValues);
         
         return {
@@ -163,12 +183,12 @@ export default function EditProductPage() {
 
   // Transform variant weight/dimensions from weights array
   const transformVariantWeightDimensions = () => {
-    // Use weights array with groupValues for variant weights
+    // Use weights array with groupValues or combination for variant weights
     const weights = (product as any).weights;
     if (!weights || weights.length === 0) return undefined;
 
     return weights.map((wg: any) => {
-      const attributeValues = buildAttributeValuesFromGroupValues(wg.groupValues || []);
+      const attributeValues = buildAttributeValuesFromItem(wg);
       const key = generateVariantKey(attributeValues);
       
       return {
@@ -736,7 +756,7 @@ export default function EditProductPage() {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b border-primary mx-auto"></div>
           <p className="mt-4 ">Loading product data...</p>
         </div>
       </div>

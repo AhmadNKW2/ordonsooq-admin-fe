@@ -80,16 +80,18 @@ interface TableRowProps {
   className?: string;
   onClick?: () => void;
   style?: React.CSSProperties;
+  isHeader?: boolean;
 }
 
 export const TableRow = React.forwardRef<HTMLTableRowElement, TableRowProps>(
-  ({ children, className = '', onClick, style }, ref) => {
+  ({ children, className = '', onClick, style, isHeader = false }, ref) => {
+    const height = isHeader ? '50px' : '65px';
     return (
       <tr
         ref={ref}
         className={`transition-all duration-200 border-b border-secondary last:border-b-0 ${onClick ? 'cursor-pointer' : ''} ${className}`}
         onClick={onClick}
-        style={{ height: '65px', ...style }}
+        style={{ height, ...style }}
       >
         {children}
       </tr>

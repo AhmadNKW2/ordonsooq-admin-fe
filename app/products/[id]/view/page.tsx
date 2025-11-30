@@ -62,7 +62,7 @@ export default function ViewProductPage() {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b border-primary mx-auto"></div>
           <p className="mt-4 ">Loading product...</p>
         </div>
       </div>
@@ -229,7 +229,11 @@ export default function ViewProductPage() {
                 <div className="flex items-center gap-2 mt-1">
                   <Star className="h-5 w-5 text-primary fill-primary" />
                   <p className="text-2xl font-bold ">
-                    {product.average_rating?.toFixed(1) || "0.0"}
+                    {typeof product.average_rating === 'number' 
+                      ? product.average_rating.toFixed(1) 
+                      : typeof product.average_rating === 'string' 
+                        ? parseFloat(product.average_rating).toFixed(1) 
+                        : "0.0"}
                   </p>
                   <span className="">out of 5</span>
                 </div>
