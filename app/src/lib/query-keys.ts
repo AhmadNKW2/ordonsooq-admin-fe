@@ -4,17 +4,6 @@
  */
 
 export const queryKeys = {
-  // Products
-  products: {
-    all: ["products"] as const,
-    lists: () => [...queryKeys.products.all, "list"] as const,
-    list: (params?: Record<string, any>) =>
-      [...queryKeys.products.lists(), params] as const,
-    details: () => [...queryKeys.products.all, "detail"] as const,
-    detail: (id: string | number) =>
-      [...queryKeys.products.details(), id] as const,
-  },
-
   // Users
   users: {
     all: ["users"] as const,
@@ -42,6 +31,8 @@ export const queryKeys = {
     all: ["categories"] as const,
     tree: ["categories", "tree"] as const,
     main: ["categories", "main"] as const,
+    archived: ["categories", "archived"] as const,
+    products: (id: number) => ["categories", id, "products"] as const,
     lists: () => [...queryKeys.categories.all, "list"] as const,
     list: (params?: Record<string, any>) =>
       [...queryKeys.categories.lists(), params] as const,
@@ -53,12 +44,26 @@ export const queryKeys = {
   // Vendors
   vendors: {
     all: ["vendors"] as const,
+    archived: ["vendors", "archived"] as const,
+    products: (id: number) => ["vendors", id, "products"] as const,
     lists: () => [...queryKeys.vendors.all, "list"] as const,
     list: (params?: Record<string, any>) =>
       [...queryKeys.vendors.lists(), params] as const,
     details: () => [...queryKeys.vendors.all, "detail"] as const,
     detail: (id: string | number) =>
       [...queryKeys.vendors.details(), id] as const,
+  },
+
+  // Products
+  products: {
+    all: ["products"] as const,
+    archived: ["products", "archived"] as const,
+    lists: () => [...queryKeys.products.all, "list"] as const,
+    list: (params?: Record<string, any>) =>
+      [...queryKeys.products.lists(), params] as const,
+    details: () => [...queryKeys.products.all, "detail"] as const,
+    detail: (id: string | number) =>
+      [...queryKeys.products.details(), id] as const,
   },
 
   // Attributes
@@ -70,5 +75,27 @@ export const queryKeys = {
     details: () => [...queryKeys.attributes.all, "detail"] as const,
     detail: (id: string | number) =>
       [...queryKeys.attributes.details(), id] as const,
+  },
+
+  // Wishlists
+  wishlists: {
+    all: ["wishlists"] as const,
+    lists: () => [...queryKeys.wishlists.all, "list"] as const,
+    list: (params?: Record<string, any>) =>
+      [...queryKeys.wishlists.lists(), params] as const,
+    details: () => [...queryKeys.wishlists.all, "detail"] as const,
+    detail: (id: string | number) =>
+      [...queryKeys.wishlists.details(), id] as const,
+  },
+
+  // Customers
+  customers: {
+    all: ["customers"] as const,
+    lists: () => [...queryKeys.customers.all, "list"] as const,
+    list: (params?: Record<string, any>) =>
+      [...queryKeys.customers.lists(), params] as const,
+    details: () => [...queryKeys.customers.all, "detail"] as const,
+    detail: (id: string | number) =>
+      [...queryKeys.customers.details(), id] as const,
   },
 } as const;

@@ -12,12 +12,14 @@ import {
 } from "@tanstack/react-query";
 import { productService } from "../api/product.service";
 import { queryKeys } from "../../../lib/query-keys";
+import { showSuccessToast } from "../../../lib/toast";
 import {
   Product,
   ProductDetail,
   CreateProductDto,
   UpdateProductDto,
   ProductFilters,
+  RestoreProductDto,
 } from "../types/product.types";
 import {
   ApiResponse,
@@ -74,6 +76,27 @@ export function useProduct(
 }
 
 /**
+ * Hook to fetch archived products
+ */
+export function useArchivedProducts(
+  options?: Omit<
+    UseQueryOptions<
+      ApiResponse<Product[]>,
+      ApiError,
+      ApiResponse<Product[]>,
+      readonly ["products", "archived"]
+    >,
+    "queryKey" | "queryFn"
+  >
+) {
+  return useQuery({
+    queryKey: queryKeys.products.archived,
+    queryFn: () => productService.getArchivedProducts(),
+    ...options,
+  });
+}
+
+/**
  * Hook to create a product
  */
 export function useCreateProduct(
@@ -90,6 +113,7 @@ export function useCreateProduct(
     onSuccess: (...args) => {
       // Invalidate products list to refetch
       queryClient.invalidateQueries({ queryKey: queryKeys.products.lists() });
+      showSuccessToast("Product created successfully");
 
       // Call onSuccess from options if provided
       options?.onSuccess?.(...args);
@@ -118,6 +142,7 @@ export function useUpdateProduct(
         queryKey: queryKeys.products.detail(variables.id),
       });
       queryClient.invalidateQueries({ queryKey: queryKeys.products.lists() });
+      showSuccessToast("Product updated successfully");
 
       // Call onSuccess from options if provided
       options?.onSuccess?.(response, variables, ...rest);
@@ -128,25 +153,82 @@ export function useUpdateProduct(
 
 /**
  * Hook to delete a product
+ * @deprecated Use useArchiveProduct instead
  */
 export function useDeleteProduct(
+  options?: UseMutationOptions<ApiResponse<void>, ApiError, string | number>
+) {
+  return useArchiveProduct(options);
+}
+
+/**
+ * Hook to archive a product
+ */
+export function useArchiveProduct(
   options?: UseMutationOptions<ApiResponse<void>, ApiError, string | number>
 ) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (id: string | number) => productService.deleteProduct(id),
+    mutationFn: (id: string | number) => productService.archiveProduct(id),
     onSuccess: (...args) => {
-      // Invalidate products list
+      // Invalidate products list and archived list
       queryClient.invalidateQueries({ queryKey: queryKeys.products.lists() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.products.archived });
 
       // Remove specific product from cache
       const [, variables] = args;
       queryClient.removeQueries({
         queryKey: queryKeys.products.detail(variables),
       });
+      showSuccessToast("Product archived successfully");
 
       // Call onSuccess from options if provided
+      options?.onSuccess?.(...args);
+    },
+    ...options,
+  });
+}
+
+/**
+ * Hook to restore an archived product
+ */
+export function useRestoreProduct(
+  options?: UseMutationOptions<
+    ApiResponse<Product>,
+    ApiError,
+    { id: string | number; data?: RestoreProductDto }
+  >
+) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, data }) => productService.restoreProduct(id, data),
+    onSuccess: (response, variables, ...rest) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.products.lists() });
+      queryClient.invalidateQueries({ queryKey: queryKeys.products.archived });
+      showSuccessToast("Product restored successfully");
+
+      options?.onSuccess?.(response, variables, ...rest);
+    },
+    ...options,
+  });
+}
+
+/**
+ * Hook to permanently delete a product
+ */
+export function usePermanentDeleteProduct(
+  options?: UseMutationOptions<ApiResponse<void>, ApiError, string | number>
+) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string | number) => productService.permanentDeleteProduct(id),
+    onSuccess: (...args) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.products.archived });
+      showSuccessToast("Product permanently deleted");
+
       options?.onSuccess?.(...args);
     },
     ...options,
@@ -174,6 +256,7 @@ export function useToggleProductStatus(
         queryKey: queryKeys.products.detail(variables.id),
       });
       queryClient.invalidateQueries({ queryKey: queryKeys.products.lists() });
+      showSuccessToast("Product status updated successfully");
 
       // Call onSuccess from options if provided
       options?.onSuccess?.(response, variables, ...rest);

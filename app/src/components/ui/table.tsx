@@ -2,7 +2,7 @@ import React from 'react';
 import { ArrowUpDown, ArrowUp, ArrowDown, Inbox } from 'lucide-react';
 
 // Context to communicate empty state from TableBody to Table
-const TableEmptyContext = React.createContext<{
+const TableContext = React.createContext<{
   isEmpty: boolean;
   setIsEmpty: (value: boolean) => void;
 }>({ isEmpty: false, setIsEmpty: () => {} });
@@ -13,11 +13,15 @@ interface TableProps {
   emptyMessage?: string;
 }
 
-export const Table: React.FC<TableProps> = ({ children, className = '', emptyMessage = "No data available" }) => {
+export const Table: React.FC<TableProps> = ({ 
+  children, 
+  className = '', 
+  emptyMessage = "No data available"
+}) => {
   const [isEmpty, setIsEmpty] = React.useState(false);
 
   return (
-    <TableEmptyContext.Provider value={{ isEmpty, setIsEmpty }}>
+    <TableContext.Provider value={{ isEmpty, setIsEmpty }}>
       {isEmpty ? (
         <div className="w-full rounded-r1 border border-primary/20 shadow-s1 bg-white">
           <div className="flex flex-col items-center justify-center py-20 px-6">
@@ -33,12 +37,12 @@ export const Table: React.FC<TableProps> = ({ children, className = '', emptyMes
         </div>
       ) : (
         <div className="w-full overflow-x-auto overflow-y-visible rounded-r1 border border-primary/20 shadow-s1">
-          <table className={`w-full border-collapse table-layout-fixed bg-white ${className}`} style={{ tableLayout: 'fixed' }}>
+          <table className={`w-full border-collapse bg-white ${className}`} style={{ tableLayout: 'fixed' }}>
             {children}
           </table>
         </div>
       )}
-    </TableEmptyContext.Provider>
+    </TableContext.Provider>
   );
 };
 
@@ -61,7 +65,7 @@ interface TableBodyProps {
 }
 
 export const TableBody: React.FC<TableBodyProps> = ({ children, className = '' }) => {
-  const { setIsEmpty } = React.useContext(TableEmptyContext);
+  const { setIsEmpty } = React.useContext(TableContext);
   const childCount = React.Children.count(children);
 
   React.useEffect(() => {
@@ -85,11 +89,11 @@ interface TableRowProps {
 
 export const TableRow = React.forwardRef<HTMLTableRowElement, TableRowProps>(
   ({ children, className = '', onClick, style, isHeader = false }, ref) => {
-    const height = isHeader ? '50px' : '65px';
+    const height = isHeader ? '50px' : '69px';
     return (
       <tr
         ref={ref}
-        className={`transition-all duration-200 border-b border-secondary last:border-b-0 ${onClick ? 'cursor-pointer' : ''} ${className}`}
+        className={`transition-all duaration-300 border-b border-secondary last:border-b-0 ${onClick ? 'cursor-pointer' : ''} ${className}`}
         onClick={onClick}
         style={{ height, ...style }}
       >

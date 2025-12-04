@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
 import { Lato, Almarai } from "next/font/google";
 import "./globals.css";
+import "react-toastify/dist/ReactToastify.css";
 import { QueryProvider } from "./src/providers/query-provider";
 import { AuthProvider } from "./src/contexts/auth.context";
 import { AppSidebar } from './src/components/sidebar/app-sidebar';
 import { sidebarConfig } from './src/components/sidebar/sidebar.config';
 import { ProtectedRoute } from "./src/components/auth/ProtectedRoute";
+import { ToastContainer, Slide } from "react-toastify";
 
 const lato = Lato({
   variable: '--font-lato',
@@ -51,6 +53,19 @@ export default function RootLayout({
               </div>
             </ProtectedRoute>
           </AuthProvider>
+          <ToastContainer
+            position="top-right"
+            autoClose={5000}
+            hideProgressBar={false}
+            newestOnTop={false}
+            closeOnClick
+            rtl={false}
+            pauseOnFocusLoss
+            draggable
+            pauseOnHover
+            theme="colored"
+            transition={Slide}
+          />
         </QueryProvider>
       </body>
     </html>

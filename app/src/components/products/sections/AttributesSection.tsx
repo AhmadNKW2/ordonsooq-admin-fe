@@ -12,7 +12,7 @@ interface AttributesSectionProps {
     attributes: Attribute[];
     onChange: (attributes: Attribute[], resetType?: 'pricing' | 'weight' | 'media' | 'stock' | 'all') => void;
     availableAttributes?: Array<{ id: string; name: string; displayName: string; values: Array<{ id: string; value: string; displayValue: string }> }>;
-    errors?: Record<string, string>;
+    errors?: Record<string, string | boolean>;
 }
 
 export const AttributesSection: React.FC<AttributesSectionProps> = ({

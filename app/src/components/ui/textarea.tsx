@@ -3,15 +3,16 @@ import { FieldWrapper, getFieldClasses } from './field-wrapper';
 
 interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
   label?: string;
-  error?: string;
+  error?: string | boolean;
   onClear?: () => void;
   autoResize?: boolean;
   minRows?: number;
   maxRows?: number;
+  isRtl?: boolean;
 }
 
 export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
-  ({ label, error, className = '', value, onChange, onFocus, onBlur, onClear, ...props }, ref) => {
+  ({ label, error, className = '', value, onChange, onFocus, onBlur, onClear, isRtl = false, ...props }, ref) => {
     const [isFocused, setIsFocused] = useState(false);
     const hasValue = Boolean(value && String(value).length > 0);
 
@@ -40,6 +41,7 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
         isFocused={isFocused}
         hasValue={hasValue}
         onClear={handleClear}
+        isRtl={isRtl}
       >
         <textarea
           ref={ref}
@@ -48,7 +50,8 @@ export const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
           onFocus={handleFocus}
           onBlur={handleBlur}
           placeholder={" "}
-          className={`${getFieldClasses(error, hasValue, false, false, className)} resize-y min-h-20`}
+          className={`${getFieldClasses(error, hasValue, false, false, className, isRtl)} resize-y min-h-20`}
+          dir={isRtl ? 'rtl' : 'ltr'}
           {...props}
         />
       </FieldWrapper>

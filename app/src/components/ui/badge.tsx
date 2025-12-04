@@ -30,7 +30,7 @@ export const Badge: React.FC<BadgeProps> = ({
       rounded-full 
       text-xs font-semibold 
       border
-      transition-all duration-200
+      transition-all duaration-300
       ${variantStyles[variant]} 
       ${className}
     `}>

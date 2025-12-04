@@ -15,6 +15,8 @@ import { Plus, RefreshCw, Package, AlertCircle, Star, X } from "lucide-react";
 import { Pagination } from "../src/components/ui/pagination";
 import { Card } from "../src/components/ui/card";
 import { Button } from "../src/components/ui/button";
+import { PageHeader } from "../src/components/common/PageHeader";
+import { EmptyState } from "../src/components/common/EmptyState";
 import { Input } from "../src/components/ui/input";
 import { Badge } from "../src/components/ui/badge";
 import { IconButton } from "../src/components/ui/icon-button";
@@ -29,6 +31,7 @@ import {
 import { PAGINATION } from "../src/lib/constants";
 import { ProductFilters, Product } from "../src/services/products/types/product.types";
 import { ProductViewModal } from "../src/components/products/ProductViewModal";
+import { DeleteConfirmationModal } from "../src/components/common/DeleteConfirmationModal";
 
 export default function ProductsPage() {
   const router = useRouter();
@@ -39,6 +42,8 @@ export default function ProductsPage() {
 
   const [searchTerm, setSearchTerm] = useState("");
   const [viewProductId, setViewProductId] = useState<number | null>(null);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [productToDelete, setProductToDelete] = useState<Product | null>(null);
 
   const { data, isLoading, isError, error, refetch } =
     useProducts(queryParams);
@@ -55,13 +60,13 @@ export default function ProductsPage() {
   // Create a category lookup map for O(1) lookups
   const categoryMap = useMemo(() => {
     if (!categoriesData) return new Map();
-    return new Map(categoriesData.map(cat => [cat.id, cat.name]));
+    return new Map(categoriesData.map(cat => [cat.id, cat.name_en]));
   }, [categoriesData]);
 
   // Create a vendor lookup map for O(1) lookups
   const vendorMap = useMemo(() => {
     if (!vendorsData) return new Map();
-    return new Map(vendorsData.map(vendor => [vendor.id, vendor.name]));
+    return new Map(vendorsData.map(vendor => [vendor.id, vendor.name_en]));
   }, [vendorsData]);
 
   const handleFilterChange = (filters: ProductFilters) => {
@@ -84,14 +89,19 @@ export default function ProductsPage() {
     router.push(`/products/${product.id}`);
   };
 
-  const handleDelete = async (product: Product) => {
-    if (window.confirm(`Are you sure you want to delete "${product.name_en}"?`)) {
+  const handleDeleteClick = (product: Product) => {
+    setProductToDelete(product);
+    setDeleteModalOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (productToDelete) {
       try {
-        await deleteProduct.mutateAsync(product.id);
-        // Success feedback handled by the mutation hook
+        await deleteProduct.mutateAsync(productToDelete.id);
+        setDeleteModalOpen(false);
+        setProductToDelete(null);
       } catch (error) {
         console.error("Failed to delete product:", error);
-        alert("Failed to delete product. Please try again.");
       }
     }
   };
@@ -178,23 +188,12 @@ export default function ProductsPage() {
 
   return (
     <div className="flex flex-col justify-center items-center gap-5 p-5">
-      {/* Header */}
-      <div className="w-full justify-between items-center flex gap-5">
-        <div className="flex items-center gap-5">
-          <div className="rounded-r1 bg-primary to-primary p-3">
-            <Package className="h-6 w-6 text-white" />
-          </div>
-          <div>
-            <h1 className="text-3xl font-bold  tracking-tight">Products</h1>
-            <p className=" mt-1">
-              Manage your product inventory
-            </p>
-          </div>
-        </div>
-        <Button onClick={handleCreateNew}>
-          Create
-        </Button>
-      </div>
+      <PageHeader
+        icon={<Package />}
+        title="Products"
+        description="Manage your product inventory"
+        action={{ label: "Create", onClick: handleCreateNew }}
+      />
 
       {/* Filters - Only show when there are products or when filters are active */}
       {(products.length > 0 || hasActiveFilters) && (
@@ -231,15 +230,16 @@ export default function ProductsPage() {
           <div className=" font-medium">Loading products...</div>
         </div>
       ) : products.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16">
-          <div className=" font-medium text-lg">No products found</div>
-          <div className=" text-sm">Try adjusting your filters or add new products</div>
-        </div>
+        <EmptyState
+          icon={<Package />}
+          title="No products found"
+          description="Try adjusting your filters or add new products"
+        />
       ) : (
         <Table>
           <TableHeader>
             <TableRow isHeader>
-              <TableHead>Product ID</TableHead>
+              <TableHead>#</TableHead>
               <TableHead>Image</TableHead>
               <TableHead>Product Name</TableHead>
               <TableHead>Category</TableHead>
@@ -257,7 +257,7 @@ export default function ProductsPage() {
                   {product.id}
                 </TableCell>
                 <TableCell>
-                  <div className="w-20 h-20 relative rounded-r1 overflow-hidden bg-primary/20 border border-primary/30">
+                  <div className="w-12 h-12 relative rounded-lg overflow-hidden bg-primary/10 border border-primary/20">
                     {product.primary_image?.url ? (
                       <Image
                         src={product.primary_image.url}
@@ -267,12 +267,12 @@ export default function ProductsPage() {
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">
-                        <Package className="h-6 w-6 text-gray-400" />
+                        <Package className="h-5 w-5 text-primary" />
                       </div>
                     )}
                   </div>
                 </TableCell>
-                <TableCell className="font-semibold max-w-xs">
+                <TableCell className="max-w-xs">
                   <div className="flex flex-col">
                     <span className="truncate">{product.name_en}</span>
                     <span className="text-sm text-gray-500 truncate">{product.name_ar}</span>
@@ -327,7 +327,7 @@ export default function ProductsPage() {
                       variant="delete"
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleDelete(product);
+                        handleDeleteClick(product);
                       }}
                       title="Delete product"
                     />
@@ -367,8 +367,19 @@ export default function ProductsPage() {
             router.push(`/products/${viewProductId}`);
           }
         }}
-        categories={categoriesData?.map(c => ({ id: c.id, name: c.name })) || []}
-        vendors={vendorsData?.map(v => ({ id: v.id, name: v.name })) || []}
+        categories={categoriesData?.map(c => ({ id: c.id, name: c.name_en })) || []}
+        vendors={vendorsData?.map(v => ({ id: v.id, name: v.name_en })) || []}
+      />
+
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmationModal
+        isOpen={deleteModalOpen}
+        onClose={() => {
+          setDeleteModalOpen(false);
+          setProductToDelete(null);
+        }}
+        onConfirm={handleDeleteConfirm}
+        isLoading={deleteProduct.isPending}
       />
     </div>
   );

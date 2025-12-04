@@ -19,13 +19,14 @@ import { mediaService } from "../../src/services/media/api/media.service";
 import { Card } from "../../src/components/ui/card";
 import { AlertCircle, RefreshCw } from "lucide-react";
 import { Button } from "../../src/components/ui/button";
+import { Attribute, AttributeValue } from "../../src/services/attributes/types/attribute.types";
 
 export default function EditProductPage() {
   const router = useRouter();
   const params = useParams();
-  const productId = parseInt(params.id as string);
+  const product_id = parseInt(params.id as string);
 
-  const { data: productData, isLoading: productLoading, isError: productError, error: productErrorData, refetch: refetchProduct } = useProduct(productId);
+  const { data: productData, isLoading: productLoading, isError: productError, error: productErrorData, refetch: refetchProduct } = useProduct(product_id);
   const { data: categoriesData, isLoading: categoriesLoading } = useCategories();
   const { data: vendorsData, isLoading: vendorsLoading } = useVendors();
   const { data: attributesData, isLoading: attributesLoading } = useAttributes();
@@ -33,19 +34,23 @@ export default function EditProductPage() {
   // Transform backend data to frontend format
   const categories = categoriesData?.map(cat => ({
     id: cat.id.toString(),
-    name: cat.name,
+    name: cat.name_en,
+    nameEn: cat.name_en,
+    nameAr: cat.name_ar,
   })) || [];
 
   const vendors = vendorsData?.map(vendor => ({
     id: vendor.id.toString(),
-    name: vendor.name,
+    name: vendor.name_en,
+    nameEn: vendor.name_en,
+    nameAr: vendor.name_ar,
   })) || [];
 
-  const attributes = attributesData?.map(attr => ({
+  const attributes = attributesData?.map((attr: Attribute) => ({
     id: attr.id.toString(),
     name: attr.name_en,
     displayName: attr.name_ar,
-    values: attr.values?.map(val => ({
+    values: attr.values?.map((val: AttributeValue) => ({
       id: val.id.toString(),
       value: val.value_en,
       displayValue: val.value_ar,
@@ -134,10 +139,10 @@ export default function EditProductPage() {
       const usedValueIds = attributeValuesUsed[attrId] || new Set();
       
       // Find all values from availableAttributes that match the used IDs
-      const availableAttr = attributesData?.find(a => a.id.toString() === attrId);
+      const availableAttr = attributesData?.find((a: Attribute) => a.id.toString() === attrId);
       const values = availableAttr?.values
-        ?.filter(v => usedValueIds.has(v.id.toString()))
-        .map((v, idx) => ({
+        ?.filter((v: AttributeValue) => usedValueIds.has(v.id.toString()))
+        .map((v: AttributeValue, idx: number) => ({
           id: v.id.toString(),
           value: v.value_en,
           order: idx,
@@ -373,7 +378,9 @@ export default function EditProductPage() {
       // Basic Information
       nameEn: product.name_en,
       nameAr: product.name_ar,
-      categoryId: product.category?.id?.toString() || product.category_id?.toString(),
+      categoryIds: product.category_ids?.map(id => id.toString()) || 
+                   (product.category?.id ? [product.category.id.toString()] : 
+                   (product.category_id ? [product.category_id.toString()] : [])),
       vendorId: product.vendor?.id?.toString() || product.vendor_id?.toString(),
       shortDescriptionEn: product.short_description_en || "",
       shortDescriptionAr: product.short_description_ar || "",
@@ -408,7 +415,7 @@ export default function EditProductPage() {
     console.log('ProductFormData received:', data);
     console.log('data.nameEn:', data.nameEn);
     console.log('data.nameAr:', data.nameAr);
-    console.log('data.categoryId:', data.categoryId);
+    console.log('data.categoryIds:', data.categoryIds);
     console.log('data.vendorId:', data.vendorId);
     console.log('data.isActive:', data.isActive);
     console.log('data.attributes:', data.attributes);
@@ -470,7 +477,7 @@ export default function EditProductPage() {
         short_description_ar: data.shortDescriptionAr || '',
         long_description_en: data.longDescriptionEn || '',
         long_description_ar: data.longDescriptionAr || '',
-        category_id: parseInt(data.categoryId),
+        category_ids: (data.categoryIds || []).map(id => parseInt(id)),
         vendor_id: data.vendorId ? parseInt(data.vendorId) : undefined,
         is_active: data.isActive,
       };
@@ -610,7 +617,7 @@ export default function EditProductPage() {
         const singleVariant = data.variants?.[0];
         if (singleVariant) {
           productPayload.stocks = [{
-            quantity: singleVariant.stock,
+            quantity: singleVariant.stock ?? 0,
           }];
         }
       } else if (data.variants && data.variants.length > 0) {
@@ -625,7 +632,7 @@ export default function EditProductPage() {
           
           return {
             combination,
-            quantity: v.stock,
+            quantity: v.stock ?? 0,
           };
         });
       }
@@ -723,32 +730,28 @@ export default function EditProductPage() {
       console.log('productPayload.attributes:', productPayload.attributes);
 
       console.log('=== DEBUG: Calling productService.updateProduct ===');
-      console.log('productId:', productId);
+      console.log('product_id:', product_id);
       
       // Update product with PUT request (full update including media)
-      const updateResult = await productService.updateProduct(productId, productPayload);
+      const updateResult = await productService.updateProduct(product_id, productPayload);
       
       console.log('=== DEBUG: Update Result ===');
       console.log('updateResult:', updateResult);
       
-      alert("Product updated successfully!");
     } catch (error: any) {
       console.error("=== DEBUG: Error updating product ===");
       console.error("Error:", error);
       console.error("Error message:", error?.message);
       console.error("Error response:", error?.response);
       console.error("Error data:", error?.response?.data);
-      alert(error?.message || "Failed to update product");
     }
   };
 
   const handleSaveDraft = async (data: Partial<ProductFormData>) => {
     try {
       // TODO: Implement draft saving functionality
-      alert("Draft saved successfully!");
     } catch (error) {
       console.error("Error saving draft:", error);
-      alert("Failed to save draft");
     }
   };
 
@@ -766,7 +769,7 @@ export default function EditProductPage() {
   if (productError) {
     return (
       <div className="min-h-screen bg-bw2 p-8">
-        <div className="mx-auto max-w-2xl">
+        <div className="mx-auto">
           <Card>
             <div className="p-12 text-center">
               <div className="flex justify-center mb-4">
@@ -797,7 +800,7 @@ export default function EditProductPage() {
   if (!initialData) {
     return (
       <div className="min-h-screen bg-bw2 p-8">
-        <div className="mx-auto max-w-2xl">
+        <div className="mx-auto">
           <Card>
             <div className="p-12 text-center">
               <h3 className="text-xl font-bold  mb-2">Product Not Found</h3>

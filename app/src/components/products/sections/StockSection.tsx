@@ -18,7 +18,7 @@ interface StockSectionProps {
     attributes: Attribute[];
     variants: VariantCombination[];
     onChange: (variants: VariantCombination[]) => void;
-    errors: Record<string, string>;
+    errors: Record<string, string | boolean>;
 }
 
 // Stat Card Component
@@ -36,8 +36,8 @@ const StatCard: React.FC<StatCardProps> = ({ label, value, valueClassName = "" }
 );
 
 // Stock Status Helper
-const getStockStatus = (stock?: number): { label: string; className: string } => {
-    if (stock === undefined || stock === 0) return { label: "Out of Stock", className: "text-danger" };
+const getStockStatus = (stock: number): { label: string; className: string } => {
+    if (stock === 0) return { label: "Out of Stock", className: "text-danger" };
     if (stock < 10) return { label: "Low Stock", className: "" };
     return { label: "In Stock", className: "text-primary" };
 };
@@ -61,7 +61,7 @@ export const StockSection: React.FC<StockSectionProps> = ({
             return [
                 {
                     id: "single",
-                    stock: existing?.stock,
+                    stock: existing?.stock ?? 0,
                     attributeValues: {},
                 },
             ];
@@ -83,7 +83,7 @@ export const StockSection: React.FC<StockSectionProps> = ({
                 return [
                     {
                         id: existing?.id || `variant-${Date.now()}-${Math.random()}`,
-                        stock: existing?.stock,
+                        stock: existing?.stock ?? 0,
                         attributeValues: { ...current },
                     },
                 ];
@@ -136,7 +136,7 @@ export const StockSection: React.FC<StockSectionProps> = ({
             if (v.id === variantId) {
                 return {
                     ...v,
-                    [field]: field === "stock" ? (value === '' ? undefined : (typeof value === "string" ? parseInt(value) || 0 : value)) : value,
+                    [field]: field === "stock" ? (value === '' ? 0 : (typeof value === "string" ? parseInt(value) || 0 : value)) : value,
                 };
             }
             return v;
@@ -150,9 +150,9 @@ export const StockSection: React.FC<StockSectionProps> = ({
         return label.includes(searchQuery.toLowerCase());
     });
 
-    const totalStock = allCombinations.reduce((sum, v) => sum + (v.stock || 0), 0);
-    const lowStockCount = allCombinations.filter((v) => v.stock !== undefined && v.stock > 0 && v.stock < 10).length;
-    const outOfStockCount = allCombinations.filter((v) => v.stock === undefined || v.stock === 0).length;
+    const totalStock = allCombinations.reduce((sum, v) => sum + v.stock, 0);
+    const lowStockCount = allCombinations.filter((v) => v.stock > 0 && v.stock < 10).length;
+    const outOfStockCount = allCombinations.filter((v) => v.stock === 0).length;
 
     return (
         <Card>
@@ -214,7 +214,7 @@ export const StockSection: React.FC<StockSectionProps> = ({
                                         id={`variants.${variantIndex}.stock`}
                                         type="number"
                                         min="0"
-                                        value={variant.stock === undefined || variant.stock === null ? '' : variant.stock}
+                                        value={variant.stock}
                                         onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                                             handleStockChange(
                                                 variant.id,

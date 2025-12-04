@@ -28,30 +28,28 @@ export const Modal: React.FC<ModalProps> = ({
 }) => {
   const [isVisible, setIsVisible] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [shouldRender, setShouldRender] = useState(false);
 
   // Handle modal visibility with animation
   useEffect(() => {
     if (isOpen) {
-      // Use setTimeout to avoid synchronous state update during render phase
-      const showTimer = setTimeout(() => {
-        setIsVisible(true);
-        // Trigger animation after render with small delay
-        const animTimer = setTimeout(() => {
-          setIsAnimating(true);
-        }, 10);
-        return () => clearTimeout(animTimer);
-      }, 0);
-      return () => clearTimeout(showTimer);
-    } else {
-      const animTimer = setTimeout(() => setIsAnimating(false), 0);
+      // Show modal and start animation
+      setShouldRender(true);
+      setIsVisible(true);
+      // Trigger animation after render with small delay
+      const animTimer = setTimeout(() => {
+        setIsAnimating(true);
+      }, 10);
+      return () => clearTimeout(animTimer);
+    } else if (shouldRender) {
+      // Start closing animation
+      setIsAnimating(false);
       // Wait for animation to complete before hiding
       const timer = setTimeout(() => {
         setIsVisible(false);
+        setShouldRender(false);
       }, 300); // Match animation duration
-      return () => {
-        clearTimeout(animTimer);
-        clearTimeout(timer);
-      };
+      return () => clearTimeout(timer);
     }
   }, [isOpen]);
 
@@ -80,7 +78,7 @@ export const Modal: React.FC<ModalProps> = ({
     };
   }, [isOpen]);
 
-  if (!isVisible) return null;
+  if (!shouldRender) return null;
 
   const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (closeOnBackdrop && e.target === e.currentTarget) {
@@ -91,7 +89,7 @@ export const Modal: React.FC<ModalProps> = ({
   return (
     <div
       className={`
-        fixed inset-0 z-50 flex items-center justify-center p-4 
+        fixed inset-0 z-50 flex items-center justify-center
         bg-black/50 backdrop-blur-sm
         transition-opacity duration-300 ease-out
         ${isAnimating ? 'opacity-100' : 'opacity-0'}
@@ -103,7 +101,7 @@ export const Modal: React.FC<ModalProps> = ({
           relative max-md:max-h-[90vh] rounded-r1 shadow-s1
           flex flex-col justify-center items-center gap-5
           transition-all duration-300 ease-out
-          ${variant === 'default' ? 'p-5' : ''}
+          ${variant === 'default' ? 'p-10 bg-white' : ''}
           ${isAnimating
             ? 'opacity-100 scale-100 translate-y-0'
             : 'opacity-0 scale-95 -translate-y-4'

@@ -15,6 +15,8 @@ import {
 import { Tag, RefreshCw, AlertCircle, X, GripVertical } from "lucide-react";
 import { Card } from "../src/components/ui/card";
 import { Button } from "../src/components/ui/button";
+import { PageHeader } from "../src/components/common/PageHeader";
+import { EmptyState } from "../src/components/common/EmptyState";
 import { Input } from "../src/components/ui/input";
 import { Badge } from "../src/components/ui/badge";
 import { IconButton } from "../src/components/ui/icon-button";
@@ -27,6 +29,7 @@ import {
   TableRow,
 } from "../src/components/ui/table";
 import { DeleteConfirmationModal } from "../src/components/common/DeleteConfirmationModal";
+import { AttributeViewModal } from "../src/components/attributes/AttributeViewModal";
 import { Attribute } from "../src/services/attributes/types/attribute.types";
 
 // DnD Kit imports
@@ -38,6 +41,7 @@ import {
   useSensor,
   useSensors,
   DragEndEvent,
+  MeasuringStrategy,
 } from "@dnd-kit/core";
 import {
   arrayMove,
@@ -51,10 +55,11 @@ import { CSS } from "@dnd-kit/utilities";
 // Sortable Row Component
 const SortableRow: React.FC<{
   attribute: Attribute;
+  displayIndex: number;
   onView: (attribute: Attribute) => void;
   onEdit: (attribute: Attribute) => void;
   onDelete: (attribute: Attribute) => void;
-}> = ({ attribute, onView, onEdit, onDelete }) => {
+}> = ({ attribute, displayIndex, onView, onEdit, onDelete }) => {
   const {
     attributes: dndAttributes,
     listeners,
@@ -66,22 +71,21 @@ const SortableRow: React.FC<{
 
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
-    transition: transition || 'transform 200ms ease, box-shadow 200ms ease',
-    opacity: isDragging ? 1 : 1,
+    transition: "transform 250ms cubic-bezier(0.25, 1, 0.5, 1), opacity 200ms ease",
+    opacity: isDragging ? 0.5 : 1,
     zIndex: isDragging ? 50 : undefined,
     position: isDragging ? 'relative' : undefined,
-    boxShadow: isDragging ? '0 10px 40px rgba(0, 0, 0, 0.15), 0 4px 12px rgba(0, 0, 0, 0.1)' : undefined,
   };
 
   return (
     <TableRow 
       ref={setNodeRef} 
       style={style}
-      className={isDragging ? 'bg-primary/5 scale-[1.02] rounded-lg' : ''}
+      className={isDragging ? 'bg-primary/5 shadow-lg ring-2 ring-primary rounded-lg' : ''}
     >
       <TableCell className="w-12">
-        <button
-          className={`cursor-grab active:cursor-grabbing p-2 rounded-lg transition-all duration-200 ${
+        <div
+          className={`cursor-grab active:cursor-grabbing p-2 rounded-lg transition-all duration-200 inline-flex ${
             isDragging 
               ? 'bg-primary/20 shadow-sm' 
               : 'hover:bg-primary/10 hover:shadow-sm'
@@ -90,17 +94,41 @@ const SortableRow: React.FC<{
           {...listeners}
         >
           <GripVertical className={`h-5 w-5 transition-colors duration-200 ${
-            isDragging ? 'text-primary' : 'text-gray-400 group-hover:text-gray-600'
+            isDragging ? 'text-primary' : 'text-primary/50'
           }`} />
-        </button>
+        </div>
       </TableCell>
-      <TableCell className="font-mono text-sm">{attribute.id}</TableCell>
+      <TableCell className="font-mono text-sm text-gray-500">{displayIndex}</TableCell>
       <TableCell className="font-semibold">
-        <div className="flex flex-col">
-          <span>{attribute.name_en}</span>
-          <span className="text-sm text-gray-500">
-            {attribute.name_ar}
-          </span>
+        <div className="flex items-center gap-2">
+          {attribute.is_color && (
+            <div className="flex items-center gap-1">
+              {attribute.values && attribute.values.length > 0 ? (
+                attribute.values.slice(0, 4).map((value) => (
+                  <div
+                    key={value.id}
+                    className="w-6 h-6 rounded-full shadow-s2 border border-black/30"
+                    style={{ backgroundColor: value.color_code || '#ccc' }}
+                    title={value.value_en}
+                  />
+                ))
+              ) : (
+                <div
+                  className="w-6 h-6 rounded-full border-2 border-dashed border-gray-300"
+                  title="Color attribute"
+                />
+              )}
+              {attribute.values && attribute.values.length > 4 && (
+                <span className="text-xs text-gray-500">+{attribute.values.length - 4}</span>
+              )}
+            </div>
+          )}
+          <div className="flex flex-col">
+            <span>{attribute.name_en}</span>
+            <span className="text-sm text-gray-500">
+              {attribute.name_ar}
+            </span>
+          </div>
         </div>
       </TableCell>
       <TableCell>
@@ -144,7 +172,11 @@ export default function AttributesPage() {
   const router = useRouter();
   const [searchTerm, setSearchTerm] = useState("");
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [viewModalOpen, setViewModalOpen] = useState(false);
   const [attributeToDelete, setAttributeToDelete] = useState<Attribute | null>(
+    null
+  );
+  const [attributeToView, setAttributeToView] = useState<Attribute | null>(
     null
   );
 
@@ -154,7 +186,11 @@ export default function AttributesPage() {
 
   // DnD sensors
   const sensors = useSensors(
-    useSensor(PointerSensor),
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })
@@ -199,11 +235,19 @@ export default function AttributesPage() {
   };
 
   const handleView = (attribute: Attribute) => {
-    router.push(`/attributes/${attribute.id}`);
+    setAttributeToView(attribute);
+    setViewModalOpen(true);
   };
 
   const handleEdit = (attribute: Attribute) => {
     router.push(`/attributes/${attribute.id}`);
+  };
+
+  const handleViewEdit = () => {
+    if (attributeToView) {
+      setViewModalOpen(false);
+      router.push(`/attributes/${attributeToView.id}`);
+    }
   };
 
   const handleDeleteClick = (attribute: Attribute) => {
@@ -265,19 +309,12 @@ export default function AttributesPage() {
 
   return (
     <div className="flex flex-col justify-center items-center gap-5 p-5">
-      {/* Header */}
-      <div className="w-full justify-between items-center flex gap-5">
-        <div className="flex items-center gap-5">
-          <div className="rounded-r1 bg-primary to-primary p-3">
-            <Tag className="h-6 w-6 text-white" />
-          </div>
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Attributes</h1>
-            <p className=" mt-1">Manage your product attributes</p>
-          </div>
-        </div>
-        <Button onClick={handleCreateNew}>Create</Button>
-      </div>
+      <PageHeader
+        icon={<Tag />}
+        title="Attributes"
+        description="Manage your product attributes"
+        action={{ label: "Create", onClick: handleCreateNew }}
+      />
 
       {/* Filters */}
       {(filteredAttributes.length > 0 || hasActiveFilters) && (
@@ -314,23 +351,27 @@ export default function AttributesPage() {
           <div className=" font-medium mt-4">Loading attributes...</div>
         </div>
       ) : filteredAttributes.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-16">
-          <div className=" font-medium text-lg">No attributes found</div>
-          <div className=" text-sm">
-            Try adjusting your filters or add new attributes
-          </div>
-        </div>
+        <EmptyState
+          icon={<Tag />}
+          title="No attributes found"
+          description="Try adjusting your filters or add new attributes"
+        />
       ) : (
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}
           onDragEnd={handleDragEnd}
+          measuring={{
+            droppable: {
+              strategy: MeasuringStrategy.Always,
+            },
+          }}
         >
           <Table>
             <TableHeader>
               <TableRow isHeader>
                 <TableHead className="w-12">{""}</TableHead>
-                <TableHead>ID</TableHead>
+                <TableHead className="w-12">#</TableHead>
                 <TableHead >Attribute Name</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Actions</TableHead>
@@ -341,10 +382,11 @@ export default function AttributesPage() {
                 items={filteredAttributes.map((attr) => attr.id)}
                 strategy={verticalListSortingStrategy}
               >
-                {filteredAttributes.map((attribute) => (
+                {filteredAttributes.map((attribute, index) => (
                   <SortableRow
                     key={attribute.id}
                     attribute={attribute}
+                    displayIndex={index + 1}
                     onView={handleView}
                     onEdit={handleEdit}
                     onDelete={handleDeleteClick}
@@ -365,9 +407,19 @@ export default function AttributesPage() {
         }}
         onConfirm={handleDeleteConfirm}
         title="Delete Attribute"
-        message={`Are you sure you want to delete "${attributeToDelete?.name_en}"? This action cannot be undone.`}
         itemName={attributeToDelete?.name_en}
         isLoading={deleteAttribute.isPending}
+      />
+
+      {/* Attribute View Modal */}
+      <AttributeViewModal
+        isOpen={viewModalOpen}
+        onClose={() => {
+          setViewModalOpen(false);
+          setAttributeToView(null);
+        }}
+        attribute={attributeToView}
+        onEdit={handleViewEdit}
       />
     </div>
   );

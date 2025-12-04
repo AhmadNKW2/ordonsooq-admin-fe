@@ -11,7 +11,7 @@ export interface SelectOption {
 
 interface SelectProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange'> {
   label?: string;
-  error?: string;
+  error?: string | boolean;
   value?: string | string[];
   onChange?: (value: string | string[]) => void;
   onClear?: () => void;
@@ -222,7 +222,7 @@ export const Select = React.forwardRef<HTMLDivElement, SelectProps>(
       className
     );
     const rightIconPosition = getRightIconPosition(size);
-    const chevronIcon = <ChevronDown className={`h-4 w-4 ${FIELD_RIGHT_ICON_COLOR} transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />;
+    const chevronIcon = <ChevronDown className={`h-4 w-4 ${FIELD_RIGHT_ICON_COLOR} transition-transform duaration-300 ${isOpen ? 'rotate-180' : ''}`} />;
 
     return (
       <div ref={containerRef} className={`relative ${isSm ? 'w-fit' : 'w-full'}`}>
@@ -317,7 +317,7 @@ export const Select = React.forwardRef<HTMLDivElement, SelectProps>(
           role="listbox"
           aria-multiselectable={multiple}
           // --- FIX 2: Change fixed to absolute to anchor to parent ---
-          className={`absolute z-50 mt-1 bg-white border border-primary/20 overflow-hidden rounded-r1 shadow-s1 transition-all duration-200 origin-top ${isOpen
+          className={`absolute z-50 mt-1 bg-white border border-primary/20 overflow-hidden rounded-r1 shadow-s1 transition-all duaration-300 origin-top ${isOpen
             ? 'opacity-100 scale-y-100 visible'
             : 'opacity-0 scale-y-95 invisible'
             }`}

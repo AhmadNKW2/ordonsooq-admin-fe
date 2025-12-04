@@ -7,12 +7,22 @@ import { z } from "zod";
 // Category Schema (matches backend)
 export const categorySchema = z.object({
   id: z.number(),
-  name: z.string(),
+  name: z.string().optional(),
+  name_en: z.string().optional(),
+  name_ar: z.string().optional(),
   description: z.string().optional().nullable(),
+  description_en: z.string().optional().nullable(),
+  description_ar: z.string().optional().nullable(),
   image: z.string().optional().nullable(),
-  level: z.number(),
-  isActive: z.boolean(),
+  level: z.number().optional(),
+  isActive: z.boolean().optional(),
+  status: z.enum(["active", "archived"]).optional(),
+  visible: z.boolean().optional(),
+  sortOrder: z.number().optional(),
   parentId: z.number().optional().nullable(),
+  parent_id: z.number().optional().nullable(),
+  archived_at: z.string().or(z.date()).optional().nullable(),
+  archived_by: z.number().optional().nullable(),
   createdAt: z.string().or(z.date()).optional(),
   updatedAt: z.string().or(z.date()).optional(),
 });
@@ -22,13 +32,16 @@ export type Category = z.infer<typeof categorySchema>;
 // Vendor Schema (matches backend)
 export const vendorSchema = z.object({
   id: z.number(),
-  name: z.string(),
+  name: z.string().optional(),
+  name_en: z.string().optional(),
+  name_ar: z.string().optional(),
   description: z.string().optional().nullable(),
   email: z.string().optional().nullable(),
   phone: z.string().optional().nullable(),
   address: z.string().optional().nullable(),
   logo: z.string().optional().nullable(),
-  isActive: z.boolean(),
+  isActive: z.boolean().optional(),
+  status: z.enum(["active", "archived"]).optional(),
   createdAt: z.string().or(z.date()).optional(),
   updatedAt: z.string().or(z.date()).optional(),
 });
@@ -86,18 +99,25 @@ export const productSchema = z.object({
   short_description_ar: z.string().optional().nullable(),
   long_description_en: z.string().optional().nullable(),
   long_description_ar: z.string().optional().nullable(),
-  category_id: z.number(),
+  category_id: z.number().optional().nullable(), // Primary category (nullable now)
+  category_ids: z.array(z.number()).optional(), // Multiple categories
   category: categorySchema.optional().nullable(),
+  categories: z.array(categorySchema).optional(), // Multiple category objects
   vendor_id: z.number().optional().nullable(),
   vendor: vendorSchema.optional().nullable(),
   sku: z.string(),
   is_active: z.boolean(),
   average_rating: z.union([z.number(), z.string()]).optional().nullable(),
   total_ratings: z.number().optional().nullable(),
+  image: z.string().optional().nullable(), // Direct image URL
   primary_image: primaryImageSchema.optional().nullable(),
   price: z.string().optional().nullable(),
   sale_price: z.string().optional().nullable(),
   stock: stockSummarySchema.optional().nullable(),
+  status: z.enum(["active", "archived"]).optional(),
+  visible: z.boolean().optional(),
+  archived_at: z.string().or(z.date()).optional().nullable(),
+  archived_by: z.number().optional().nullable(),
   created_at: z.string().or(z.date()).optional(),
   updated_at: z.string().or(z.date()).optional(),
 });
@@ -182,6 +202,7 @@ export interface ProductFilters {
   page?: number;
   limit?: number;
   category_id?: number;
+  vendor_id?: number;
   min_price?: number;
   max_price?: number;
   search?: string;
@@ -314,7 +335,7 @@ export interface CreateProductDto {
   short_description_ar: string;
   long_description_en: string;
   long_description_ar: string;
-  category_id: number;
+  category_ids: number[]; // Changed from category_id to category_ids array
   vendor_id?: number;
   is_active?: boolean;
 
@@ -420,7 +441,7 @@ export interface UpdateProductDto {
   short_description_ar?: string;
   long_description_en?: string;
   long_description_ar?: string;
-  category_id?: number;
+  category_ids?: number[]; // Changed from category_id to category_ids array
   vendor_id?: number;
   is_active?: boolean;
 
@@ -432,4 +453,9 @@ export interface UpdateProductDto {
   weights?: WeightInputWithCombination[];
   stocks?: StockInputWithCombination[];
   media?: MediaInputDto[];
+}
+
+// Restore Product DTO
+export interface RestoreProductDto {
+  newCategoryId?: number | null;
 }

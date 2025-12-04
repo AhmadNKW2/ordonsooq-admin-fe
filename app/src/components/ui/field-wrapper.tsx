@@ -3,7 +3,7 @@ import { X } from 'lucide-react';
 
 interface FieldWrapperProps {
     label?: string;
-    error?: string;
+    error?: string | boolean;
     isFocused: boolean;
     hasValue: boolean;
     onClear?: () => void;
@@ -66,7 +66,7 @@ export const FieldWrapper: React.FC<FieldWrapperProps> = ({
 
                 {label && (
                     <label
-                        className={`absolute ${labelLeftOffset} rounded-r1 p-1 bg-white font-medium transition-all duration-200 pointer-events-none z-10 ${showLabel
+                        className={`absolute ${labelLeftOffset} rounded-r1 p-1 bg-white font-medium transition-all duaration-300 pointer-events-none z-10 ${showLabel
                             ? 'top-0 -translate-y-1/2  text-xs'
                             : 'top-1/2 -translate-y-1/2 text-primary2 text-sm'
                             } ${error && showLabel ? 'text-danger' : ''} peer-autofill:top-0 peer-autofill:-translate-y-1/2 peer-autofill: peer-autofill:text-xs`}
@@ -75,14 +75,14 @@ export const FieldWrapper: React.FC<FieldWrapperProps> = ({
                     </label>
                 )}
             </div>
-            {error && <span className="text-xs text-danger mt-1 block">{error}</span>}
+            {error && typeof error === 'string' && error.trim() !== "" && <span className="text-xs text-danger mt-1 block">{error}</span>}
         </div >
 
     );
 };
 
 // Shared field styles constant
-export const FIELD_BASE_CLASSES = 'min-h-13 border rounded-r1 placeholder-primary/60 bg-white focus:outline-none focus:border-secondary focus:shadow-s2 transition-all duration-500 disabled:cursor-not-allowed aria-disabled:cursor-not-allowed [&:-webkit-autofill]:bg-white [&:-webkit-autofill]: [&:-webkit-autofill]:shadow-[0_0_0px_1000px_theme(colors.secondary)_inset]';
+export const FIELD_BASE_CLASSES = 'min-h-13 border rounded-r1 placeholder-primary/60 bg-white focus:outline-none focus:border-secondary focus:shadow-s2 transition-all duaration-300 disabled:cursor-not-allowed aria-disabled:cursor-not-allowed [&:-webkit-autofill]:bg-white [&:-webkit-autofill]: [&:-webkit-autofill]:shadow-[0_0_0px_1000px_theme(colors.secondary)_inset]';
 
 // Shared icon styles for consistent appearance across all field components
 export const FIELD_ICON_CLASSES = 'h-4 w-4 text-primary/60';
@@ -98,7 +98,7 @@ export const getRightIconPosition = (size: 'default' | 'sm') => {
 // Get field classes based on size variant
 export const getFieldClassesBySize = (
     size: 'default' | 'sm',
-    error?: string,
+    error?: string | boolean,
     hasValue?: boolean,
     isSearchVariant?: boolean,
     isNum?: boolean,
@@ -132,6 +132,6 @@ export const getFieldClassesBySize = (
 };
 
 // Legacy function for backward compatibility
-export const getFieldClasses = (error?: string, hasValue?: boolean, hasLeftIcon?: boolean, hasRightIcon?: boolean, className?: string, isRtl?: boolean) => {
+export const getFieldClasses = (error?: string | boolean, hasValue?: boolean, hasLeftIcon?: boolean, hasRightIcon?: boolean, className?: string, isRtl?: boolean) => {
     return getFieldClassesBySize('default', error, hasValue, hasLeftIcon, hasRightIcon, className, isRtl);
 };

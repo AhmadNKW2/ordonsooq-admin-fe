@@ -115,7 +115,7 @@ export function AppSidebar({ groups, header, footer }: AppSidebarProps) {
             </div>
             <button
               onClick={handleLogout}
-              className="p-2 hover: rounded-r1 transition-colors duration-200"
+              className="p-2 hover: rounded-r1 transition-colors duaration-300"
               title="Logout"
             >
                 <svg

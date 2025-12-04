@@ -1,6 +1,7 @@
 /**
  * Single Page Product Form Component
  * All sections in one scrollable page
+ * Uses Zod for validation
  */
 
 "use client";
@@ -8,6 +9,7 @@
 import React, { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "../ui/button";
+import { PageHeader } from "../common/PageHeader";
 import {
   ProductFormData,
   Attribute,
@@ -26,7 +28,8 @@ import { WeightDimensionsSection } from "./sections/WeightDimensionsSection";
 import { MediaSection } from "./sections/MediaSection";
 import { StockSection } from "./sections/StockSection";
 import { Card } from "../ui";
-import { useFormValidation, ValidationSchema } from "../../hooks/use-form-validation";
+import { useZodValidation } from "../../hooks/use-zod-validation";
+import { createProductSchema, type ProductFormConfig } from "../../lib/validations/product.schema";
 import { Package } from "lucide-react";
 
 interface ProductFormProps {
@@ -34,8 +37,8 @@ interface ProductFormProps {
   isEditMode?: boolean;
   onSubmit: (data: ProductFormData) => Promise<void>;
   onSaveDraft?: (data: Partial<ProductFormData>) => Promise<void>;
-  categories?: Array<{ id: string; name: string }>;
-  vendors?: Array<{ id: string; name: string }>;
+  categories?: Array<{ id: string; name: string; nameEn?: string; nameAr?: string }>;
+  vendors?: Array<{ id: string; name: string; nameEn?: string; nameAr?: string }>;
   attributes?: Array<{ id: string; name: string; displayName: string; values: Array<{ id: string; value: string; displayValue: string }> }>;
 }
 
@@ -52,7 +55,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
   const [formData, setFormData] = useState<Partial<ProductFormData>>({
     nameEn: "",
     nameAr: "",
-    categoryId: "",
+    categoryIds: [],
     vendorId: "",
     shortDescriptionEn: "",
     shortDescriptionAr: "",
@@ -85,7 +88,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
       setFormData({
         nameEn: "",
         nameAr: "",
-        categoryId: "",
+        categoryIds: [],
         vendorId: "",
         shortDescriptionEn: "",
         shortDescriptionAr: "",
@@ -108,76 +111,34 @@ export const ProductForm: React.FC<ProductFormProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isEditMode, initialDataJson]);
 
-  const validationSchema = useMemo<ValidationSchema>(() => {
-    const schema: ValidationSchema = {
-      nameEn: ['required', 'isEn'],
-      nameAr: ['required', 'isAr'],
-      shortDescriptionEn: ['required', 'isEn'],
-      shortDescriptionAr: ['required', 'isAr'],
-      longDescriptionEn: ['required', 'isEn'],
-      longDescriptionAr: ['required', 'isAr'],
-      categoryId: ['required'],
-      vendorId: ['required'],
-    };
-
+  // Build dynamic Zod schema based on form state
+  const validationConfig = useMemo<ProductFormConfig>(() => {
     const pricingAttributes = formData.attributes?.filter(a => a.controlsPricing) || [];
-    const isVariantPricing = pricingAttributes.length > 0;
+    const hasPricingAttributes = pricingAttributes.length > 0;
+    
+    // Check which variant pricing items have sale enabled
+    const variantPricingItems: { isSale: boolean }[] = formData.variantPricing?.map(vp => ({ isSale: vp.isSale !== false })) || [];
 
-    // Conditional Validation: Pricing
-    if (!isVariantPricing) {
-      schema['singlePricing.cost'] = ['required', 'isNum'];
-      schema['singlePricing.price'] = ['required', 'isNum'];
-
-      // isSale defaults to true, so require salePrice unless explicitly set to false
-      if (formData.singlePricing?.isSale !== false) {
-        schema['singlePricing.salePrice'] = ['required', 'isNum'];
-      }
-    } else {
-      schema['attributes'] = ['required'];
-      schema['variants'] = ['required'];
-      schema['variantPricing.$.cost'] = ['required', 'isNum'];
-      schema['variantPricing.$.price'] = ['required', 'isNum'];
-
-      formData.variantPricing?.forEach((vp, index) => {
-        // isSale defaults to true, so require salePrice unless explicitly set to false
-        if (vp.isSale !== false) {
-          schema[`variantPricing.${index}.salePrice`] = ['required', 'isNum'];
-        }
-      });
-
-      schema['variants.$.stock'] = ['required', 'isNum'];
-    }
-
-    // Conditional Validation: Weight & Dimensions
-    if (!formData.isWeightVariantBased) {
-      schema['singleWeightDimensions.weight'] = ['required', 'isNum'];
-      schema['singleWeightDimensions.length'] = ['required', 'isNum'];
-      schema['singleWeightDimensions.width'] = ['required', 'isNum'];
-      schema['singleWeightDimensions.height'] = ['required', 'isNum'];
-    } else {
-      schema['variantWeightDimensions.$.weight'] = ['required', 'isNum'];
-      schema['variantWeightDimensions.$.length'] = ['required', 'isNum'];
-      schema['variantWeightDimensions.$.width'] = ['required', 'isNum'];
-      schema['variantWeightDimensions.$.height'] = ['required', 'isNum'];
-    }
-
-    // Conditional Validation: Media
-    if (!formData.isMediaVariantBased) {
-      schema['singleMedia'] = ['required'];
-    } else {
-      schema['variantMedia.$.media'] = ['required'];
-    }
-
-    return schema;
+    return {
+      hasPricingAttributes,
+      singlePricingIsSale: formData.singlePricing?.isSale !== false,
+      variantPricingItems,
+      isWeightVariantBased: formData.isWeightVariantBased || false,
+      isMediaVariantBased: formData.isMediaVariantBased || false,
+    };
   }, [
     formData.attributes,
     formData.singlePricing?.isSale,
     formData.variantPricing,
     formData.isWeightVariantBased,
-    formData.isMediaVariantBased
+    formData.isMediaVariantBased,
   ]);
 
-  const { errors, handleValidationChange, validateForm, isSubmitted } = useFormValidation(validationSchema);
+  const zodSchema = useMemo(() => createProductSchema(validationConfig), [validationConfig]);
+  
+  const { errors, validateForm, validateField, clearFieldError, isSubmitted } = useZodValidation<ProductFormData>({
+    schema: zodSchema,
+  });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async () => {
@@ -186,9 +147,32 @@ export const ProductForm: React.FC<ProductFormProps> = ({
     console.log('formData.isMediaVariantBased:', formData.isMediaVariantBased);
     console.log('formData.variantMedia:', formData.variantMedia);
     console.log('formData.singleMedia:', formData.singleMedia);
-    console.log('validationSchema:', validationSchema);
+    console.log('zodSchema:', zodSchema);
 
-    const isValid = validateForm(formData);
+    // Cast to ProductFormData for validation (with defaults)
+    const dataToValidate: ProductFormData = {
+      nameEn: formData.nameEn || '',
+      nameAr: formData.nameAr || '',
+      categoryIds: formData.categoryIds || [],
+      vendorId: formData.vendorId || '',
+      shortDescriptionEn: formData.shortDescriptionEn || '',
+      shortDescriptionAr: formData.shortDescriptionAr || '',
+      longDescriptionEn: formData.longDescriptionEn || '',
+      longDescriptionAr: formData.longDescriptionAr || '',
+      isActive: formData.isActive ?? true,
+      isWeightVariantBased: formData.isWeightVariantBased ?? false,
+      isMediaVariantBased: formData.isMediaVariantBased ?? false,
+      attributes: formData.attributes,
+      singlePricing: formData.singlePricing,
+      variantPricing: formData.variantPricing,
+      singleWeightDimensions: formData.singleWeightDimensions,
+      variantWeightDimensions: formData.variantWeightDimensions,
+      singleMedia: formData.singleMedia,
+      variantMedia: formData.variantMedia,
+      variants: formData.variants,
+    };
+
+    const isValid = validateForm(dataToValidate);
     console.log('isValid:', isValid);
     console.log('errors after validation:', errors);
 
@@ -236,7 +220,11 @@ export const ProductForm: React.FC<ProductFormProps> = ({
 
       return newData;
     });
-    handleValidationChange(field, value);
+    
+    // Clear field error when value changes (after submission)
+    if (isSubmitted) {
+      clearFieldError(field);
+    }
   };
 
   // Check if any attribute controls pricing, media, or weight
@@ -254,55 +242,27 @@ export const ProductForm: React.FC<ProductFormProps> = ({
 
   return (
     <div className="mx-auto p-5 flex flex-col gap-5">
-      <div className="flex justify-between items-center">
-        <div className="flex justify-center items-center gap-5">
-          <div className="rounded-r1 bg-primary to-primary p-3">
-            <Package className="h-6 w-6 text-white" />
-          </div>
-
-          <div>
-            <h1 className="text-3xl font-bold ">
-              {isEditMode ? "Edit Product" : "Create New Product"}
-            </h1>
-
-            <p className=" mt-2">
-              {isEditMode
-                ? "Update product information and variants"
-                : "Fill in the details to create a new product"}
-            </p>
-          </div>
-
-        </div>
-        <div className="flex gap-5">
-          {/* Cancel Button */}
-          <Button
-            onClick={() => router.push('/products')}
-            disabled={isSubmitting}
-            variant="solid"
-            color="var(--color-primary2)"
-          >
-            Cancel
-          </Button>
-
-          {/* Submit Button */}
-          <Button
-            onClick={handleSubmit}
-            disabled={isSubmitting}
-          >
-            {isSubmitting
-              ? "Submitting..."
-              : isEditMode
-                ? "Update Product"
-                : "Create Product"}
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        icon={<Package />}
+        title={isEditMode ? "Edit Product" : "Create New Product"}
+        description={isEditMode ? "Update product information and variants" : "Fill in the details to create a new product"}
+        cancelAction={{
+          label: "Cancel",
+          onClick: () => router.push('/products'),
+          disabled: isSubmitting,
+        }}
+        action={{
+          label: isSubmitting ? "Submitting..." : (isEditMode ? "Update Product" : "Create Product"),
+          onClick: handleSubmit,
+          disabled: isSubmitting,
+        }}
+      />
       {/* Basic Information */}
       <BasicInformationSection
         formData={{
           nameEn: formData.nameEn,
           nameAr: formData.nameAr,
-          categoryId: formData.categoryId,
+          categoryIds: formData.categoryIds,
           vendorId: formData.vendorId,
           shortDescriptionEn: formData.shortDescriptionEn,
           shortDescriptionAr: formData.shortDescriptionAr,
@@ -370,7 +330,10 @@ export const ProductForm: React.FC<ProductFormProps> = ({
 
             return updates as ProductFormData;
           });
-          handleValidationChange("attributes", attributes);
+          // Clear attribute errors when changed
+          if (isSubmitted) {
+            clearFieldError("attributes");
+          }
         }}
         errors={errors}
       />

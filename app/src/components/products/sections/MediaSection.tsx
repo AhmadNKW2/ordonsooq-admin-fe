@@ -1,36 +1,16 @@
-import React, { useState } from "react";
-import { Toggle } from "../../ui/toggle";
-import { Button } from "../../ui/button";
+import React from "react";
 import {
     Attribute,
     MediaItem,
     VariantMedia,
 } from "../../../services/products/types/product-form.types";
-import { Card, Modal } from "@/components/ui";
-import Image from "next/image";
-import {
-    DndContext,
-    closestCenter,
-    KeyboardSensor,
-    PointerSensor,
-    useSensor,
-    useSensors,
-    DragEndEvent,
-} from '@dnd-kit/core';
-import {
-    arrayMove,
-    SortableContext,
-    sortableKeyboardCoordinates,
-    useSortable,
-    rectSortingStrategy,
-} from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
+import { Card } from "@/components/ui";
 import {
     generateCombinations,
     getControllingAttributes,
     getVariantData,
 } from "../../../services/products/utils/variant-combinations";
-import { Eye, Star, Upload } from "lucide-react";
+import { ImageUpload, ImageUploadItem } from "../../ui/image-upload";
 
 interface MediaSectionProps {
     attributes: Attribute[];
@@ -41,7 +21,7 @@ interface MediaSectionProps {
     onChangeSingle: (media: MediaItem[]) => void;
     onChangeVariant: (media: VariantMedia[]) => void;
     hasAttributeControllingMedia: boolean;
-    errors?: Record<string, string>;
+    errors?: Record<string, string | boolean>;
 }
 
 export const MediaSection: React.FC<MediaSectionProps> = ({
@@ -55,236 +35,147 @@ export const MediaSection: React.FC<MediaSectionProps> = ({
     hasAttributeControllingMedia,
     errors = {},
 }) => {
-    const [previewImage, setPreviewImage] = useState<string | null>(null);
     // Filter attributes that control media AND have values
     const mediaAttributes = getControllingAttributes(attributes, 'controlsMedia');
 
     // Generate all combinations for media attributes
     const combinations = generateCombinations(mediaAttributes);
 
-    // Check if any media across the product has isPrimary set
-    const hasAnyPrimaryMedia = () => {
-        const hasPrimaryInSingle = singleMedia.some((m) => m.isPrimary);
-        const hasPrimaryInVariants = variantMedia.some((vm) => vm.media.some((m) => m.isPrimary));
-        return hasPrimaryInSingle || hasPrimaryInVariants;
-    };
-
-    const handleSingleMediaAdd = (files: FileList | null) => {
-        if (!files || files.length === 0) return;
-
-        const shouldSetFirstAsPrimary = !hasAnyPrimaryMedia() && singleMedia.length === 0;
-
-        const newMediaItems: MediaItem[] = Array.from(files).map((file, index) => ({
-            id: `media-${Date.now()}-${index}`,
-            file: file,
-            preview: URL.createObjectURL(file),
-            type: file.type.startsWith("video") ? "video" : "image",
-            isPrimary: shouldSetFirstAsPrimary && index === 0,
-            order: singleMedia.length + index,
+    // Convert MediaItem[] to ImageUploadItem[] for the ImageUpload component
+    const toImageUploadItems = (media: MediaItem[]): ImageUploadItem[] => {
+        return media.map((m) => ({
+            id: m.id,
+            file: m.file ?? undefined,
+            preview: m.preview,
+            type: m.type,
+            isPrimary: m.isPrimary,
+            order: m.order,
         }));
-
-        onChangeSingle([...singleMedia, ...newMediaItems]);
     };
 
-    const handleSingleMediaRemove = (mediaId: string) => {
-        const mediaToRemove = singleMedia.find((m) => m.id === mediaId);
-        if (mediaToRemove) {
-            URL.revokeObjectURL(mediaToRemove.preview);
-        }
-        let filtered = singleMedia.filter((m) => m.id !== mediaId);
-
-        // If the removed media was primary, find a new primary
-        if (mediaToRemove?.isPrimary) {
-            // First try to set the first remaining single media as primary
-            if (filtered.length > 0) {
-                const sortedByOrder = [...filtered].sort((a, b) => a.order - b.order);
-                const firstItemId = sortedByOrder[0].id;
-                filtered = filtered.map((m) => ({
-                    ...m,
-                    isPrimary: m.id === firstItemId,
-                }));
-            } else {
-                // If no single media left, set the first variant media as primary
-                if (variantMedia.length > 0) {
-                    const firstVariantWithMedia = variantMedia.find((vm) => vm.media.length > 0);
-                    if (firstVariantWithMedia) {
-                        const sortedMedia = [...firstVariantWithMedia.media].sort((a, b) => a.order - b.order);
-                        const firstMediaId = sortedMedia[0].id;
-                        const updatedVariantMedia = variantMedia.map((vm) => ({
-                            ...vm,
-                            media: vm.media.map((m) => ({
-                                ...m,
-                                isPrimary: vm.key === firstVariantWithMedia.key && m.id === firstMediaId,
-                            })),
-                        }));
-                        onChangeVariant(updatedVariantMedia);
-                    }
-                }
-            }
-        }
-
-        onChangeSingle(filtered);
-    };
-
-    const handleSingleMediaSetPrimary = (mediaId: string) => {
-        // Set the selected media as primary and clear all others in single media
-        const updated = singleMedia.map((m) => ({
-            ...m,
-            isPrimary: m.id === mediaId,
+    // Convert ImageUploadItem[] back to MediaItem[]
+    const toMediaItems = (items: ImageUploadItem[]): MediaItem[] => {
+        return items.map((item) => ({
+            id: item.id,
+            file: item.file ?? null,
+            preview: item.preview,
+            type: item.type,
+            isPrimary: item.isPrimary ?? false,
+            order: item.order,
         }));
-        onChangeSingle(updated);
+    };
 
-        // Also clear primary from all variant media to ensure only one primary across the product
-        if (variantMedia.length > 0) {
+    // Handle single media change with cross-variant primary management
+    const handleSingleMediaChange = (items: ImageUploadItem[]) => {
+        const mediaItems = toMediaItems(items);
+        
+        // Check if any item was set as primary
+        const newPrimary = mediaItems.find((m) => m.isPrimary);
+        
+        if (newPrimary && variantMedia.length > 0) {
+            // Clear primary from all variant media
             const clearedVariantMedia = variantMedia.map((vm) => ({
                 ...vm,
                 media: vm.media.map((m) => ({ ...m, isPrimary: false })),
             }));
             onChangeVariant(clearedVariantMedia);
         }
+        
+        // If removing media that was primary and no new primary is set, 
+        // try to set a new primary from remaining items
+        if (mediaItems.length > 0 && !mediaItems.some((m) => m.isPrimary)) {
+            // Check if we had a primary before
+            const hadPrimary = singleMedia.some((m) => m.isPrimary);
+            if (hadPrimary) {
+                // Set the first item as primary
+                mediaItems[0].isPrimary = true;
+            }
+        } else if (mediaItems.length === 0) {
+            // If all single media removed, check if we need to set a variant media as primary
+            const anyVariantHasPrimary = variantMedia.some((vm) => vm.media.some((m) => m.isPrimary));
+            if (!anyVariantHasPrimary && variantMedia.length > 0) {
+                const firstVariantWithMedia = variantMedia.find((vm) => vm.media.length > 0);
+                if (firstVariantWithMedia) {
+                    const updatedVariantMedia = variantMedia.map((vm) => ({
+                        ...vm,
+                        media: vm.media.map((m, idx) => ({
+                            ...m,
+                            isPrimary: vm.key === firstVariantWithMedia.key && idx === 0,
+                        })),
+                    }));
+                    onChangeVariant(updatedVariantMedia);
+                }
+            }
+        }
+        
+        onChangeSingle(mediaItems);
     };
 
-    const handleSingleMediaReorder = (fromIndex: number, toIndex: number) => {
-        const reordered = [...singleMedia];
-        const [movedItem] = reordered.splice(fromIndex, 1);
-        reordered.splice(toIndex, 0, movedItem);
-
-        const updated = reordered.map((m, idx) => ({ ...m, order: idx }));
-        onChangeSingle(updated);
-    };
-
-    const handleVariantMediaAdd = (key: string, files: FileList | null) => {
-        if (!files || files.length === 0) return;
-
+    // Handle variant media change with cross-variant primary management
+    const handleVariantMediaChange = (key: string, items: ImageUploadItem[]) => {
         const combo = combinations.find((c) => c.key === key);
         if (!combo) return;
 
-        const existing = variantMedia.find((vm) => vm.key === key);
-        const currentMedia = existing?.media || [];
-
-        const shouldSetFirstAsPrimary = !hasAnyPrimaryMedia() && currentMedia.length === 0;
-
-        const newMediaItems: MediaItem[] = Array.from(files).map((file, index) => ({
-            id: `media-${Date.now()}-${index}`,
-            file: file,
-            preview: URL.createObjectURL(file),
-            type: file.type.startsWith("video") ? "video" : "image",
-            isPrimary: shouldSetFirstAsPrimary && index === 0,
-            order: currentMedia.length + index,
-        }));
-
-        const updated: VariantMedia = {
-            key,
-            attributeValues: combo.attributeValues,
-            media: [...currentMedia, ...newMediaItems],
-        };
-
-        const newVariantMedia = variantMedia.filter((vm) => vm.key !== key);
-        onChangeVariant([...newVariantMedia, updated]);
-    };
-
-    const handleVariantMediaRemove = (key: string, mediaId: string) => {
-        const existing = variantMedia.find((vm) => vm.key === key);
-        if (!existing) return;
-
-        const mediaToRemove = existing.media.find((m) => m.id === mediaId);
-        if (mediaToRemove) {
-            URL.revokeObjectURL(mediaToRemove.preview);
+        const mediaItems = toMediaItems(items);
+        
+        // Check if any item was set as primary
+        const newPrimary = mediaItems.find((m) => m.isPrimary);
+        
+        let updatedVariantMedia = variantMedia.filter((vm) => vm.key !== key);
+        
+        if (newPrimary) {
+            // Clear primary from single media
+            if (singleMedia.some((m) => m.isPrimary)) {
+                const clearedSingleMedia = singleMedia.map((m) => ({ ...m, isPrimary: false }));
+                onChangeSingle(clearedSingleMedia);
+            }
+            
+            // Clear primary from other variants
+            updatedVariantMedia = updatedVariantMedia.map((vm) => ({
+                ...vm,
+                media: vm.media.map((m) => ({ ...m, isPrimary: false })),
+            }));
         }
-
-        let filtered = existing.media.filter((m) => m.id !== mediaId);
-        let newVariantMediaList = variantMedia.filter((vm) => vm.key !== key);
-
-        if (filtered.length === 0) {
-            // If this variant has no more media, remove it from the list
-            // But first check if we need to reassign primary
-            if (mediaToRemove?.isPrimary) {
-                // Try to find another media to set as primary
-                // First check single media
+        
+        if (mediaItems.length > 0) {
+            const updated: VariantMedia = {
+                key,
+                attributeValues: combo.attributeValues,
+                media: mediaItems,
+            };
+            onChangeVariant([...updatedVariantMedia, updated]);
+        } else {
+            // If all media removed from this variant
+            // Check if we need to reassign primary
+            const wasRemovingPrimary = variantMedia
+                .find((vm) => vm.key === key)
+                ?.media.some((m) => m.isPrimary);
+            
+            if (wasRemovingPrimary) {
+                // Try to set a new primary from single media first
                 if (singleMedia.length > 0) {
-                    const sortedByOrder = [...singleMedia].sort((a, b) => a.order - b.order);
-                    const firstItemId = sortedByOrder[0].id;
-                    const updatedSingleMedia = singleMedia.map((m) => ({
+                    const updatedSingleMedia = singleMedia.map((m, idx) => ({
                         ...m,
-                        isPrimary: m.id === firstItemId,
+                        isPrimary: idx === 0,
                     }));
                     onChangeSingle(updatedSingleMedia);
                 } else {
-                    // Check other variants for media
-                    const otherVariantWithMedia = newVariantMediaList.find((vm) => vm.media.length > 0);
+                    // Try to set from other variants
+                    const otherVariantWithMedia = updatedVariantMedia.find((vm) => vm.media.length > 0);
                     if (otherVariantWithMedia) {
-                        const sortedMedia = [...otherVariantWithMedia.media].sort((a, b) => a.order - b.order);
-                        const firstMediaId = sortedMedia[0].id;
-                        newVariantMediaList = newVariantMediaList.map((vm) => ({
+                        updatedVariantMedia = updatedVariantMedia.map((vm) => ({
                             ...vm,
-                            media: vm.media.map((m) => ({
+                            media: vm.media.map((m, idx) => ({
                                 ...m,
-                                isPrimary: vm.key === otherVariantWithMedia.key && m.id === firstMediaId,
+                                isPrimary: vm.key === otherVariantWithMedia.key && idx === 0,
                             })),
                         }));
                     }
                 }
             }
-            onChangeVariant(newVariantMediaList);
-        } else {
-            // If the removed media was primary, find a new primary
-            if (mediaToRemove?.isPrimary) {
-                // Set the first remaining item in this variant as primary
-                const sortedByOrder = [...filtered].sort((a, b) => a.order - b.order);
-                const firstItemId = sortedByOrder[0].id;
-                filtered = filtered.map((m) => ({
-                    ...m,
-                    isPrimary: m.id === firstItemId,
-                }));
-            }
-
-            const updated: VariantMedia = {
-                ...existing,
-                media: filtered,
-            };
-
-            onChangeVariant([...newVariantMediaList, updated]);
+            
+            onChangeVariant(updatedVariantMedia);
         }
-    };
-
-    const handleVariantMediaSetPrimary = (key: string, mediaId: string) => {
-        const existing = variantMedia.find((vm) => vm.key === key);
-        if (!existing) return;
-
-        // Clear primary from all variant media and set the selected one as primary
-        const updatedVariantMedia = variantMedia.map((vm) => ({
-            ...vm,
-            media: vm.media.map((m) => ({
-                ...m,
-                isPrimary: vm.key === key && m.id === mediaId,
-            })),
-        }));
-        onChangeVariant(updatedVariantMedia);
-
-        // Also clear primary from single media to ensure only one primary across the product
-        if (singleMedia.length > 0) {
-            const clearedSingleMedia = singleMedia.map((m) => ({ ...m, isPrimary: false }));
-            onChangeSingle(clearedSingleMedia);
-        }
-    };
-
-    const handleVariantMediaReorder = (key: string, fromIndex: number, toIndex: number) => {
-        const existing = variantMedia.find((vm) => vm.key === key);
-        if (!existing) return;
-
-        const reordered = [...existing.media];
-        const [movedItem] = reordered.splice(fromIndex, 1);
-        reordered.splice(toIndex, 0, movedItem);
-
-        const updatedMedia = reordered.map((m, idx) => ({ ...m, order: idx }));
-
-        const updated: VariantMedia = {
-            ...existing,
-            media: updatedMedia,
-        };
-
-        const newVariantMedia = variantMedia.filter((vm) => vm.key !== key);
-        onChangeVariant([...newVariantMedia, updated]);
     };
 
     // Get variant media using shared utility
@@ -299,45 +190,24 @@ export const MediaSection: React.FC<MediaSectionProps> = ({
             <Card className={errors['singleMedia'] ? "border-danger" : ""}>
                 <div className="flex flex-col gap-2" id="singleMedia">
                     <div className="flex items-center justify-between">
-                        <h2 className="text-xl font-semibold ">
+                        <h2 className="text-xl font-semibold">
                             Media Management
                         </h2>
                     </div>
                     {hasAttributeControllingMedia && mediaAttributes.length === 0 && (
-                        <p className="text-sm ">
+                        <p className="text-sm">
                             No attributes are controlling media. These images apply to all variants.
                         </p>
                     )}
-                    {errors['singleMedia'] && (
-                        <p className="text-sm text-danger">{errors['singleMedia']}</p>
-                    )}
                 </div>
 
-                <MediaUploadArea
-                    media={singleMedia}
-                    onAdd={handleSingleMediaAdd}
-                    onRemove={handleSingleMediaRemove}
-                    onSetPrimary={handleSingleMediaSetPrimary}
-                    onReorder={handleSingleMediaReorder}
-                    onPreview={setPreviewImage}
+                <ImageUpload
+                    value={toImageUploadItems(singleMedia)}
+                    onChange={handleSingleMediaChange}
+                    isMulti={true}
+                    hasPrimary={true}
+                    error={errors['singleMedia'] ? String(errors['singleMedia']) : undefined}
                 />
-
-                <Modal
-                    isOpen={!!previewImage}
-                    onClose={() => setPreviewImage(null)}
-                    variant="transparent"
-                >
-                    {previewImage && (
-                        <div className="w-188 h-188 relative rounded-r1">
-                            <Image
-                                src={previewImage}
-                                alt="Preview"
-                                fill
-                                className="object-cover rounded-r1"
-                            />
-                        </div>
-                    )}
-                </Modal>
             </Card>
         );
     }
@@ -347,12 +217,12 @@ export const MediaSection: React.FC<MediaSectionProps> = ({
         return (
             <Card>
                 <div className="flex items-center justify-between">
-                    <h2 className="text-xl font-semibold ">
+                    <h2 className="text-xl font-semibold">
                         Media Management
                     </h2>
                 </div>
-                <div className=" border border-b1 rounded-r1 p-4">
-                    <p className="">
+                <div className="border border-b1 rounded-r1 p-4">
+                    <p>
                         Please select attribute values to configure media.
                     </p>
                 </div>
@@ -363,12 +233,12 @@ export const MediaSection: React.FC<MediaSectionProps> = ({
     return (
         <Card>
             <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold ">
+                <h2 className="text-xl font-semibold">
                     Media Management - Variant Based
                 </h2>
             </div>
 
-            <p className="text-sm ">
+            <p className="text-sm">
                 Upload media for each variant based on{" "}
                 <strong>{mediaAttributes.map((a) => a.name).join(", ")}</strong>
             </p>
@@ -381,260 +251,17 @@ export const MediaSection: React.FC<MediaSectionProps> = ({
                         key={combo.key}
                         variant="nested"
                     >
-                        <h4 className="font-medium ">{combo.label}</h4>
+                        <h4 className="font-medium">{combo.label}</h4>
 
-                        <MediaUploadArea
-                            media={media}
-                            onAdd={(file) => handleVariantMediaAdd(combo.key, file)}
-                            onRemove={(mediaId) =>
-                                handleVariantMediaRemove(combo.key, mediaId)
-                            }
-                            onSetPrimary={(mediaId) =>
-                                handleVariantMediaSetPrimary(combo.key, mediaId)
-                            }
-                            onReorder={(from, to) => handleVariantMediaReorder(combo.key, from, to)}
-                            onPreview={setPreviewImage}
+                        <ImageUpload
+                            value={toImageUploadItems(media)}
+                            onChange={(items) => handleVariantMediaChange(combo.key, items)}
+                            isMulti={true}
+                            hasPrimary={true}
                         />
                     </Card>
                 );
             })}
-
-            <Modal
-                isOpen={!!previewImage}
-                onClose={() => setPreviewImage(null)}
-                className="max-w-4xl"
-                variant="transparent"
-            >
-                {previewImage && (
-                    <div className="relative w-[650px] h-[650px]">
-                        <Image
-                            src={previewImage}
-                            alt="Preview"
-                            fill
-                            className="object-contain rounded-r1"
-                        />
-                    </div>
-                )}
-            </Modal>
         </Card>
-    );
-};
-
-// Sortable Media Item Component
-interface SortableMediaItemProps {
-    item: MediaItem;
-    onRemove: (id: string) => void;
-    onSetPrimary: (id: string) => void;
-    onPreview?: (url: string) => void;
-}
-
-const SortableMediaItem = ({ item, onRemove, onSetPrimary, onPreview }: SortableMediaItemProps) => {
-    const {
-        attributes,
-        listeners,
-        setNodeRef,
-        transform,
-        transition,
-        isDragging
-    } = useSortable({ id: item.id });
-
-    const style = {
-        transform: CSS.Transform.toString(transform),
-        transition,
-        opacity: isDragging ? 0.5 : 1,
-        zIndex: isDragging ? 1000 : 'auto',
-    };
-
-    return (
-        <div
-            ref={setNodeRef}
-            style={style}
-            {...attributes}
-            {...listeners}
-            className="w-40 h-40 relative group border rounded-r1 overflow-hidden border-primary/20 touch-none"
-        >
-            {item.type === "image" ? (
-                <Image
-                    src={item.preview}
-                    alt=""
-                    fill
-                    className="object-cover rounded-r1"
-                />
-            ) : (
-                <video src={item.preview} className="object-cover w-full h-full" />
-            )}
-
-            {item.isPrimary && (
-                <div className="absolute top-2 left-2 bg-primary text-white text-xs px-2 py-1 rounded z-10">
-                    Primary
-                </div>
-            )}
-
-            <div className="flex justify-center items-center gap-2  absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-all duration-300 z-20">
-                {!item.isPrimary && (
-                    <button
-                        onPointerDown={(e) => e.stopPropagation()}
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            onSetPrimary(item.id);
-                        }}
-                        className="bg-secondary/50 p-3 rounded-r1 text-sm transition-all duration-300 ease-in-out hover:bg-secondary/75 active:bg-secondary/90 group/secondary"
-                    >
-                        <Star className="text-secondary group-hover/secondary:text-white transition-all duration-300" />
-                    </button>
-                )}
-                {onPreview && (
-                    <button
-                        onPointerDown={(e) => e.stopPropagation()}
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            onPreview(item.preview);
-                        }}
-                        className="bg-primary/50 p-3 rounded-r1 text-sm transition-all duration-300 ease-in-out hover:bg-primary/75 active:bg-primary/90 group/preview"
-                    >
-                        <Eye className="text-primary3 group-hover/preview:text-white transition-all duration-300" />
-                    </button>
-                )}
-                <button
-                    onPointerDown={(e) => e.stopPropagation()}
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        onRemove(item.id);
-                    }}
-                    className="absolute top-2 right-2 bg-danger w-6 h-6 flex justify-center items-center text-white rounded text-md hover:bg-danger2"
-                >
-                    &times;
-                </button>
-            </div>
-        </div>
-    );
-};
-
-// Media Upload Area Component
-interface MediaUploadAreaProps {
-    media: MediaItem[];
-    onAdd: (files: FileList | null) => void;
-    onRemove: (mediaId: string) => void;
-    onSetPrimary: (mediaId: string) => void;
-    onReorder?: (fromIndex: number, toIndex: number) => void;
-    onPreview?: (url: string) => void;
-}
-
-const MediaUploadArea: React.FC<MediaUploadAreaProps> = ({
-    media,
-    onAdd,
-    onRemove,
-    onSetPrimary,
-    onReorder,
-    onPreview,
-}) => {
-    const [dragOver, setDragOver] = useState(false);
-    const fileInputRef = React.useRef<HTMLInputElement>(null);
-
-    const sensors = useSensors(
-        useSensor(PointerSensor, {
-            activationConstraint: {
-                distance: 8,
-            },
-        }),
-        useSensor(KeyboardSensor, {
-            coordinateGetter: sortableKeyboardCoordinates,
-        })
-    );
-
-    const handleDragEnd = (event: DragEndEvent) => {
-        const { active, over } = event;
-
-        if (over && active.id !== over.id && onReorder) {
-            const oldIndex = media.findIndex((item) => item.id === active.id);
-            const newIndex = media.findIndex((item) => item.id === over.id);
-            onReorder(oldIndex, newIndex);
-        }
-    };
-
-    const handleDrop = (e: React.DragEvent) => {
-        e.preventDefault();
-        setDragOver(false);
-
-        const files = e.dataTransfer.files;
-        if (files && files.length > 0) {
-            onAdd(files);
-        }
-    };
-
-    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const files = e.target.files;
-        onAdd(files);
-    };
-
-    return (
-        <div className="flex flex-col gap-5">
-            {/* Upload Zone */}
-            <div
-                onDragOver={(e) => {
-                    e.preventDefault();
-                    setDragOver(true);
-                }}
-                onDragLeave={() => setDragOver(false)}
-                onDrop={handleDrop}
-                className={`border border-dashed rounded-r1 p-8 text-center transition-colors ${dragOver
-                    ? "border-primary bg-primary/10"
-                    : "border-primary/20 hover:border-primary hover:bg-primary/10 hover:cursor-pointer"
-                    }`}
-                onClick={() => fileInputRef.current?.click()}
-            >
-                <input
-                    ref={fileInputRef}
-                    type="file"
-                    multiple
-                    accept="image/*,video/*"
-                    onChange={handleFileSelect}
-                    className="hidden"
-                />
-
-                <Upload className="mx-auto mb-3 bg-primary/10 p-2 w-10 h-10 rounded-r2 text-primary" />
-
-                <div>
-                    <Button
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            fileInputRef.current?.click();
-                        }}
-                        color="var(--color-primary)"
-                    >
-                        Choose Files
-                    </Button>
-                    <p className="text-sm text-primary mt-2">
-                        or drag and drop images/videos here
-                    </p>
-                </div>
-            </div>
-
-            {/* Media Grid */}
-            {media.length > 0 && (
-                <DndContext
-                    sensors={sensors}
-                    collisionDetection={closestCenter}
-                    onDragEnd={handleDragEnd}
-                >
-                    <SortableContext
-                        items={media.map(m => m.id)}
-                        strategy={rectSortingStrategy}
-                    >
-                        <div className="flex flex-wrap gap-5">
-                            {media.map((item) => (
-                                <SortableMediaItem
-                                    key={item.id}
-                                    item={item}
-                                    onRemove={onRemove}
-                                    onSetPrimary={onSetPrimary}
-                                    onPreview={onPreview}
-                                />
-                            ))}
-                        </div>
-                    </SortableContext>
-                </DndContext>
-            )}
-        </div>
     );
 };

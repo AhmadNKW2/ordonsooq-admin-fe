@@ -20,7 +20,7 @@ interface PricingSectionProps {
     onChangeSingle: (pricing: SinglePricing) => void;
     onChangeVariant: (pricing: VariantPricing[]) => void;
     calculateSalePercentage: (price: number, salePrice?: number) => number;
-    errors?: Record<string, string>;
+    errors?: Record<string, string | boolean>;
 }
 
 // Helper component for pricing inputs grid
@@ -33,9 +33,9 @@ interface PricingInputsProps {
     onCostChange: (value: string) => void;
     onPriceChange: (value: string) => void;
     onSalePriceChange: (value: string) => void;
-    costError?: string;
-    priceError?: string;
-    salePriceError?: string;
+    costError?: string | boolean;
+    priceError?: string | boolean;
+    salePriceError?: string | boolean;
     idPrefix: string;
 }
 

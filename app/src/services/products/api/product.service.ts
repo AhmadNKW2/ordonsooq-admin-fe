@@ -29,6 +29,7 @@ import {
   UpdateMediaDto,
   DeleteMediaDto,
   ReorderMediaDto,
+  RestoreProductDto,
 } from "../types/product.types";
 import {
   ApiResponse,
@@ -183,10 +184,39 @@ class ProductService extends BaseService<Product> {
   }
 
   /**
-   * Delete a product
+   * Archive a product (soft delete)
+   */
+  async archiveProduct(id: string | number): Promise<ApiResponse<void>> {
+    return httpClient.post<ApiResponse<void>>(`${this.endpoint}/${id}/archive`);
+  }
+
+  /**
+   * Restore an archived product
+   */
+  async restoreProduct(id: string | number, data?: RestoreProductDto): Promise<ApiResponse<Product>> {
+    return httpClient.post<ApiResponse<Product>>(`${this.endpoint}/${id}/restore`, data);
+  }
+
+  /**
+   * Get archived products (trash view)
+   */
+  async getArchivedProducts(): Promise<ApiResponse<Product[]>> {
+    return httpClient.get<ApiResponse<Product[]>>(`${this.endpoint}/archive/list`);
+  }
+
+  /**
+   * Permanently delete a product
+   */
+  async permanentDeleteProduct(id: string | number): Promise<ApiResponse<void>> {
+    return httpClient.delete<ApiResponse<void>>(`${this.endpoint}/${id}/permanent`);
+  }
+
+  /**
+   * Delete a product (legacy - now archives instead)
+   * @deprecated Use archiveProduct instead
    */
   async deleteProduct(id: string | number): Promise<ApiResponse<void>> {
-    return this.delete(id);
+    return this.archiveProduct(id);
   }
 
   /**
@@ -207,17 +237,17 @@ class ProductService extends BaseService<Product> {
    * Add attributes to product
    */
   async addProductAttributes(
-    productId: number,
+    product_id: number,
     data: AddProductAttributesDto
   ): Promise<ApiResponse<any>> {
-    return httpClient.post(`${this.endpoint}/${productId}/attributes`, data);
+    return httpClient.post(`${this.endpoint}/${product_id}/attributes`, data);
   }
 
   /**
    * Get product attributes
    */
-  async getProductAttributes(productId: number): Promise<ApiResponse<any>> {
-    return httpClient.get(`${this.endpoint}/${productId}/attributes`);
+  async getProductAttributes(product_id: number): Promise<ApiResponse<any>> {
+    return httpClient.get(`${this.endpoint}/${product_id}/attributes`);
   }
 
   /**
@@ -245,34 +275,34 @@ class ProductService extends BaseService<Product> {
    * Set single pricing
    */
   async setSinglePricing(
-    productId: number,
+    product_id: number,
     data: SinglePricingDto
   ): Promise<ApiResponse<any>> {
-    return httpClient.post(`${this.endpoint}/${productId}/pricing`, data);
+    return httpClient.post(`${this.endpoint}/${product_id}/pricing`, data);
   }
 
   /**
    * Set variant pricing
    */
   async setVariantPricing(
-    productId: number,
+    product_id: number,
     data: VariantPricingDto
   ): Promise<ApiResponse<any>> {
-    return httpClient.post(`${this.endpoint}/${productId}/variant-pricing`, data);
+    return httpClient.post(`${this.endpoint}/${product_id}/variant-pricing`, data);
   }
 
   /**
    * Get product pricing
    */
-  async getProductPricing(productId: number): Promise<ApiResponse<any>> {
-    return httpClient.get(`${this.endpoint}/${productId}/pricing`);
+  async getProductPricing(product_id: number): Promise<ApiResponse<any>> {
+    return httpClient.get(`${this.endpoint}/${product_id}/pricing`);
   }
 
   /**
    * Get variant pricing
    */
-  async getVariantPricing(productId: number): Promise<ApiResponse<any[]>> {
-    return httpClient.get(`${this.endpoint}/${productId}/variant-pricing`);
+  async getVariantPricing(product_id: number): Promise<ApiResponse<any[]>> {
+    return httpClient.get(`${this.endpoint}/${product_id}/variant-pricing`);
   }
 
   // ============================================
@@ -283,10 +313,10 @@ class ProductService extends BaseService<Product> {
    * Add product media
    */
   async addProductMedia(
-    productId: number,
+    product_id: number,
     data: ProductMediaDto
   ): Promise<ApiResponse<any>> {
-    return httpClient.post(`${this.endpoint}/${productId}/media`, data);
+    return httpClient.post(`${this.endpoint}/${product_id}/media`, data);
   }
 
   /**
@@ -295,7 +325,7 @@ class ProductService extends BaseService<Product> {
    * - With variantId: saves as variant-specific media
    */
   async uploadProductMedia(
-    productId: number,
+    product_id: number,
     file: File,
     sortOrder?: number,
     isPrimary?: boolean,
@@ -307,7 +337,7 @@ class ProductService extends BaseService<Product> {
     if (isPrimary !== undefined) formData.append('is_primary', isPrimary.toString());
     if (variantId !== undefined) formData.append('variant_id', variantId.toString());
     
-    return httpClient.postFormData(`${this.endpoint}/${productId}/media`, formData);
+    return httpClient.postFormData(`${this.endpoint}/${product_id}/media`, formData);
   }
 
   /**
@@ -315,7 +345,7 @@ class ProductService extends BaseService<Product> {
    * Uses the unified media endpoint with variant_id parameter
    */
   async uploadVariantMedia(
-    productId: number,
+    product_id: number,
     variantId: number,
     file: File,
     sortOrder?: number,
@@ -327,14 +357,14 @@ class ProductService extends BaseService<Product> {
     if (sortOrder !== undefined) formData.append('sort_order', sortOrder.toString());
     if (isPrimary !== undefined) formData.append('is_primary', isPrimary.toString());
     
-    return httpClient.postFormData(`${this.endpoint}/${productId}/media`, formData);
+    return httpClient.postFormData(`${this.endpoint}/${product_id}/media`, formData);
   }
 
   /**
    * Get product media
    */
-  async getProductMedia(productId: number): Promise<ApiResponse<any>> {
-    return httpClient.get(`${this.endpoint}/${productId}/media`);
+  async getProductMedia(product_id: number): Promise<ApiResponse<any>> {
+    return httpClient.get(`${this.endpoint}/${product_id}/media`);
   }
 
   /**
@@ -369,34 +399,34 @@ class ProductService extends BaseService<Product> {
    * Set product weight
    */
   async setProductWeight(
-    productId: number,
+    product_id: number,
     data: ProductWeightDto
   ): Promise<ApiResponse<any>> {
-    return httpClient.post(`${this.endpoint}/${productId}/weight`, data);
+    return httpClient.post(`${this.endpoint}/${product_id}/weight`, data);
   }
 
   /**
    * Set variant weight
    */
   async setVariantWeight(
-    productId: number,
+    product_id: number,
     data: VariantWeightDto
   ): Promise<ApiResponse<any>> {
-    return httpClient.post(`${this.endpoint}/${productId}/variant-weight`, data);
+    return httpClient.post(`${this.endpoint}/${product_id}/variant-weight`, data);
   }
 
   /**
    * Get product weight
    */
-  async getProductWeight(productId: number): Promise<ApiResponse<any>> {
-    return httpClient.get(`${this.endpoint}/${productId}/weight`);
+  async getProductWeight(product_id: number): Promise<ApiResponse<any>> {
+    return httpClient.get(`${this.endpoint}/${product_id}/weight`);
   }
 
   /**
    * Get variant weights
    */
-  async getVariantWeights(productId: number): Promise<ApiResponse<any[]>> {
-    return httpClient.get(`${this.endpoint}/${productId}/variant-weights`);
+  async getVariantWeights(product_id: number): Promise<ApiResponse<any[]>> {
+    return httpClient.get(`${this.endpoint}/${product_id}/variant-weights`);
   }
 
   // ============================================
@@ -406,8 +436,8 @@ class ProductService extends BaseService<Product> {
   /**
    * Get product stock
    */
-  async getProductStock(productId: number): Promise<ApiResponse<any[]>> {
-    return httpClient.get(`${this.endpoint}/${productId}/stock`);
+  async getProductStock(product_id: number): Promise<ApiResponse<any[]>> {
+    return httpClient.get(`${this.endpoint}/${product_id}/stock`);
   }
 
   /**
@@ -418,6 +448,42 @@ class ProductService extends BaseService<Product> {
     data: UpdateStockDto
   ): Promise<ApiResponse<any>> {
     return httpClient.patch(`${this.endpoint}/stock/${stockId}`, data);
+  }
+
+  // ============================================
+  // Product Category Assignment
+  // ============================================
+
+  /**
+   * Assign products to a category
+   */
+  async assignToCategory(categoryId: number, product_ids: number[]): Promise<ApiResponse<void>> {
+    return httpClient.post<ApiResponse<void>>(`${this.endpoint}/assign/category/${categoryId}`, { product_ids });
+  }
+
+  /**
+   * Remove products from a category
+   */
+  async removeFromCategory(categoryId: number, product_ids: number[]): Promise<ApiResponse<void>> {
+    return httpClient.delete<ApiResponse<void>>(`${this.endpoint}/assign/category/${categoryId}`, { product_ids });
+  }
+
+  // ============================================
+  // Product Vendor Assignment
+  // ============================================
+
+  /**
+   * Assign products to a vendor
+   */
+  async assignToVendor(vendorId: number, product_ids: number[]): Promise<ApiResponse<void>> {
+    return httpClient.post<ApiResponse<void>>(`${this.endpoint}/assign/vendor/${vendorId}`, { product_ids });
+  }
+
+  /**
+   * Remove products from a vendor
+   */
+  async removeFromVendor(vendorId: number, product_ids: number[]): Promise<ApiResponse<void>> {
+    return httpClient.delete<ApiResponse<void>>(`${this.endpoint}/assign/vendor/${vendorId}`, { product_ids });
   }
 }
 

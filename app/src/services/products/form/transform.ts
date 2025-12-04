@@ -46,7 +46,7 @@ export function transformFormDataToDto(
     short_description_ar: data.shortDescriptionAr || '',
     long_description_en: data.longDescriptionEn || '',
     long_description_ar: data.longDescriptionAr || '',
-    category_id: parseInt(data.categoryId),
+    category_ids: (data.categoryIds || []).map(id => parseInt(id)), // Changed to category_ids array
     is_active: data.isActive,
   };
 
@@ -103,7 +103,7 @@ export function transformFormDataToDto(
       const singleVariant = data.variants.find(v => v.id === 'single');
       if (singleVariant) {
         dto.stocks = [{
-          quantity: singleVariant.stock,
+          quantity: singleVariant.stock ?? 0,
         }];
       }
     }

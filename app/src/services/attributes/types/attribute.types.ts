@@ -22,6 +22,7 @@ export interface Attribute {
   name_en: string;
   name_ar: string;
   type: string;
+  is_color: boolean;
   sort_order: number;
   is_active: boolean;
   created_at?: string;
@@ -35,6 +36,7 @@ export interface Attribute {
 export interface CreateAttributeDto {
   name_en: string;
   name_ar: string;
+  is_color?: boolean;
   is_active?: boolean;
   values?: CreateAttributeValueDto[];
 }
@@ -47,12 +49,24 @@ export interface CreateAttributeValueDto {
   is_active?: boolean;
 }
 
+// Update Attribute Value in Attribute DTO (for batch update)
+export interface UpdateAttributeValueInDto {
+  id?: number; // Optional for new values
+  value_en?: string;
+  value_ar?: string;
+  color_code?: string | null;
+  is_active?: boolean;
+  sort_order?: number;
+}
+
 // Update Attribute DTO
 export interface UpdateAttributeDto {
   name_en?: string;
   name_ar?: string;
+  is_color?: boolean;
   is_active?: boolean;
   sort_order?: number;
+  values?: UpdateAttributeValueInDto[];
 }
 
 // Add Value to Attribute DTO

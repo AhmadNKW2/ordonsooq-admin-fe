@@ -30,9 +30,9 @@ import {
 export default function ViewProductPage() {
   const router = useRouter();
   const params = useParams();
-  const productId = parseInt(params.id as string);
+  const product_id = parseInt(params.id as string);
 
-  const { data: productData, isLoading: productLoading, isError: productError, error: productErrorData, refetch: refetchProduct } = useProduct(productId);
+  const { data: productData, isLoading: productLoading, isError: productError, error: productErrorData, refetch: refetchProduct } = useProduct(product_id);
   const { data: categoriesData, isLoading: categoriesLoading } = useCategories();
   const { data: vendorsData, isLoading: vendorsLoading } = useVendors();
 
@@ -40,13 +40,19 @@ export default function ViewProductPage() {
   const categories = categoriesData || [];
   const vendors = vendorsData || [];
 
-  const getCategoryName = (categoryId: number) => {
-    return categories.find(cat => cat.id === categoryId)?.name || `Category ${categoryId}`;
+  const getCategoryName = (categoryId?: number | null) => {
+    if (!categoryId) return null;
+    return categories.find(cat => cat.id === categoryId)?.name_en || `Category ${categoryId}`;
+  };
+
+  const getCategoryNames = (categoryIds?: number[]) => {
+    if (!categoryIds || categoryIds.length === 0) return "N/A";
+    return categoryIds.map(id => getCategoryName(id)).filter(Boolean).join(", ") || "N/A";
   };
 
   const getVendorName = (vendorId?: number | null) => {
     if (!vendorId) return "N/A";
-    return vendors.find(vendor => vendor.id === vendorId)?.name || `Vendor ${vendorId}`;
+    return vendors.find(vendor => vendor.id === vendorId)?.name_en || `Vendor ${vendorId}`;
   };
 
   const formatDate = (date?: string | Date | null) => {
@@ -140,7 +146,7 @@ export default function ViewProductPage() {
               <p className=" mt-1">{product.name_ar}</p>
             </div>
           </div>
-          <Button onClick={() => router.push(`/products/${productId}`)}>
+          <Button onClick={() => router.push(`/products/${product_id}`)}>
             <Edit className="mr-2 h-4 w-4" />
             Edit Product
           </Button>
@@ -165,8 +171,8 @@ export default function ViewProductPage() {
               <p className=" font-semibold font-mono">{product.sku || "N/A"}</p>
             </div>
             <div>
-              <label className="text-sm font-medium ">Category</label>
-              <p className=" font-semibold">{getCategoryName(product.category_id)}</p>
+              <label className="text-sm font-medium ">Categories</label>
+              <p className=" font-semibold">{getCategoryNames(product.category_ids || (product.category_id ? [product.category_id] : []))}</p>
             </div>
             <div>
               <label className="text-sm font-medium ">Vendor</label>
@@ -258,7 +264,7 @@ export default function ViewProductPage() {
           </div>
           <div className="text-center py-8">
             <p className="">
-              Pricing data will be loaded from <code className=" px-2 py-1 rounded text-sm">GET /products/{productId}/pricing</code>
+              Pricing data will be loaded from <code className=" px-2 py-1 rounded text-sm">GET /products/{product_id}/pricing</code>
             </p>
             <p className=" text-sm mt-2">
             </p>
@@ -275,7 +281,7 @@ export default function ViewProductPage() {
           </div>
           <div className="text-center py-8">
             <p className="">
-              Weight data will be loaded from <code className=" px-2 py-1 rounded text-sm">GET /products/{productId}/weight</code>
+              Weight data will be loaded from <code className=" px-2 py-1 rounded text-sm">GET /products/{product_id}/weight</code>
             </p>
           </div>
         </Card>
@@ -290,7 +296,7 @@ export default function ViewProductPage() {
           </div>
           <div className="text-center py-8">
             <p className="">
-              Media files will be loaded from <code className=" px-2 py-1 rounded text-sm">GET /products/{productId}/media</code>
+              Media files will be loaded from <code className=" px-2 py-1 rounded text-sm">GET /products/{product_id}/media</code>
             </p>
           </div>
         </Card>
@@ -305,7 +311,7 @@ export default function ViewProductPage() {
           </div>
           <div className="text-center py-8">
             <p className="">
-              Stock data will be loaded from <code className=" px-2 py-1 rounded text-sm">GET /products/{productId}/stock</code>
+              Stock data will be loaded from <code className=" px-2 py-1 rounded text-sm">GET /products/{product_id}/stock</code>
             </p>
           </div>
         </Card>

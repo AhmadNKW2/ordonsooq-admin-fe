@@ -5,6 +5,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { attributeService } from "../api/attribute.service";
 import { queryKeys } from "../../../lib/query-keys";
+import { showSuccessToast } from "../../../lib/toast";
 import {
   CreateAttributeDto,
   UpdateAttributeDto,
@@ -53,6 +54,7 @@ export const useCreateAttribute = () => {
       attributeService.createAttribute(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [queryKeys.attributes.all] });
+      showSuccessToast("Attribute created successfully");
     },
   });
 };
@@ -69,6 +71,7 @@ export const useUpdateAttribute = () => {
       queryClient.invalidateQueries({
         queryKey: queryKeys.attributes.detail(variables.id),
       });
+      showSuccessToast("Attribute updated successfully");
     },
   });
 };
@@ -81,6 +84,7 @@ export const useDeleteAttribute = () => {
     mutationFn: (id: number) => attributeService.deleteAttribute(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [queryKeys.attributes.all] });
+      showSuccessToast("Attribute deleted successfully");
     },
   });
 };
@@ -102,6 +106,7 @@ export const useAddAttributeValue = () => {
       queryClient.invalidateQueries({
         queryKey: queryKeys.attributes.detail(variables.attributeId),
       });
+      showSuccessToast("Value added successfully");
     },
   });
 };
@@ -127,6 +132,7 @@ export const useUpdateAttributeValue = () => {
           queryKey: queryKeys.attributes.detail(variables.attributeId),
         });
       }
+      showSuccessToast("Value updated successfully");
     },
   });
 };
@@ -150,6 +156,7 @@ export const useDeleteAttributeValue = () => {
           queryKey: queryKeys.attributes.detail(variables.attributeId),
         });
       }
+      showSuccessToast("Value deleted successfully");
     },
   });
 };
@@ -163,6 +170,7 @@ export const useReorderAttributes = () => {
       attributeService.reorderAttributes(orders),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [queryKeys.attributes.all] });
+      showSuccessToast("Attributes reordered successfully");
     },
   });
 };
@@ -184,6 +192,7 @@ export const useReorderAttributeValues = () => {
       queryClient.invalidateQueries({
         queryKey: queryKeys.attributes.detail(variables.attributeId),
       });
+      showSuccessToast("Values reordered successfully");
     },
   });
 };

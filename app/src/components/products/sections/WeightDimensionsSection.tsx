@@ -22,7 +22,7 @@ interface WeightDimensionsSectionProps {
     onChangeSingle: (data: WeightDimensions) => void;
     onChangeVariant: (data: VariantWeightDimensions[]) => void;
     hasAttributeControllingWeight: boolean;
-    errors: Record<string, string>;
+    errors: Record<string, string | boolean>;
 }
 
 // Helper component for weight/dimensions inputs grid
@@ -35,10 +35,10 @@ interface WeightInputsProps {
     onLengthChange: (value: string) => void;
     onWidthChange: (value: string) => void;
     onHeightChange: (value: string) => void;
-    weightError?: string;
-    lengthError?: string;
-    widthError?: string;
-    heightError?: string;
+    weightError?: string | boolean;
+    lengthError?: string | boolean;
+    widthError?: string | boolean;
+    heightError?: string | boolean;
     idPrefix: string;
 }
 

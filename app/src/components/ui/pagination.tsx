@@ -34,7 +34,7 @@ const PaginationButton: React.FC<PaginationButtonProps> = ({ onClick, disabled, 
   <button
     onClick={onClick}
     disabled={disabled}
-    className="w-8 h-8 p-1 flex justify-center items-center rounded-r1 border border-primary2 text-primary2 hover:bg-primary2 hover:text-white disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent transition-all duration-200"
+    className="w-8 h-8 p-1 flex justify-center items-center rounded-r1 border border-primary2 text-primary2 hover:bg-primary2 hover:text-white disabled:opacity-25 disabled:cursor-not-allowed disabled:hover:bg-transparent transition-all duaration-300"
     title={title}
   >
     {icon}

@@ -4,12 +4,13 @@ import { Textarea } from "../../ui/textarea";
 import { Select } from "../../ui/select";
 import { Checkbox } from "../../ui/checkbox";
 import { Card } from "@/components/ui";
+import { Toggle } from "@/components/ui/toggle";
 
 interface BasicInformationSectionProps {
     formData: {
         nameEn?: string;
         nameAr?: string;
-        categoryId?: string;
+        categoryIds?: string[]; // Changed from categoryId to categoryIds
         vendorId?: string;
         shortDescriptionEn?: string;
         shortDescriptionAr?: string;
@@ -17,9 +18,9 @@ interface BasicInformationSectionProps {
         longDescriptionAr?: string;
         isActive?: boolean;
     };
-    errors: { [key: string]: string };
-    categories: Array<{ id: string; name: string }>;
-    vendors: Array<{ id: string; name: string }>;
+    errors: Record<string, string | boolean>;
+    categories: Array<{ id: string; name: string; nameEn?: string; nameAr?: string }>;
+    vendors: Array<{ id: string; name: string; nameEn?: string; nameAr?: string }>;
     onChange: (field: string, value: any) => void;
 }
 
@@ -55,13 +56,11 @@ export const BasicInformationSection: React.FC<BasicInformationSectionProps> = (
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                         onChange("nameAr", e.target.value)
                     }
-                    dir="rtl"
+                    isRtl
                     error={errors.nameAr}
                 />
-            </div>
 
-            {/* Short Descriptions */}
-            <div className="grid grid-cols-2 gap-5">
+                {/* Short Descriptions */}
                 <Textarea
                     id="shortDescriptionEn"
                     label="Short Description (English)"
@@ -80,14 +79,12 @@ export const BasicInformationSection: React.FC<BasicInformationSectionProps> = (
                     onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
                         onChange("shortDescriptionAr", e.target.value)
                     }
-                    dir="rtl"
+                    isRtl
                     rows={3}
                     error={errors.shortDescriptionAr}
                 />
-            </div>
 
-            {/* Long Descriptions */}
-            <div className="grid grid-cols-2 gap-5">
+                {/* Long Descriptions */}
                 <Textarea
                     id="longDescriptionEn"
                     label="Long Description (English)"
@@ -106,27 +103,32 @@ export const BasicInformationSection: React.FC<BasicInformationSectionProps> = (
                     onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
                         onChange("longDescriptionAr", e.target.value)
                     }
-                    dir="rtl"
+                    isRtl
                     rows={6}
                     error={errors.longDescriptionAr}
                 />
-            </div>
 
-            {/* Category, Vendor */}
-            <div className="grid grid-cols-2 gap-5">
+                {/* Category, Vendor */}
                 <Select
-                    id="categoryId"
-                    label="Category"
-                    value={formData.categoryId || ""}
-                    onChange={(value) => onChange("categoryId", value as string)}
+                    id="categoryIds"
+                    label="Categories"
+                    value={formData.categoryIds || []}
+                    onChange={(value) => {
+                        // Always ensure we send an array of category IDs
+                        const categoryIds = Array.isArray(value) ? value : (value ? [value] : []);
+                        onChange("categoryIds", categoryIds as string[]);
+                    }}
                     options={[
                         ...categories.map((category) => ({
                             value: category.id,
-                            label: category.name,
+                            label: category.nameEn && category.nameAr
+                                ? `${category.nameEn} - ${category.nameAr}`
+                                : category.name,
                         })),
                     ]}
                     search={true}
-                    error={errors.categoryId}
+                    multiple={true}
+                    error={errors.categoryIds}
                 />
 
                 <Select
@@ -137,19 +139,21 @@ export const BasicInformationSection: React.FC<BasicInformationSectionProps> = (
                     options={[
                         ...vendors.map((vendor) => ({
                             value: vendor.id,
-                            label: vendor.name,
+                            label: vendor.nameEn && vendor.nameAr
+                                ? `${vendor.nameEn} - ${vendor.nameAr}`
+                                : vendor.name,
                         })),
                     ]}
                     search={true}
                     error={errors.vendorId}
                 />
-            </div>
 
-            <Checkbox
-                checked={formData.isActive ?? true}
-                onChange={(checked) => onChange("isActive", checked)}
-                label="Product is active"
-            />
+                {/* Visibility Status */}
+                <div className="flex items-center justify-between bg-gray-50 rounded-lg p-3">
+                    <p className="font-medium">Visibility Status</p>
+                    <Toggle checked={formData.isActive ?? true} onChange={(checked) => onChange("isActive", checked)} />
+                </div>
+            </div>
         </Card>
     );
 };

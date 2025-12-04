@@ -25,7 +25,7 @@ export interface Attribute {
 export interface VariantCombination {
   id: string;
   attributeValues: { [attrId: string]: string };
-  stock?: number;
+  stock: number;
 }
 
 // Pricing Configuration
@@ -85,7 +85,7 @@ export const productFormSchema = z.object({
   // Basic Information
   nameEn: z.string().min(1, "English name is required"),
   nameAr: z.string().min(1, "Arabic name is required"),
-  categoryId: z.string().min(1, "Category is required"),
+  categoryIds: z.array(z.string()).min(1, "At least one category is required"), // Changed from categoryId to categoryIds
   vendorId: z.string().optional(),
   shortDescriptionEn: z.string().optional(),
   shortDescriptionAr: z.string().optional(),
@@ -197,7 +197,7 @@ export const productFormSchema = z.object({
     z.object({
       id: z.string(),
       attributeValues: z.record(z.string(), z.string()),
-      stock: z.number().min(0).optional(),
+      stock: z.number().min(0, "Stock is required"),
     })
   ).optional(),
 });

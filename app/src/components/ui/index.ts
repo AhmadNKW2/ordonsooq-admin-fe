@@ -9,6 +9,8 @@ export { Textarea } from './textarea';
 export { Select } from './select';
 export { DatePicker } from './date-picker';
 export { Modal } from './modal';
+export { ImageUpload } from './image-upload';
+export { SortableList, DragHandle, useSortableItem, arrayMove } from './sortable-list';
 export {
   Sidebar,
   SidebarHeader,
@@ -20,3 +22,5 @@ export {
 } from '../sidebar/sidebar';
 export type { PaginationData } from './pagination';
 export type { SelectOption } from './select';
+export type { ImageUploadItem, ImageUploadProps, UploadedImage } from './image-upload';
+export type { SortableItem, SortableListProps, DragHandleProps } from './sortable-list';

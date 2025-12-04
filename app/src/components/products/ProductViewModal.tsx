@@ -447,7 +447,7 @@ export const ProductViewModal: React.FC<ProductViewModalProps> = ({
                                                 <button
                                                     key={media.id}
                                                     onClick={() => setCurrentMediaIndex(index)}
-                                                    className={`relative w-16 h-16 flex-shrink-0 rounded-r1 overflow-hidden border-2 transition-colors ${index === currentMediaIndex
+                                                    className={`relative w-16 h-16 shrink-0 rounded-r1 overflow-hidden border-2 transition-colors ${index === currentMediaIndex
                                                         ? "border-primary"
                                                         : "border-transparent hover:border-primary/50"
                                                         }`}

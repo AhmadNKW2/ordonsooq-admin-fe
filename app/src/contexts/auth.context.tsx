@@ -15,6 +15,7 @@ import { useRouter } from "next/navigation";
 import { authService } from "../services/auth/api/auth.service";
 import { LoginRequest, User, AuthState } from "../services/auth/types/auth.types";
 import { httpClient } from "../lib/api/http-client";
+import { showSuccessToast } from "../lib/toast";
 
 interface AuthContextType extends AuthState {
   login: (credentials: LoginRequest) => Promise<void>;
@@ -86,6 +87,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
           isAuthenticated: true,
           isLoading: false,
         });
+
+        showSuccessToast("Login successful");
 
         // Redirect to dashboard
         router.push("/");

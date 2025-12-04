@@ -4,7 +4,7 @@ import { FieldWrapper, getFieldClassesBySize, FIELD_ICON_CLASSES, FIELD_RIGHT_IC
 
 interface InputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'size'> {
   label?: string;
-  error?: string;
+  error?: string | boolean;
   variant?: 'default' | 'search';
   onClear?: () => void;
   isNum?: boolean;
@@ -49,31 +49,34 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
     // For RTL, position the # icon on the left side
     const numIconPosition = isRtl ? 'left-4' : rightIconPosition;
 
-    // For sm size without label/error, render simplified version
-    if (isSm && !label && !error) {
+    // For sm size without label, render simplified version
+    if (isSm && !label) {
       return (
-        <div className="relative">
-          {isSearchVariant && (
-            <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none z-10">
-              <Search className={FIELD_ICON_CLASSES} />
-            </div>
-          )}
-          <input
-            ref={ref}
-            value={value}
-            onChange={handleNumChange}
-            onFocus={handleFocus}
-            onBlur={handleBlur}
-            placeholder={props.placeholder || " "}
-            className={`${inputClasses} disabled:opacity-50 peer`}
-            dir={isRtl ? 'rtl' : 'ltr'}
-            {...props}
-          />
-          {isNum && (
-            <span className={`absolute ${numIconPosition} top-1/2 -translate-y-1/2 ${FIELD_RIGHT_ICON_COLOR} text-base pointer-events-none z-10`}>
-              #
-            </span>
-          )}
+        <div className="w-full">
+          <div className="relative">
+            {isSearchVariant && (
+              <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none z-10">
+                <Search className={FIELD_ICON_CLASSES} />
+              </div>
+            )}
+            <input
+              ref={ref}
+              value={value}
+              onChange={handleNumChange}
+              onFocus={handleFocus}
+              onBlur={handleBlur}
+              placeholder={props.placeholder || " "}
+              className={`${inputClasses} disabled:opacity-50 peer`}
+              dir={isRtl ? 'rtl' : 'ltr'}
+              {...props}
+            />
+            {isNum && (
+              <span className={`absolute ${numIconPosition} top-1/2 -translate-y-1/2 ${FIELD_RIGHT_ICON_COLOR} text-base pointer-events-none z-10`}>
+                #
+              </span>
+            )}
+          </div>
+          {error && typeof error === 'string' && error.trim() !== "" && <span className="text-xs text-danger mt-1 block">{error}</span>}
         </div>
       );
     }
@@ -99,7 +102,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
           onChange={handleNumChange}
           onFocus={handleFocus}
           onBlur={handleBlur}
-          placeholder=" "
+          placeholder=""
           className={`${inputClasses} peer`}
           dir={isRtl ? 'rtl' : 'ltr'}
           {...props}

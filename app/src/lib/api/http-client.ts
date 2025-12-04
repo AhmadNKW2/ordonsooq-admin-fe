@@ -5,6 +5,7 @@
 
 import { API_CONFIG } from "../constants";
 import { ApiError, ApiResponse } from "../../types/common.types";
+import { showErrorToast } from "../toast";
 
 type RequestInterceptor = (
   config: RequestInit
@@ -94,6 +95,9 @@ class HttpClient {
       errors,
     };
 
+    // Show error toast notification
+    showErrorToast(errorMessage);
+
     // Handle 401 Unauthorized - redirect to login
     if (response.status === 401) {
       // Clear auth data
@@ -146,8 +150,10 @@ class HttpClient {
       }
 
       // Network error or other fetch error
+      const networkError = "Network error. Please check your connection.";
+      showErrorToast(networkError);
       throw {
-        message: "Network error. Please check your connection.",
+        message: networkError,
         statusCode: 0,
       } as ApiError;
     }
@@ -204,9 +210,10 @@ class HttpClient {
   /**
    * DELETE request
    */
-  public delete<T>(endpoint: string): Promise<T> {
+  public delete<T>(endpoint: string, data?: any): Promise<T> {
     return this.request<T>(endpoint, {
       method: "DELETE",
+      ...(data && { body: JSON.stringify(data) }),
     });
   }
 
@@ -245,6 +252,31 @@ class HttpClient {
       console.log('response.ok:', response.ok);
       console.log('response.status:', response.status);
       
+      if (!response.ok) {
+        await this.handleError(response);
+      }
+      return response.json();
+    });
+  }
+
+  /**
+   * PATCH request with FormData (for file uploads)
+   */
+  public patchFormData<T>(endpoint: string, formData: FormData): Promise<T> {
+    const url = `${this.baseURL}${endpoint}`;
+
+    // Don't set Content-Type for FormData - browser will set it with boundary
+    const headers: HeadersInit = {};
+    const authHeader = (this.defaultHeaders as any).Authorization;
+    if (authHeader) {
+      headers['Authorization'] = authHeader;
+    }
+
+    return fetch(url, {
+      method: "PATCH",
+      headers,
+      body: formData,
+    }).then(async (response) => {
       if (!response.ok) {
         await this.handleError(response);
       }

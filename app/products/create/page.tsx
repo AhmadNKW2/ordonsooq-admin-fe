@@ -18,6 +18,7 @@ import { mediaService } from "../../src/services/media/api/media.service";
 import { transformFormDataToDto, UploadedMediaReference } from "../../src/services/products/form/transform";
 import { queryKeys } from "../../src/lib/query-keys";
 import { MediaInputDto } from "../../src/services/products/types/product.types";
+import { Attribute, AttributeValue } from "../../src/services/attributes/types/attribute.types";
 
 export default function CreateProductPage() {
   const router = useRouter();
@@ -29,19 +30,23 @@ export default function CreateProductPage() {
   // Transform backend data to frontend format
   const categories = categoriesData?.map(cat => ({
     id: cat.id.toString(),
-    name: cat.name,
+    name: cat.name_en,
+    nameEn: cat.name_en,
+    nameAr: cat.name_ar,
   })) || [];
 
   const vendors = vendorsData?.map(vendor => ({
     id: vendor.id.toString(),
-    name: vendor.name,
+    name: vendor.name_en,
+    nameEn: vendor.name_en,
+    nameAr: vendor.name_ar,
   })) || [];
 
-  const attributes = attributesData?.map(attr => ({
+  const attributes = attributesData?.map((attr: Attribute) => ({
     id: attr.id.toString(),
     name: attr.name_en,
     displayName: attr.name_ar,
-    values: attr.values?.map(val => ({
+    values: attr.values?.map((val: AttributeValue) => ({
       id: val.id.toString(),
       value: val.value_en,
       displayValue: val.value_ar,
@@ -112,21 +117,17 @@ export default function CreateProductPage() {
       // Invalidate products list query to refetch data
       await queryClient.invalidateQueries({ queryKey: queryKeys.products.lists() });
       
-      alert("Product created successfully!");
       router.push("/products");
     } catch (error: any) {
       console.error("Error creating product:", error);
-      alert(error?.message || "Failed to create product");
     }
   };
 
   const handleSaveDraft = async (data: Partial<ProductFormData>) => {
     try {
       // TODO: Implement draft saving functionality
-      alert("Draft saved successfully!");
     } catch (error) {
       console.error("Error saving draft:", error);
-      alert("Failed to save draft");
     }
   };
 
