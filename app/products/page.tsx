@@ -9,8 +9,6 @@ import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useProducts, useDeleteProduct, useProduct } from "../src/services/products/hooks/use-products";
-import { useCategories } from "../src/services/categories/hooks/use-categories";
-import { useVendors } from "../src/services/vendors/hooks/use-vendors";
 import { Plus, RefreshCw, Package, AlertCircle, Star, X } from "lucide-react";
 import { Pagination } from "../src/components/ui/pagination";
 import { Card } from "../src/components/ui/card";
@@ -47,8 +45,6 @@ export default function ProductsPage() {
 
   const { data, isLoading, isError, error, refetch } =
     useProducts(queryParams);
-  const { data: categoriesData } = useCategories();
-  const { data: vendorsData } = useVendors();
   const deleteProduct = useDeleteProduct();
 
   // Fetch product details when viewing
@@ -56,18 +52,6 @@ export default function ProductsPage() {
     viewProductId || 0,
     { enabled: !!viewProductId }
   );
-
-  // Create a category lookup map for O(1) lookups
-  const categoryMap = useMemo(() => {
-    if (!categoriesData) return new Map();
-    return new Map(categoriesData.map(cat => [cat.id, cat.name_en]));
-  }, [categoriesData]);
-
-  // Create a vendor lookup map for O(1) lookups
-  const vendorMap = useMemo(() => {
-    if (!vendorsData) return new Map();
-    return new Map(vendorsData.map(vendor => [vendor.id, vendor.name_en]));
-  }, [vendorsData]);
 
   const handleFilterChange = (filters: ProductFilters) => {
     setQueryParams((prev) => ({
@@ -280,12 +264,12 @@ export default function ProductsPage() {
                 </TableCell>
                 <TableCell>
                   <div>
-                    {product.category?.name || categoryMap.get(product.category_id) || <span className="text-gray-400">—</span>}
+                    {product.category?.name_en || product.category?.name || <span className="text-gray-400">—</span>}
                   </div>
                 </TableCell>
                 <TableCell>
                   <div>
-                    {product.vendor?.name || (product.vendor_id && vendorMap.get(product.vendor_id)) || <span className="text-gray-400">—</span>}
+                    {product.vendor?.name_en || product.vendor?.name || <span className="text-gray-400">—</span>}
                   </div>
                 </TableCell>
                 <TableCell>
@@ -367,8 +351,6 @@ export default function ProductsPage() {
             router.push(`/products/${viewProductId}`);
           }
         }}
-        categories={categoriesData?.map(c => ({ id: c.id, name: c.name_en })) || []}
-        vendors={vendorsData?.map(v => ({ id: v.id, name: v.name_en })) || []}
       />
 
       {/* Delete Confirmation Modal */}

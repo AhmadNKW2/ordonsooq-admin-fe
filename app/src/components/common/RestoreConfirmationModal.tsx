@@ -42,6 +42,13 @@ interface ProductItem extends BaseItem {
     logo?: string | null;
     status?: "active" | "archived";
   } | null;
+  category?: {
+    name?: string;
+    name_en?: string;
+    name_ar?: string;
+    image?: string | null;
+    status?: "active" | "archived";
+  } | null;
 }
 
 // Category item
@@ -149,17 +156,33 @@ export const RestoreConfirmationModal: React.FC<RestoreConfirmationModalProps> =
       case "product":
         const productItem = displayItem as ProductItem;
         const isVendorArchived = productItem.vendor?.status === "archived";
+        const isCategoryArchived = productItem.category?.status === "archived";
+        const canRestore = !isVendorArchived && !isCategoryArchived;
         const productImage = productItem.image || productItem.primary_image?.url;
+        
+        // Determine title based on what's blocking restoration
+        let productTitle = "Restore Product";
+        if (isVendorArchived && isCategoryArchived) {
+          productTitle = "Cannot Restore Product";
+        } else if (isVendorArchived) {
+          productTitle = "Cannot Restore Product";
+        } else if (isCategoryArchived) {
+          productTitle = "Cannot Restore Product";
+        }
+        
         return {
-          title: isVendorArchived ? "Cannot Restore Product" : "Restore Product",
+          title: productTitle,
           icon: <Package className="w-5 h-5 text-primary" />,
           image: productImage,
           imageAlt: productItem.primary_image?.alt_text || productItem.name_en,
-          canRestore: !isVendorArchived,
+          canRestore,
           confirmText: "Restore Product",
           successMessage: "Are you sure you want to restore this product? This will make the product active again.",
-          extraContent: isVendorArchived ? (
-            <VendorArchivedWarning vendor={productItem.vendor!} />
+          extraContent: !canRestore ? (
+            <ProductBlockedWarning 
+              vendor={isVendorArchived ? productItem.vendor! : undefined} 
+              category={isCategoryArchived ? productItem.category! : undefined}
+            />
           ) : null,
           sku: productItem.sku,
           confirmDisabled: false,
@@ -440,14 +463,19 @@ const VendorProductSelection: React.FC<VendorProductSelectionProps> = ({
   );
 };
 
-// Helper component for vendor archived warning
-interface VendorArchivedWarningProps {
-  vendor: NonNullable<ProductItem["vendor"]>;
+// Helper component for product restoration blocked warning (vendor or category archived)
+interface ProductBlockedWarningProps {
+  vendor?: NonNullable<ProductItem["vendor"]>;
+  category?: NonNullable<ProductItem["category"]>;
 }
 
-const VendorArchivedWarning: React.FC<VendorArchivedWarningProps> = ({ vendor }) => {
-  const vendorNameEn = vendor.name_en || vendor.name || "Unknown Vendor";
-  const vendorNameAr = vendor.name_ar || "";
+const ProductBlockedWarning: React.FC<ProductBlockedWarningProps> = ({ vendor, category }) => {
+  const vendorNameEn = vendor?.name_en || vendor?.name || "Unknown Vendor";
+  const vendorNameAr = vendor?.name_ar || "";
+  const categoryNameEn = category?.name_en || category?.name || "Unknown Category";
+  const categoryNameAr = category?.name_ar || "";
+  
+  const bothArchived = !!vendor && !!category;
 
   return (
     <div className="w-full space-y-3">
@@ -459,47 +487,106 @@ const VendorArchivedWarning: React.FC<VendorArchivedWarningProps> = ({ vendor })
             This product cannot be restored
           </p>
           <p className="text-sm text-amber-700">
-            The vendor associated with this product is currently archived. 
-            Please restore the vendor first before restoring this product.
+            {bothArchived ? (
+              <>
+                Both the vendor and category associated with this product are currently archived. 
+                Please restore them first before restoring this product.
+              </>
+            ) : vendor ? (
+              <>
+                The vendor associated with this product is currently archived. 
+                Please restore the vendor first before restoring this product.
+              </>
+            ) : (
+              <>
+                The category associated with this product is currently archived. 
+                Please restore the category first before restoring this product.
+              </>
+            )}
           </p>
         </div>
       </div>
 
       {/* Archived Vendor Info */}
-      <div className="flex items-center gap-3 p-3 bg-gray-100 rounded-lg border border-gray-200">
-        {vendor.logo ? (
-          <div className="w-10 h-10 relative rounded-lg overflow-hidden border border-gray-200">
-            <Image
-              src={vendor.logo}
-              alt={vendorNameEn}
-              fill
-              className="object-cover"
-            />
+      {vendor && (
+        <div className="flex items-center gap-3 p-3 bg-gray-100 rounded-lg border border-gray-200">
+          {vendor.logo ? (
+            <div className="w-10 h-10 relative rounded-lg overflow-hidden border border-gray-200">
+              <Image
+                src={vendor.logo}
+                alt={vendorNameEn}
+                fill
+                className="object-cover"
+              />
+            </div>
+          ) : (
+            <div className="w-10 h-10 rounded-lg bg-gray-200 flex items-center justify-center">
+              <Building2 className="w-4 h-4 text-gray-500" />
+            </div>
+          )}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium truncate">{vendorNameEn}</span>
+              <span className="px-2 py-0.5 text-xs font-medium bg-amber-100 text-amber-700 rounded-full">
+                Archived Vendor
+              </span>
+            </div>
+            {vendorNameAr && (
+              <div className="text-xs text-gray-500" dir="rtl">{vendorNameAr}</div>
+            )}
           </div>
-        ) : (
-          <div className="w-10 h-10 rounded-lg bg-gray-200 flex items-center justify-center">
-            <Building2 className="w-4 h-4 text-gray-500" />
+        </div>
+      )}
+
+      {/* Archived Category Info */}
+      {category && (
+        <div className="flex items-center gap-3 p-3 bg-gray-100 rounded-lg border border-gray-200">
+          {category.image ? (
+            <div className="w-10 h-10 relative rounded-lg overflow-hidden border border-gray-200">
+              <Image
+                src={category.image}
+                alt={categoryNameEn}
+                fill
+                className="object-cover"
+              />
+            </div>
+          ) : (
+            <div className="w-10 h-10 rounded-lg bg-gray-200 flex items-center justify-center">
+              <Folder className="w-4 h-4 text-gray-500" />
+            </div>
+          )}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium truncate">{categoryNameEn}</span>
+              <span className="px-2 py-0.5 text-xs font-medium bg-amber-100 text-amber-700 rounded-full">
+                Archived Category
+              </span>
+            </div>
+            {categoryNameAr && (
+              <div className="text-xs text-gray-500" dir="rtl">{categoryNameAr}</div>
+            )}
           </div>
-        )}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium truncate">{vendorNameEn}</span>
-            <span className="px-2 py-0.5 text-xs font-medium bg-amber-100 text-amber-700 rounded-full">
-              Archived
+        </div>
+      )}
+
+      {/* Helpful tips */}
+      <div className="space-y-2">
+        {vendor && (
+          <div className="flex items-start gap-2 p-3 bg-blue-50 rounded-lg text-blue-700 text-sm">
+            <Building2 className="w-4 h-4 shrink-0 mt-0.5" />
+            <span>
+              Go to <strong>Archived → Vendors</strong> to restore the vendor &quot;{vendorNameEn}&quot;.
             </span>
           </div>
-          {vendorNameAr && (
-            <div className="text-xs text-gray-500" dir="rtl">{vendorNameAr}</div>
-          )}
-        </div>
-      </div>
-
-      {/* Helpful tip */}
-      <div className="flex items-start gap-2 p-3 bg-blue-50 rounded-lg text-blue-700 text-sm">
-        <Building2 className="w-4 h-4 shrink-0 mt-0.5" />
-        <span>
-          Go to <strong>Archived → Vendors</strong> to restore the vendor &quot;{vendorNameEn}&quot; first.
-        </span>
+        )}
+        {category && (
+          <div className="flex items-start gap-2 p-3 bg-blue-50 rounded-lg text-blue-700 text-sm">
+            <Folder className="w-4 h-4 shrink-0 mt-0.5" />
+            <span>
+              Go to <strong>Archived → Categories</strong> to restore the category &quot;{categoryNameEn}&quot;.
+            </span>
+          </div>
+        )}
       </div>
     </div>
   );

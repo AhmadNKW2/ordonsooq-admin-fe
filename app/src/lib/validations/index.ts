@@ -8,3 +8,4 @@ export * from "./product.schema";
 export * from "./category.schema";
 export * from "./vendor.schema";
 export * from "./customer.schema";
+export * from "./brand.schema";

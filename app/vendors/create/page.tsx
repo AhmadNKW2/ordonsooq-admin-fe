@@ -84,7 +84,7 @@ export default function CreateVendorPage() {
         description_ar: descriptionAr || undefined,
         visible: visible,
         logo: logo?.file || undefined,
-        product_ids: product_ids.length > 0 ? product_ids : undefined,
+        product_ids,
       });
       
       router.push("/vendors");

@@ -86,6 +86,16 @@ export const sidebarConfig = {
           ),
         },
         {
+          href: '/banners',
+          label: 'Banners',
+          icon: (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <rect x="3" y="7" width="18" height="10" rx="2" stroke="currentColor" strokeWidth="2" fill="none" />
+              <path d="M3 7l9 5 9-5" stroke="currentColor" strokeWidth="2" fill="none" />
+            </svg>
+          ),
+        },
+        {
           href: '/attributes',
           label: 'Attributes',
           icon: (
@@ -123,6 +133,20 @@ export const sidebarConfig = {
                 strokeLinejoin="round"
                 strokeWidth={2}
                 d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+              />
+            </svg>
+          ),
+        },
+        {
+          href: '/brands',
+          label: 'Brands',
+          icon: (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M16 5a4 4 0 11-8 0 4 4 0 018 0zM3 20a9 9 0 1118 0H3z"
               />
             </svg>
           ),
@@ -195,6 +219,26 @@ export const sidebarConfig = {
                 strokeLinejoin="round"
                 strokeWidth={2}
                 d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+              />
+            </svg>
+          ),
+        },
+        {
+          href: '/archived-brands',
+          label: 'Archived Brands',
+          icon: (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 11c1.657 0 3-1.567 3-3.5S13.657 4 12 4 9 5.567 9 7.5 10.343 11 12 11z"
+              />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M5.5 21a6.5 6.5 0 0113 0"
               />
             </svg>
           ),

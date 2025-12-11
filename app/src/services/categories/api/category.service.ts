@@ -93,6 +93,9 @@ class CategoryService {
       formData.append("image", data.image);
     }
 
+    // Always send product_ids, even when empty
+    formData.append("product_ids", JSON.stringify(data.product_ids ?? []));
+
     return httpClient.postFormData<ApiResponse<Category>>(
       this.endpoint,
       formData
@@ -140,6 +143,9 @@ class CategoryService {
     if (data.image) {
       formData.append("image", data.image);
     }
+
+    // Always send product_ids, even when empty
+    formData.append("product_ids", JSON.stringify(data.product_ids ?? []));
 
     return httpClient.patchFormData<ApiResponse<Category>>(
       `${this.endpoint}/${id}`,

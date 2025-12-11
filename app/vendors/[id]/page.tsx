@@ -9,9 +9,7 @@ import { useRouter, useParams } from "next/navigation";
 import {
   useVendor,
   useUpdateVendor,
-  useVendorProducts,
 } from "../../src/services/vendors/hooks/use-vendors";
-import { useProducts } from "../../src/services/products/hooks/use-products";
 import { VendorForm } from "../../src/components/vendors/VendorForm";
 import { Card } from "../../src/components/ui/card";
 import { Button } from "../../src/components/ui/button";
@@ -50,13 +48,12 @@ export default function EditVendorPage() {
     refetch,
   } = useVendor(vendorId);
 
-  const { data: vendorProducts } = useVendorProducts(vendorId);
-  const { data: productsData } = useProducts({ limit: 1000 });
   const updateVendor = useUpdateVendor();
 
-  // Transform products for the ProductsTableSection
-  const allProducts: ProductItem[] = useMemo(() => {
-    return productsData?.data?.data?.map((p) => ({
+  // Get assigned products from vendor response
+  const assignedProducts: ProductItem[] = useMemo(() => {
+    const products = (vendor as any)?.products || [];
+    return products.map((p: any) => ({
       id: p.id,
       name_en: p.name_en,
       name_ar: p.name_ar,
@@ -65,13 +62,8 @@ export default function EditVendorPage() {
       price: p.price,
       category: p.category ? { name: p.category.name } : null,
       vendor: p.vendor ? { name: p.vendor.name } : null,
-    })) || [];
-  }, [productsData]);
-
-  // Get assigned products
-  const assignedProducts: ProductItem[] = useMemo(() => {
-    return allProducts.filter((p) => product_ids.includes(p.id));
-  }, [allProducts, product_ids]);
+    }));
+  }, [vendor]);
 
   // Initialize form when vendor loads
   useEffect(() => {
@@ -96,12 +88,12 @@ export default function EditVendorPage() {
     }
   }, [vendor]);
 
-  // Initialize product IDs when vendor products load
+  // Initialize product IDs from vendor response
   useEffect(() => {
-    if (vendorProducts?.products) {
-      setProductIds(vendorProducts.products.map((p: { id: number }) => p.id));
+    if (vendor && (vendor as any).products) {
+      setProductIds((vendor as any).products.map((p: { id: number }) => p.id));
     }
-  }, [vendorProducts]);
+  }, [vendor]);
 
   const validate = () => {
     const result = validateVendorForm({
@@ -244,7 +236,6 @@ export default function EditVendorPage() {
       onVisibleChange={setVisible}
       onProductIdsChange={setProductIds}
       formErrors={formErrors}
-      allProducts={allProducts}
       assignedProducts={assignedProducts}
       onSubmit={handleSubmit}
       isSubmitting={updateVendor.isPending}

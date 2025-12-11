@@ -23,6 +23,7 @@ export const basicInformationSchema = z.object({
     .regex(ARABIC_PATTERN, "Must be in Arabic"),
   categoryIds: z.array(z.string()).min(1, "At least one category is required"),
   vendorId: z.string().min(1, "Required"),
+  brandId: z.string().optional().default("").pipe(z.string().min(1, "Required")),
   shortDescriptionEn: z
     .string()
     .min(1, "Required")
@@ -146,6 +147,7 @@ export const createProductSchema = (config: ProductFormConfig) => {
     nameAr: z.string().min(1, "Required"),
     categoryIds: z.array(z.string()).min(1, "At least one category is required"),
     vendorId: z.string().min(1, "Required"),
+    brandId: z.string().optional().default("").pipe(z.string().min(1, "Required")),
     shortDescriptionEn: z.string().min(1, "Required"),
     shortDescriptionAr: z.string().min(1, "Required"),
     longDescriptionEn: z.string().min(1, "Required"),

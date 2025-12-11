@@ -12,6 +12,7 @@ import { ProductFormData } from "../../src/services/products/types/product-form.
 import { ProductDetail, MediaInputDto, UpdateProductDto } from "../../src/services/products/types/product.types";
 import { useCategories } from "../../src/services/categories/hooks/use-categories";
 import { useVendors } from "../../src/services/vendors/hooks/use-vendors";
+import { useBrands } from "../../src/services/brands/hooks/use-brands";
 import { useAttributes } from "../../src/services/attributes/hooks/use-attributes";
 import { useProduct } from "../../src/services/products/hooks/use-products";
 import { productService } from "../../src/services/products/api/product.service";
@@ -29,6 +30,7 @@ export default function EditProductPage() {
   const { data: productData, isLoading: productLoading, isError: productError, error: productErrorData, refetch: refetchProduct } = useProduct(product_id);
   const { data: categoriesData, isLoading: categoriesLoading } = useCategories();
   const { data: vendorsData, isLoading: vendorsLoading } = useVendors();
+  const { data: brandsData, isLoading: brandsLoading } = useBrands();
   const { data: attributesData, isLoading: attributesLoading } = useAttributes();
 
   // Transform backend data to frontend format
@@ -44,6 +46,13 @@ export default function EditProductPage() {
     name: vendor.name_en,
     nameEn: vendor.name_en,
     nameAr: vendor.name_ar,
+  })) || [];
+
+  const brands = brandsData?.map(brand => ({
+    id: brand.id.toString(),
+    name: brand.name_en,
+    nameEn: brand.name_en,
+    nameAr: brand.name_ar,
   })) || [];
 
   const attributes = attributesData?.map((attr: Attribute) => ({
@@ -382,6 +391,7 @@ export default function EditProductPage() {
                    (product.category?.id ? [product.category.id.toString()] : 
                    (product.category_id ? [product.category_id.toString()] : [])),
       vendorId: product.vendor?.id?.toString() || product.vendor_id?.toString(),
+      brandId: product.brand?.id?.toString() || product.brand_id?.toString(),
       shortDescriptionEn: product.short_description_en || "",
       shortDescriptionAr: product.short_description_ar || "",
     longDescriptionEn: product.long_description_en || "",
@@ -823,6 +833,7 @@ export default function EditProductPage() {
       onSaveDraft={handleSaveDraft}
       categories={categories}
       vendors={vendors}
+      brands={brands}
       attributes={attributes}
     />
   );

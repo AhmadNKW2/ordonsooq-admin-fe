@@ -10,7 +10,7 @@ export interface SelectOption {
 }
 
 interface SelectProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange'> {
-  label?: string;
+  label?: React.ReactNode;
   error?: string | boolean;
   value?: string | string[];
   onChange?: (value: string | string[]) => void;

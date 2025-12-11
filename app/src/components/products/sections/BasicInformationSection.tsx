@@ -12,6 +12,7 @@ interface BasicInformationSectionProps {
         nameAr?: string;
         categoryIds?: string[]; // Changed from categoryId to categoryIds
         vendorId?: string;
+        brandId?: string;
         shortDescriptionEn?: string;
         shortDescriptionAr?: string;
         longDescriptionEn?: string;
@@ -21,6 +22,7 @@ interface BasicInformationSectionProps {
     errors: Record<string, string | boolean>;
     categories: Array<{ id: string; name: string; nameEn?: string; nameAr?: string }>;
     vendors: Array<{ id: string; name: string; nameEn?: string; nameAr?: string }>;
+    brands: Array<{ id: string; name: string; nameEn?: string; nameAr?: string }>;
     onChange: (field: string, value: any) => void;
 }
 
@@ -29,6 +31,7 @@ export const BasicInformationSection: React.FC<BasicInformationSectionProps> = (
     errors,
     categories,
     vendors,
+    brands,
     onChange,
 }) => {
     return (
@@ -146,6 +149,23 @@ export const BasicInformationSection: React.FC<BasicInformationSectionProps> = (
                     ]}
                     search={true}
                     error={errors.vendorId}
+                />
+
+                <Select
+                    id="brandId"
+                    label="Brand"
+                    value={formData.brandId || ""}
+                    onChange={(value) => onChange("brandId", value as string)}
+                    options={[
+                        ...brands.map((brand) => ({
+                            value: brand.id,
+                            label: brand.nameEn && brand.nameAr
+                                ? `${brand.nameEn} - ${brand.nameAr}`
+                                : brand.name,
+                        })),
+                    ]}
+                    search={true}
+                    error={errors.brandId}
                 />
 
                 {/* Visibility Status */}

@@ -44,8 +44,6 @@ interface ProductViewModalProps {
     onClose: () => void;
     product: ProductDetail | any | null;
     onEdit?: () => void;
-    categories?: { id: number; name: string }[];
-    vendors?: { id: number; name: string }[];
 }
 
 // Helper to format currency
@@ -194,8 +192,6 @@ export const ProductViewModal: React.FC<ProductViewModalProps> = ({
     onClose,
     product,
     onEdit,
-    categories = [],
-    vendors = [],
 }) => {
     const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
     const [selectedMediaGroup, setSelectedMediaGroup] = useState<number | 'all'>('all');
@@ -255,16 +251,9 @@ export const ProductViewModal: React.FC<ProductViewModalProps> = ({
         return getMediaGroupLabel(currentMedia.media_group.groupValues);
     };
 
-    // Get category and vendor names
-    const categoryName =
-        categories.find((c) => c.id === product.category_id)?.name ||
-        product.category?.name ||
-        `Category #${product.category_id}`;
-    const vendorName = product.vendor_id
-        ? vendors.find((v) => v.id === product.vendor_id)?.name ||
-        product.vendor?.name ||
-        `Vendor #${product.vendor_id}`
-        : null;
+    // Get category and vendor names from product data
+    const categoryName = product.category?.name_en || product.category?.name || `Category #${product.category_id}`;
+    const vendorName = product.vendor?.name_en || product.vendor?.name || (product.vendor_id ? `Vendor #${product.vendor_id}` : null);
 
     // Get pricing data
     const prices = (product as any).prices || [];

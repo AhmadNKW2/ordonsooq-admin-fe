@@ -8,11 +8,8 @@ import { useState, useEffect, useMemo } from "react";
 import { useRouter, useParams } from "next/navigation";
 import {
   useCategory,
-  useCategories,
   useUpdateCategory,
-  useCategoryProducts,
 } from "../../src/services/categories/hooks/use-categories";
-import { useProducts } from "../../src/services/products/hooks/use-products";
 import { CategoryForm } from "../../src/components/categories/CategoryForm";
 import { Card } from "../../src/components/ui/card";
 import { Button } from "../../src/components/ui/button";
@@ -52,15 +49,12 @@ export default function EditCategoryPage() {
     refetch,
   } = useCategory(categoryId);
 
-  // Get all categories for parent dropdown
-  const { data: categories } = useCategories();
-  const { data: categoryProducts } = useCategoryProducts(categoryId);
-  const { data: productsData } = useProducts({ limit: 1000 });
   const updateCategory = useUpdateCategory();
 
-  // Transform products for the ProductsTableSection
-  const allProducts: ProductItem[] = useMemo(() => {
-    return productsData?.data?.data?.map((p) => ({
+  // Get assigned products from category response
+  const assignedProducts: ProductItem[] = useMemo(() => {
+    const products = (category as any)?.products || [];
+    return products.map((p: any) => ({
       id: p.id,
       name_en: p.name_en,
       name_ar: p.name_ar,
@@ -69,13 +63,8 @@ export default function EditCategoryPage() {
       price: p.price,
       category: p.category ? { name: p.category.name } : null,
       vendor: p.vendor ? { name: p.vendor.name } : null,
-    })) || [];
-  }, [productsData]);
-
-  // Get assigned products
-  const assignedProducts: ProductItem[] = useMemo(() => {
-    return allProducts.filter((p) => product_ids.includes(p.id));
-  }, [allProducts, product_ids]);
+    }));
+  }, [category]);
 
   // Initialize form when category loads
   useEffect(() => {
@@ -101,12 +90,12 @@ export default function EditCategoryPage() {
     }
   }, [category]);
 
-  // Initialize product IDs when category products load
+  // Initialize product IDs from category response
   useEffect(() => {
-    if (categoryProducts?.products) {
-      setProductIds(categoryProducts.products.map((p: { id: number }) => p.id));
+    if (category && (category as any).products) {
+      setProductIds((category as any).products.map((p: { id: number }) => p.id));
     }
-  }, [categoryProducts]);
+  }, [category]);
 
   const validate = () => {
     const result = validateCategoryForm({
@@ -152,8 +141,8 @@ export default function EditCategoryPage() {
     }
   };
 
-  // Filter out current category from parent options
-  const availableParents = categories?.filter((cat) => cat.id !== categoryId) || [];
+  // Get available parent categories from the category response (assumes API includes this)
+  const availableParents = (category as any)?.availableParents || [];
 
   if (isLoading) {
     return (
@@ -256,7 +245,6 @@ export default function EditCategoryPage() {
       onProductIdsChange={setProductIds}
       formErrors={formErrors}
       parentCategories={availableParents}
-      allProducts={allProducts}
       assignedProducts={assignedProducts}
       onSubmit={handleSubmit}
       isSubmitting={updateCategory.isPending}

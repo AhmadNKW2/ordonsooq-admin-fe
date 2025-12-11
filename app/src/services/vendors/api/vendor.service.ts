@@ -58,6 +58,9 @@ class VendorService {
       formData.append("logo", data.logo);
     }
 
+    // Always send product_ids, even when empty
+    formData.append("product_ids", JSON.stringify(data.product_ids ?? []));
+
     return httpClient.postFormData<ApiResponse<Vendor>>(
       this.endpoint,
       formData
@@ -97,6 +100,9 @@ class VendorService {
     if (data.logo) {
       formData.append("logo", data.logo);
     }
+
+    // Always send product_ids, even when empty
+    formData.append("product_ids", JSON.stringify(data.product_ids ?? []));
 
     return httpClient.patchFormData<ApiResponse<Vendor>>(
       `${this.endpoint}/${id}`,

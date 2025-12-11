@@ -39,6 +39,7 @@ interface ProductFormProps {
   onSaveDraft?: (data: Partial<ProductFormData>) => Promise<void>;
   categories?: Array<{ id: string; name: string; nameEn?: string; nameAr?: string }>;
   vendors?: Array<{ id: string; name: string; nameEn?: string; nameAr?: string }>;
+  brands?: Array<{ id: string; name: string; nameEn?: string; nameAr?: string }>;
   attributes?: Array<{ id: string; name: string; displayName: string; values: Array<{ id: string; value: string; displayValue: string }> }>;
 }
 
@@ -49,6 +50,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
   onSaveDraft,
   categories = [],
   vendors = [],
+  brands = [],
   attributes = [],
 }) => {
   const router = useRouter();
@@ -57,6 +59,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
     nameAr: "",
     categoryIds: [],
     vendorId: "",
+    brandId: "",
     shortDescriptionEn: "",
     shortDescriptionAr: "",
     longDescriptionEn: "",
@@ -155,6 +158,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
       nameAr: formData.nameAr || '',
       categoryIds: formData.categoryIds || [],
       vendorId: formData.vendorId || '',
+      brandId: formData.brandId || '',
       shortDescriptionEn: formData.shortDescriptionEn || '',
       shortDescriptionAr: formData.shortDescriptionAr || '',
       longDescriptionEn: formData.longDescriptionEn || '',
@@ -264,6 +268,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
           nameAr: formData.nameAr,
           categoryIds: formData.categoryIds,
           vendorId: formData.vendorId,
+          brandId: formData.brandId,
           shortDescriptionEn: formData.shortDescriptionEn,
           shortDescriptionAr: formData.shortDescriptionAr,
           longDescriptionEn: formData.longDescriptionEn,
@@ -273,6 +278,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
         errors={errors}
         categories={categories}
         vendors={vendors}
+        brands={brands}
         onChange={handleFieldChange}
       />
 

@@ -87,6 +87,7 @@ export const productFormSchema = z.object({
   nameAr: z.string().min(1, "Arabic name is required"),
   categoryIds: z.array(z.string()).min(1, "At least one category is required"), // Changed from categoryId to categoryIds
   vendorId: z.string().optional(),
+  brandId: z.string().optional(),
   shortDescriptionEn: z.string().optional(),
   shortDescriptionAr: z.string().optional(),
   longDescriptionEn: z.string().optional(),

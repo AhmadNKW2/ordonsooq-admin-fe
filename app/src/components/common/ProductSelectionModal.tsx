@@ -24,8 +24,6 @@ import {
     TableCell,
 } from "../ui/table";
 import { useProducts } from "../../services/products/hooks/use-products";
-import { useCategories } from "../../services/categories/hooks/use-categories";
-import { useVendors } from "../../services/vendors/hooks/use-vendors";
 import { Product, ProductFilters } from "../../services/products/types/product.types";
 import { PAGINATION } from "../../lib/constants";
 
@@ -66,19 +64,6 @@ export const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
 
     // Fetch products
     const { data, isLoading } = useProducts(queryParams, { enabled: isOpen });
-    const { data: categoriesData } = useCategories();
-    const { data: vendorsData } = useVendors();
-
-    // Create lookup maps
-    const categoryMap = useMemo(() => {
-        if (!categoriesData) return new Map<number, string>();
-        return new Map(categoriesData.map(cat => [cat.id, cat.name_en]));
-    }, [categoriesData]);
-
-    const vendorMap = useMemo(() => {
-        if (!vendorsData) return new Map<number, string>();
-        return new Map(vendorsData.map(vendor => [vendor.id, vendor.name_en]));
-    }, [vendorsData]);
 
     const products = data?.data?.data || [];
     const pagination = data?.data?.pagination;
@@ -292,12 +277,12 @@ export const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
                                 </TableCell>
                                 <TableCell>
                                     <div>
-                                        {product.category?.name || categoryMap.get(product.category_id!) || <span className="text-gray-400">—</span>}
+                                        {product.category?.name || <span className="text-gray-400">—</span>}
                                     </div>
                                 </TableCell>
                                 <TableCell>
                                     <div>
-                                        {product.vendor?.name || (product.vendor_id && vendorMap.get(product.vendor_id)) || <span className="text-gray-400">—</span>}
+                                        {product.vendor?.name || <span className="text-gray-400">—</span>}
                                     </div>
                                 </TableCell>
                                 <TableCell>

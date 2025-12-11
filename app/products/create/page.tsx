@@ -12,6 +12,7 @@ import { ProductForm } from "../../src/components/products/ProductForm";
 import { ProductFormData } from "../../src/services/products/types/product-form.types";
 import { useCategories } from "../../src/services/categories/hooks/use-categories";
 import { useVendors } from "../../src/services/vendors/hooks/use-vendors";
+import { useBrands } from "../../src/services/brands/hooks/use-brands";
 import { useAttributes } from "../../src/services/attributes/hooks/use-attributes";
 import { productService } from "../../src/services/products/api/product.service";
 import { mediaService } from "../../src/services/media/api/media.service";
@@ -25,6 +26,7 @@ export default function CreateProductPage() {
   const queryClient = useQueryClient();
   const { data: categoriesData, isLoading: categoriesLoading } = useCategories();
   const { data: vendorsData, isLoading: vendorsLoading } = useVendors();
+  const { data: brandsData, isLoading: brandsLoading } = useBrands();
   const { data: attributesData, isLoading: attributesLoading } = useAttributes();
 
   // Transform backend data to frontend format
@@ -40,6 +42,13 @@ export default function CreateProductPage() {
     name: vendor.name_en,
     nameEn: vendor.name_en,
     nameAr: vendor.name_ar,
+  })) || [];
+
+  const brands = brandsData?.map(brand => ({
+    id: brand.id.toString(),
+    name: brand.name_en,
+    nameEn: brand.name_en,
+    nameAr: brand.name_ar,
   })) || [];
 
   const attributes = attributesData?.map((attr: Attribute) => ({
@@ -131,7 +140,7 @@ export default function CreateProductPage() {
     }
   };
 
-  if (categoriesLoading || vendorsLoading || attributesLoading) {
+  if (categoriesLoading || vendorsLoading || brandsLoading || attributesLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
@@ -148,6 +157,7 @@ export default function CreateProductPage() {
       onSaveDraft={handleSaveDraft}
       categories={categories}
       vendors={vendors}
+      brands={brands}
       attributes={attributes}
     />
   );

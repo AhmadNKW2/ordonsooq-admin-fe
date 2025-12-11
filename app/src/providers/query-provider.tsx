@@ -2,34 +2,21 @@
 
 /**
  * React Query Provider - Configures and provides QueryClient to the app
+ * Uses a global singleton QueryClient for consistent cache management
  */
 
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
-import { useState, type ReactNode } from "react";
-import { QUERY_CONFIG } from "../lib/constants";
+import { type ReactNode } from "react";
+import { getQueryClient } from "../lib/query-client";
 
 interface QueryProviderProps {
   children: ReactNode;
 }
 
 export function QueryProvider({ children }: QueryProviderProps) {
-  const [queryClient] = useState(
-    () =>
-      new QueryClient({
-        defaultOptions: {
-          queries: {
-            staleTime: QUERY_CONFIG.staleTime,
-            gcTime: QUERY_CONFIG.cacheTime,
-            refetchOnWindowFocus: QUERY_CONFIG.refetchOnWindowFocus,
-            retry: QUERY_CONFIG.retry,
-          },
-          mutations: {
-            retry: QUERY_CONFIG.retry,
-          },
-        },
-      })
-  );
+  // Use the global singleton QueryClient
+  const queryClient = getQueryClient();
 
   return (
     <QueryClientProvider client={queryClient}>

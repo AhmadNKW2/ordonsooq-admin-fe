@@ -1,5 +1,6 @@
 /**
  * Auth Context for managing authentication state
+ * Supports cookie-based auth, session management, activity monitoring, and cross-tab sync
  */
 
 "use client";
@@ -9,23 +10,45 @@ import React, {
   useContext,
   useState,
   useEffect,
+  useCallback,
+  useRef,
   ReactNode,
 } from "react";
 import { useRouter } from "next/navigation";
 import { authService } from "../services/auth/api/auth.service";
-import { LoginRequest, User, AuthState } from "../services/auth/types/auth.types";
+import { LoginRequest, User, AuthState, SessionInfo } from "../services/auth/types/auth.types";
 import { httpClient } from "../lib/api/http-client";
-import { showSuccessToast } from "../lib/toast";
+import { sessionManager } from "../lib/session/session-manager";
+import { showSuccessToast, showInfoToast } from "../lib/toast";
 
-interface AuthContextType extends AuthState {
+// Session configuration
+const SESSION_CONFIG = {
+  // Warning before expiration (5 minutes)
+  warningBeforeExpiry: 5 * 60 * 1000,
+  // Activity check interval (1 minute)
+  activityCheckInterval: 60 * 1000,
+  // Session refresh threshold (when less than 10 minutes remaining)
+  refreshThreshold: 10 * 60 * 1000,
+  // Inactivity timeout for non-rememberMe sessions (30 minutes)
+  inactivityTimeout: 30 * 60 * 1000,
+} as const;
+
+interface SessionWarning {
+  show: boolean;
+  expiresAt: number;
+  timeRemaining: number;
+}
+
+interface AuthContextType extends Omit<AuthState, 'sessionExpiresAt'> {
   login: (credentials: LoginRequest) => Promise<void>;
   logout: () => Promise<void>;
+  refreshSession: () => Promise<boolean>;
+  extendSession: () => Promise<void>;
+  sessionWarning: SessionWarning | null;
+  dismissSessionWarning: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-const TOKEN_KEY = "auth_token";
-const USER_KEY = "auth_user";
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   children,
@@ -33,96 +56,368 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   const router = useRouter();
   const [authState, setAuthState] = useState<AuthState>({
     user: null,
-    token: null,
     isAuthenticated: false,
     isLoading: true,
+    sessionExpiresAt: null,
   });
+  const [sessionWarning, setSessionWarning] = useState<SessionWarning | null>(null);
+  
+  // Refs for intervals and cleanup
+  const sessionCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const warningIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const lastActivityRef = useRef<number>(Date.now());
 
-  // Initialize auth state from localStorage
+  // Clear all intervals
+  const clearIntervals = useCallback(() => {
+    if (sessionCheckIntervalRef.current) {
+      clearInterval(sessionCheckIntervalRef.current);
+      sessionCheckIntervalRef.current = null;
+    }
+    if (warningIntervalRef.current) {
+      clearInterval(warningIntervalRef.current);
+      warningIntervalRef.current = null;
+    }
+  }, []);
+
+  // Refresh the session token
+  const refreshSession = useCallback(async (): Promise<boolean> => {
+    try {
+      const response = await authService.refreshToken();
+      if (response.success && response.data) {
+        const expiresAt = Date.now() + (response.data.expires_in * 1000);
+        
+        // Update session info
+        const sessionInfo = sessionManager.getSessionInfo();
+        if (sessionInfo) {
+          sessionManager.setSessionInfo({
+            ...sessionInfo,
+            expiresAt,
+            lastActivity: Date.now(),
+          });
+        }
+        
+        setAuthState(prev => ({
+          ...prev,
+          sessionExpiresAt: expiresAt,
+        }));
+        
+        // Broadcast session refresh to other tabs
+        sessionManager.broadcastEvent({ type: 'session_refresh', timestamp: Date.now() });
+        
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Session refresh failed:', error);
+      return false;
+    }
+  }, []);
+
+  // Check session and show warning if needed
+  const checkSession = useCallback(async () => {
+    const sessionInfo = sessionManager.getSessionInfo();
+    if (!sessionInfo || !authState.isAuthenticated) return;
+    
+    const now = Date.now();
+    const timeUntilExpiry = sessionInfo.expiresAt - now;
+    
+    // Check for inactivity (only for non-rememberMe sessions)
+    if (!sessionInfo.rememberMe) {
+      const timeSinceActivity = now - lastActivityRef.current;
+      if (timeSinceActivity > SESSION_CONFIG.inactivityTimeout) {
+        // Session expired due to inactivity
+        showInfoToast('Your session has expired due to inactivity');
+        await handleLogout(false);
+        return;
+      }
+    }
+    
+    // Show warning if session expiring soon
+    if (timeUntilExpiry <= SESSION_CONFIG.warningBeforeExpiry && timeUntilExpiry > 0) {
+      setSessionWarning({
+        show: true,
+        expiresAt: sessionInfo.expiresAt,
+        timeRemaining: timeUntilExpiry,
+      });
+      
+      // Start countdown interval
+      if (!warningIntervalRef.current) {
+        warningIntervalRef.current = setInterval(() => {
+          setSessionWarning(prev => {
+            if (!prev) return null;
+            const remaining = prev.expiresAt - Date.now();
+            if (remaining <= 0) {
+              clearInterval(warningIntervalRef.current!);
+              warningIntervalRef.current = null;
+              return null;
+            }
+            return { ...prev, timeRemaining: remaining };
+          });
+        }, 1000);
+      }
+    }
+    
+    // Session expired
+    if (timeUntilExpiry <= 0) {
+      showInfoToast('Your session has expired');
+      await handleLogout(false);
+      return;
+    }
+    
+    // Proactively refresh if within threshold and has activity
+    if (timeUntilExpiry <= SESSION_CONFIG.refreshThreshold) {
+      const sessionInfo = sessionManager.getSessionInfo();
+      if (sessionInfo?.rememberMe || (now - lastActivityRef.current < SESSION_CONFIG.activityCheckInterval)) {
+        await refreshSession();
+      }
+    }
+  }, [authState.isAuthenticated, refreshSession]);
+
+  // Handle logout
+  const handleLogout = useCallback(async (callApi: boolean = true) => {
+    clearIntervals();
+    setSessionWarning(null);
+    
+    try {
+      if (callApi) {
+        await authService.logout();
+      }
+    } catch (error) {
+      console.error("Logout API error:", error);
+    } finally {
+      sessionManager.clearSession();
+      sessionManager.broadcastEvent({ type: 'logout', timestamp: Date.now() });
+
+      setAuthState({
+        user: null,
+        isAuthenticated: false,
+        isLoading: false,
+        sessionExpiresAt: null,
+      });
+
+      router.push("/login");
+    }
+  }, [router, clearIntervals]);
+
+  // Extend session (called when user clicks "Stay logged in")
+  const extendSession = useCallback(async () => {
+    setSessionWarning(null);
+    clearIntervals();
+    
+    const success = await refreshSession();
+    if (success) {
+      showSuccessToast('Session extended');
+      // Restart session checking
+      sessionCheckIntervalRef.current = setInterval(checkSession, SESSION_CONFIG.activityCheckInterval);
+    } else {
+      showInfoToast('Could not extend session. Please log in again.');
+      await handleLogout(false);
+    }
+  }, [refreshSession, checkSession, clearIntervals, handleLogout]);
+
+  // Dismiss session warning without extending
+  const dismissSessionWarning = useCallback(() => {
+    setSessionWarning(null);
+    if (warningIntervalRef.current) {
+      clearInterval(warningIntervalRef.current);
+      warningIntervalRef.current = null;
+    }
+  }, []);
+
+  // Handle activity for session tracking
   useEffect(() => {
-    const initAuth = () => {
-      try {
-        const token = localStorage.getItem(TOKEN_KEY);
-        const userStr = localStorage.getItem(USER_KEY);
+    const handleActivity = () => {
+      lastActivityRef.current = Date.now();
+      
+      // Update session info
+      const sessionInfo = sessionManager.getSessionInfo();
+      if (sessionInfo) {
+        sessionManager.setSessionInfo({
+          ...sessionInfo,
+          lastActivity: Date.now(),
+        });
+      }
+      
+      // Broadcast activity to other tabs
+      sessionManager.broadcastEvent({ type: 'activity', timestamp: Date.now() });
+    };
 
-        if (token && userStr) {
-          const user = JSON.parse(userStr);
-          httpClient.setAuthToken(token);
+    // Throttle activity updates
+    let throttleTimeout: NodeJS.Timeout | null = null;
+    const throttledActivity = () => {
+      if (throttleTimeout) return;
+      throttleTimeout = setTimeout(() => {
+        handleActivity();
+        throttleTimeout = null;
+      }, 5000); // Throttle to once every 5 seconds
+    };
+
+    window.addEventListener('mousemove', throttledActivity);
+    window.addEventListener('keydown', throttledActivity);
+    window.addEventListener('click', throttledActivity);
+    window.addEventListener('scroll', throttledActivity);
+
+    return () => {
+      window.removeEventListener('mousemove', throttledActivity);
+      window.removeEventListener('keydown', throttledActivity);
+      window.removeEventListener('click', throttledActivity);
+      window.removeEventListener('scroll', throttledActivity);
+      if (throttleTimeout) clearTimeout(throttleTimeout);
+    };
+  }, []);
+
+  // Initialize auth state and set up cross-tab sync
+  useEffect(() => {
+    const initAuth = async () => {
+      try {
+        // Try to validate existing session via /me endpoint
+        const { valid, user } = await authService.validateSession();
+        
+        if (valid && user) {
+          const sessionInfo = sessionManager.getSessionInfo();
+          const expiresAt = sessionInfo?.expiresAt || Date.now() + 30 * 60 * 1000;
+          
           setAuthState({
             user,
-            token,
             isAuthenticated: true,
             isLoading: false,
+            sessionExpiresAt: expiresAt,
           });
+          
+          // Start session checking
+          sessionCheckIntervalRef.current = setInterval(checkSession, SESSION_CONFIG.activityCheckInterval);
         } else {
-          setAuthState((prev) => ({ ...prev, isLoading: false }));
+          setAuthState({
+            user: null,
+            isAuthenticated: false,
+            isLoading: false,
+            sessionExpiresAt: null,
+          });
         }
       } catch (error) {
         console.error("Failed to initialize auth:", error);
-        setAuthState((prev) => ({ ...prev, isLoading: false }));
+        setAuthState({
+          user: null,
+          isAuthenticated: false,
+          isLoading: false,
+          sessionExpiresAt: null,
+        });
       }
     };
 
     initAuth();
+
+    // Set up cross-tab event listener
+    const unsubscribe = sessionManager.onSessionEvent((event) => {
+      switch (event.type) {
+        case 'logout':
+          // Another tab logged out
+          clearIntervals();
+          setSessionWarning(null);
+          setAuthState({
+            user: null,
+            isAuthenticated: false,
+            isLoading: false,
+            sessionExpiresAt: null,
+          });
+          router.push('/login');
+          break;
+        case 'login':
+          // Another tab logged in - refresh our state
+          initAuth();
+          break;
+        case 'session_refresh':
+          // Another tab refreshed - update our expiry
+          const sessionInfo = sessionManager.getSessionInfo();
+          if (sessionInfo) {
+            setAuthState(prev => ({
+              ...prev,
+              sessionExpiresAt: sessionInfo.expiresAt,
+            }));
+          }
+          break;
+        case 'activity':
+          // Another tab had activity - update our last activity
+          lastActivityRef.current = event.timestamp;
+          break;
+      }
+    });
+
+    // Subscribe to HTTP client auth state changes
+    const unsubscribeHttp = httpClient.onAuthStateChange((isAuthenticated) => {
+      if (!isAuthenticated && authState.isAuthenticated) {
+        // HTTP client detected auth failure
+        handleLogout(false);
+      }
+    });
+
+    return () => {
+      unsubscribe();
+      unsubscribeHttp();
+      clearIntervals();
+    };
   }, []);
 
-  const login = async (credentials: LoginRequest) => {
+  // Login handler
+  const login = useCallback(async (credentials: LoginRequest) => {
     try {
       const response = await authService.login(credentials);
 
       if (response.success && response.data) {
-        const { access_token, user } = response.data;
+        const { user, expires_in } = response.data;
+        const expiresAt = Date.now() + (expires_in * 1000);
 
-        // Store token and user
-        localStorage.setItem(TOKEN_KEY, access_token);
-        localStorage.setItem(USER_KEY, JSON.stringify(user));
-
-        // Set token in httpClient
-        httpClient.setAuthToken(access_token);
+        // Store session info
+        sessionManager.setSessionInfo({
+          expiresAt,
+          lastActivity: Date.now(),
+          rememberMe: credentials.rememberMe || false,
+        });
 
         // Update state
         setAuthState({
           user,
-          token: access_token,
           isAuthenticated: true,
           isLoading: false,
+          sessionExpiresAt: expiresAt,
         });
+
+        // Broadcast login to other tabs
+        sessionManager.broadcastEvent({ type: 'login', timestamp: Date.now() });
 
         showSuccessToast("Login successful");
 
-        // Redirect to dashboard
-        router.push("/");
+        // Start session checking
+        sessionCheckIntervalRef.current = setInterval(checkSession, SESSION_CONFIG.activityCheckInterval);
+
+        // Redirect to intended URL or dashboard
+        const intendedUrl = sessionManager.getIntendedUrl();
+        sessionManager.clearIntendedUrl();
+        router.push(intendedUrl || "/");
       }
     } catch (error: any) {
       console.error("Login failed:", error);
       throw error;
     }
-  };
+  }, [router, checkSession]);
 
-  const logout = async () => {
-    try {
-      await authService.logout();
-    } catch (error) {
-      console.error("Logout API error:", error);
-    } finally {
-      // Clear storage and state regardless of API response
-      localStorage.removeItem(TOKEN_KEY);
-      localStorage.removeItem(USER_KEY);
-      httpClient.removeAuthToken();
-
-      setAuthState({
-        user: null,
-        token: null,
-        isAuthenticated: false,
-        isLoading: false,
-      });
-
-      router.push("/login");
-    }
-  };
+  // Logout handler
+  const logout = useCallback(async () => {
+    await handleLogout(true);
+  }, [handleLogout]);
 
   return (
-    <AuthContext.Provider value={{ ...authState, login, logout }}>
+    <AuthContext.Provider 
+      value={{ 
+        ...authState,
+        login, 
+        logout, 
+        refreshSession,
+        extendSession,
+        sessionWarning,
+        dismissSessionWarning,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

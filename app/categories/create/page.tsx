@@ -91,7 +91,7 @@ export default function CreateCategoryPage() {
         visible: visible,
         parent_id: parentId,
         image: image?.file || undefined,
-        product_ids: product_ids.length > 0 ? product_ids : undefined,
+        product_ids,
       });
       
       router.push("/categories");
