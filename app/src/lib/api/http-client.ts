@@ -27,6 +27,7 @@ class HttpClient {
   private isRefreshing: boolean = false;
   private refreshPromise: Promise<boolean> | null = null;
   private authStateHandlers: Set<AuthStateChangeHandler> = new Set();
+  private isRedirecting: boolean = false;
 
   private constructor() {
     this.baseURL = API_CONFIG.baseUrl;
@@ -182,10 +183,24 @@ class HttpClient {
       }
       
       // Refresh failed or retry failed - clear session and redirect
-      if (typeof window !== "undefined") {
+      if (typeof window !== "undefined" && !this.isRedirecting) {
+        const currentPath = window.location.pathname;
+        // Don't redirect if already on login page
+        if (currentPath === '/login') {
+          // Just clear session and notify, don't redirect
+          sessionManager.clearSession();
+          this.notifyAuthStateChange(false);
+          throw error;
+        }
+        
+        this.isRedirecting = true;
         sessionManager.clearSession();
         // Save intended URL for after login
-        sessionManager.setIntendedUrl(window.location.pathname + window.location.search);
+        const fullPath = currentPath + window.location.search;
+        // Don't save login page or root as intended URL
+        if (fullPath !== '/login' && fullPath !== '/') {
+          sessionManager.setIntendedUrl(fullPath);
+        }
         // Notify listeners of auth state change
         this.notifyAuthStateChange(false);
         // Redirect to login

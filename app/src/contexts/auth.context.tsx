@@ -19,7 +19,7 @@ import { authService } from "../services/auth/api/auth.service";
 import { LoginRequest, User, AuthState, SessionInfo } from "../services/auth/types/auth.types";
 import { httpClient } from "../lib/api/http-client";
 import { sessionManager } from "../lib/session/session-manager";
-import { showSuccessToast, showInfoToast } from "../lib/toast";
+import { showSuccessToast, showInfoToast, showErrorToast } from "../lib/toast";
 
 // Session configuration
 const SESSION_CONFIG = {
@@ -195,7 +195,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         sessionExpiresAt: null,
       });
 
-      router.push("/login");
+      // Only redirect if not already on login page
+      if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
+        router.push("/login");
+      }
     }
   }, [router, clearIntervals]);
 
@@ -269,6 +272,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   // Initialize auth state and set up cross-tab sync
   useEffect(() => {
     const initAuth = async () => {
+      // Skip validation if on login page to prevent infinite loop
+      if (typeof window !== 'undefined' && window.location.pathname === '/login') {
+        setAuthState({
+          user: null,
+          isAuthenticated: false,
+          isLoading: false,
+          sessionExpiresAt: null,
+        });
+        return;
+      }
+
       try {
         // Try to validate existing session via /me endpoint
         const { valid, user } = await authService.validateSession();
@@ -320,7 +334,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
             isLoading: false,
             sessionExpiresAt: null,
           });
-          router.push('/login');
+          // Only redirect if not already on login page
+          if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
+            router.push('/login');
+          }
           break;
         case 'login':
           // Another tab logged in - refresh our state
@@ -345,9 +362,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
 
     // Subscribe to HTTP client auth state changes
     const unsubscribeHttp = httpClient.onAuthStateChange((isAuthenticated) => {
-      if (!isAuthenticated && authState.isAuthenticated) {
+      if (!isAuthenticated) {
         // HTTP client detected auth failure
-        handleLogout(false);
+        // Don't logout if already on login page
+        if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
+          handleLogout(false);
+        } else {
+          // Just update state without redirect
+          setAuthState({
+            user: null,
+            isAuthenticated: false,
+            isLoading: false,
+            sessionExpiresAt: null,
+          });
+        }
       }
     });
 
@@ -356,7 +384,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       unsubscribeHttp();
       clearIntervals();
     };
-  }, []);
+  }, [handleLogout, clearIntervals]);
 
   // Login handler
   const login = useCallback(async (credentials: LoginRequest) => {
@@ -397,6 +425,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       }
     } catch (error: any) {
       console.error("Login failed:", error);
+      const errorMessage = error?.response?.data?.message || error?.message || "Login failed. Please check your credentials.";
+      showErrorToast(errorMessage);
       throw error;
     }
   }, [router, checkSession]);
