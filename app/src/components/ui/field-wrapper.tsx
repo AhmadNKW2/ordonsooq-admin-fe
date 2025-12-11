@@ -2,7 +2,7 @@ import React, { ReactNode } from 'react';
 import { X } from 'lucide-react';
 
 interface FieldWrapperProps {
-    label?: string;
+    label?: ReactNode;
     error?: string | boolean;
     isFocused: boolean;
     hasValue: boolean;

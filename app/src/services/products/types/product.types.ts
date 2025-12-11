@@ -105,6 +105,7 @@ export const productSchema = z.object({
   categories: z.array(categorySchema).optional(), // Multiple category objects
   vendor_id: z.number().optional().nullable(),
   vendor: vendorSchema.optional().nullable(),
+  brand_id: z.number().optional().nullable(),
   sku: z.string(),
   is_active: z.boolean(),
   average_rating: z.union([z.number(), z.string()]).optional().nullable(),
@@ -184,6 +185,21 @@ export interface ProductDetail extends Omit<Product, 'vendor' | 'category' | 'st
     updated_at?: string | Date;
     createdAt?: string | Date;
     updatedAt?: string | Date;
+  } | null;
+  brand?: {
+    id: number;
+    name_en: string;
+    name_ar: string;
+    description_en?: string | null;
+    description_ar?: string | null;
+    logo?: string | null;
+    visible?: boolean;
+    is_active?: boolean;
+    sort_order?: number;
+    status?: "active" | "archived";
+    archived_at?: string | Date | null;
+    created_at?: string | Date;
+    updated_at?: string | Date;
   } | null;
   media?: ProductMedia[];
   pricing?: ProductPricing[];
@@ -337,6 +353,7 @@ export interface CreateProductDto {
   long_description_ar: string;
   category_ids: number[]; // Changed from category_id to category_ids array
   vendor_id?: number;
+  brand_id?: number;
   is_active?: boolean;
 
   // Attributes (for variant products)
@@ -443,6 +460,7 @@ export interface UpdateProductDto {
   long_description_ar?: string;
   category_ids?: number[]; // Changed from category_id to category_ids array
   vendor_id?: number;
+  brand_id?: number;
   is_active?: boolean;
 
   // Attributes (for variant products)
