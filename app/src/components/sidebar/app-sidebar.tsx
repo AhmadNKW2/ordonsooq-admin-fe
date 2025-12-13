@@ -44,6 +44,10 @@ interface AppSidebarProps {
 export function AppSidebar({ groups, header, footer }: AppSidebarProps) {
   const { logout, user } = useAuth();
 
+  const userDisplayName = user
+    ? [user.firstName, user.lastName].filter(Boolean).join(" ")
+    : undefined;
+
   const handleLogout = async () => {
     try {
       await logout();
@@ -99,17 +103,17 @@ export function AppSidebar({ groups, header, footer }: AppSidebarProps) {
             {footer.userAvatar ? (
               <img
                 src={footer.userAvatar}
-                alt={user?.name || footer.userName}
+                alt={userDisplayName || footer.userName}
                 className="w-10 h-10 rounded-full object-cover"
               />
             ) : (
               <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-bold">
-                {(user?.name || footer.userName).charAt(0).toUpperCase()}
+                {(userDisplayName || footer.userName).charAt(0).toUpperCase()}
               </div>
             )}
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold  truncate">
-                {user?.name || footer.userName}
+                {userDisplayName || footer.userName}
               </p>
               <p className="text-xs  truncate">{user?.email || footer.userEmail}</p>
             </div>

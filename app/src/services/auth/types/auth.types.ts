@@ -10,7 +10,6 @@ export interface LoginRequest {
 
 export interface LoginResponse {
   access_token: string;
-  refresh_token?: string;
   expires_in: number; // seconds until token expires
   user: User;
 }
@@ -21,14 +20,15 @@ export interface RefreshTokenResponse {
 }
 
 export interface User {
-  id: string;
+  id: number;
   email: string;
-  name: string;
+  firstName: string;
+  lastName: string;
   role: UserRole;
   permissions?: string[];
 }
 
-export type UserRole = "super_admin" | "admin" | "moderator" | "viewer";
+export type UserRole = "user" | "admin";
 
 export interface AuthState {
   user: User | null;
