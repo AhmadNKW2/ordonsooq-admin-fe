@@ -288,20 +288,29 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       }
 
       try {
-        // Try to validate existing session via /me endpoint
-        const { valid, user } = await authService.validateSession();
-        
-        if (valid && user) {
+        // Validate existing session via /auth/profile.
+        // If it fails (e.g., access token expired), try a one-time silent refresh then validate again.
+        const firstCheck = await authService.validateSession();
+
+        let finalCheck = firstCheck;
+        if (!firstCheck.valid) {
+          const refreshed = await refreshSession();
+          if (refreshed) {
+            finalCheck = await authService.validateSession();
+          }
+        }
+
+        if (finalCheck.valid && finalCheck.user) {
           const sessionInfo = sessionManager.getSessionInfo();
           const expiresAt = sessionInfo?.expiresAt || Date.now() + 30 * 60 * 1000;
-          
+
           setAuthState({
-            user,
+            user: finalCheck.user,
             isAuthenticated: true,
             isLoading: false,
             sessionExpiresAt: expiresAt,
           });
-          
+
           // Start session checking
           sessionCheckIntervalRef.current = setInterval(checkSession, SESSION_CONFIG.activityCheckInterval);
         } else {
