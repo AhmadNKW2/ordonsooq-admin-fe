@@ -84,6 +84,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     try {
       const response = await authService.refreshToken();
       if (response.success && response.data) {
+        if (response.data.access_token) {
+          httpClient.setAuthToken(response.data.access_token);
+        }
         const expiresAt = Date.now() + (response.data.expires_in * 1000);
         
         // Update session info
@@ -186,6 +189,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       console.error("Logout API error:", error);
     } finally {
       sessionManager.clearSession();
+      httpClient.removeAuthToken();
       sessionManager.broadcastEvent({ type: 'logout', timestamp: Date.now() });
 
       setAuthState({
@@ -392,7 +396,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       const response = await authService.login(credentials);
 
       if (response.success && response.data) {
-        const { user, expires_in } = response.data;
+        const { user, expires_in, access_token } = response.data;
+        if (access_token) {
+          httpClient.setAuthToken(access_token);
+        }
         const expiresAt = Date.now() + (expires_in * 1000);
 
         // Store session info

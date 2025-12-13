@@ -29,6 +29,8 @@ class HttpClient {
   private authStateHandlers: Set<AuthStateChangeHandler> = new Set();
   private isRedirecting: boolean = false;
 
+  private static readonly AUTH_REFRESH_ENDPOINT = "/auth/refresh";
+
   private constructor() {
     this.baseURL = API_CONFIG.baseUrl;
     this.defaultHeaders = {
@@ -86,7 +88,7 @@ class HttpClient {
     this.isRefreshing = true;
     this.refreshPromise = (async () => {
       try {
-        const response = await fetch(`${this.baseURL}/auth/refresh`, {
+        const response = await fetch(`${this.baseURL}${HttpClient.AUTH_REFRESH_ENDPOINT}`, {
           method: 'POST',
           credentials: 'include',
           headers: {
@@ -98,8 +100,27 @@ class HttpClient {
           return false;
         }
 
-        // Token refreshed successfully via cookies
-        return true;
+        // Prefer backend-declared success when JSON is available.
+        // Some backends may return 200 with { success: false }.
+        try {
+          const json = (await response.clone().json()) as Partial<ApiResponse<{ access_token?: string }>> & {
+            access_token?: string;
+            expires_in?: number;
+          };
+
+          const success = typeof json?.success === "boolean" ? json.success : true;
+
+          // If backend returns an access token in body, keep it as a bearer fallback.
+          const tokenFromBody = (json as any)?.data?.access_token ?? (json as any)?.access_token;
+          if (success && typeof tokenFromBody === "string" && tokenFromBody.length > 0) {
+            this.setAuthToken(tokenFromBody);
+          }
+
+          return success;
+        } catch {
+          // Non-JSON response; assume cookies were refreshed.
+          return true;
+        }
       } catch (error) {
         console.error('Token refresh failed:', error);
         return false;
@@ -161,16 +182,41 @@ class HttpClient {
     };
 
     // Handle 401 Unauthorized - attempt token refresh
-    if (response.status === 401 && originalRequest) {
+    if (
+      response.status === 401 &&
+      originalRequest &&
+      originalRequest.endpoint !== HttpClient.AUTH_REFRESH_ENDPOINT
+    ) {
       // Try to refresh the token
       const refreshSuccess = await this.refreshToken();
       
       if (refreshSuccess) {
+        const isFormDataBody =
+          typeof FormData !== 'undefined' &&
+          (originalRequest.options as any)?.body instanceof FormData;
+
+        // Build retry headers using the latest auth header after refresh.
+        const retryHeaders = new Headers((originalRequest.options.headers as HeadersInit) ?? undefined);
+        const currentAuthHeader = (this.defaultHeaders as any).Authorization as string | undefined;
+        if (currentAuthHeader && !retryHeaders.has('Authorization')) {
+          retryHeaders.set('Authorization', currentAuthHeader);
+        }
+
+        if (!isFormDataBody) {
+          // For JSON requests, also ensure default headers are present (without overwriting explicit headers).
+          Object.entries(this.defaultHeaders as Record<string, string>).forEach(([key, value]) => {
+            if (!retryHeaders.has(key)) {
+              retryHeaders.set(key, value);
+            }
+          });
+        }
+
         // Retry the original request
         const retryResponse = await fetch(
           `${this.baseURL}${originalRequest.endpoint}`,
           {
             ...originalRequest.options,
+            headers: retryHeaders,
             credentials: 'include',
           }
         );
@@ -189,12 +235,14 @@ class HttpClient {
         if (currentPath === '/login') {
           // Just clear session and notify, don't redirect
           sessionManager.clearSession();
+          this.removeAuthToken();
           this.notifyAuthStateChange(false);
           throw error;
         }
         
         this.isRedirecting = true;
         sessionManager.clearSession();
+        this.removeAuthToken();
         // Save intended URL for after login
         const fullPath = currentPath + window.location.search;
         // Don't save login page or root as intended URL
@@ -366,7 +414,7 @@ class HttpClient {
       credentials: 'include', // Include cookies for auth
     }).then(async (response) => {
       if (!response.ok) {
-        await this.handleError(response, { endpoint, options: { method: 'POST', body: formData } });
+        await this.handleError(response, { endpoint, options: { method: 'POST', headers, body: formData, credentials: 'include' } });
       }
       const result = await response.json();
       // Invalidate all queries after successful mutation
@@ -396,7 +444,7 @@ class HttpClient {
       credentials: 'include', // Include cookies for auth
     }).then(async (response) => {
       if (!response.ok) {
-        await this.handleError(response, { endpoint, options: { method: 'PATCH', body: formData } });
+        await this.handleError(response, { endpoint, options: { method: 'PATCH', headers, body: formData, credentials: 'include' } });
       }
       const result = await response.json();
       // Invalidate all queries after successful mutation
