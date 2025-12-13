@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import { Lato, Almarai } from "next/font/google";
 import "./globals.css";
 import "react-toastify/dist/ReactToastify.css";
+import "nprogress/nprogress.css";
 import { QueryProvider } from "./src/providers/query-provider";
+import { LoadingProvider } from "./src/providers/loading-provider";
 import { AuthProvider } from "./src/contexts/auth.context";
 import { AppSidebar } from './src/components/sidebar/app-sidebar';
 import { sidebarConfig } from './src/components/sidebar/sidebar.config';
@@ -39,20 +41,22 @@ export default function RootLayout({
         className={`${lato.variable} ${almarai.variable} antialiased`}
       >
         <QueryProvider>
-          <AuthProvider>
-            <ProtectedRoute>
-              <div className="flex h-screen bg-primary/10">
-                <AppSidebar
-                  groups={sidebarConfig.groups}
-                  header={sidebarConfig.header}
-                  footer={sidebarConfig.footer}
-                />
-                <main className="flex-1 overflow-auto">
-                  {children}
-                </main>
-              </div>
-            </ProtectedRoute>
-          </AuthProvider>
+          <LoadingProvider>
+            <AuthProvider>
+              <ProtectedRoute>
+                <div className="flex h-screen bg-primary/10">
+                  <AppSidebar
+                    groups={sidebarConfig.groups}
+                    header={sidebarConfig.header}
+                    footer={sidebarConfig.footer}
+                  />
+                  <main className="flex-1 overflow-auto">
+                    {children}
+                  </main>
+                </div>
+              </ProtectedRoute>
+            </AuthProvider>
+          </LoadingProvider>
           <ToastContainer
             position="top-right"
             autoClose={5000}

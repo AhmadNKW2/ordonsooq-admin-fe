@@ -6,7 +6,7 @@
 "use client";
 
 import React from "react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/hooks/use-loading-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { ProductForm } from "../../src/components/products/ProductForm";
 import { ProductFormData } from "../../src/services/products/types/product-form.types";

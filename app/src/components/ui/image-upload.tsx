@@ -66,7 +66,7 @@ const SortableImageItem = ({ item, onRemove, onSetPrimary, onPreview, hasPrimary
             style={style}
             {...attributes}
             {...listeners}
-            className={`w-40 h-40 relative group border rounded-r1 overflow-hidden border-primary/20 ${hasPrimary && item.isPrimary ? 'border-primary/100' : ''}`}
+            className={`w-40 h-40 relative group border rounded-r1 overflow-hidden border-primary/20 ${hasPrimary && item.isPrimary ? 'border-primary' : ''}`}
         >
             {item.type === "image" ? (
                 <Image
@@ -294,7 +294,17 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
             {/* Single Image Mode - Show image inside dashed border */}
             {!isMulti && hasSingleImage && singleImage ? (
                 <div
-                    className={`border-2 border-dashed rounded-r1 p-4 transition-colors border-primary/20 flex flex-col items-center justify-center gap-4`}
+                    onDragOver={(e) => {
+                        e.preventDefault();
+                        setDragOver(true);
+                    }}
+                    onDragLeave={() => setDragOver(false)}
+                    onDrop={handleDrop}
+                    onClick={() => fileInputRef.current?.click()}
+                    className={`border-2 border-dashed rounded-r1 p-4 text-center transition-colors flex flex-col items-center justify-center gap-4 ${dragOver
+                        ? "border-primary bg-primary/10"
+                        : "border-primary/20 hover:border-primary hover:bg-primary/10 hover:cursor-pointer"
+                        } ${error ? "border-danger" : ""}`}
                 >
                     <input
                         ref={fileInputRef}
@@ -433,7 +443,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
                     variant="transparent"
                 >
                     {previewImage && (
-                        <div className="relative w-[650px] h-[650px]">
+                        <div className="relative w-[650px] h-[650px] border-2 border-white bg-white/50 rounded-r1">
                             <Image
                                 src={previewImage}
                                 alt="Preview"

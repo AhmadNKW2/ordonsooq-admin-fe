@@ -14,7 +14,7 @@ import React, {
   useRef,
   ReactNode,
 } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/hooks/use-loading-router";
 import { authService } from "../services/auth/api/auth.service";
 import { LoginRequest, User, AuthState, SessionInfo } from "../services/auth/types/auth.types";
 import { httpClient } from "../lib/api/http-client";

@@ -5,7 +5,7 @@
  * Reusable form for creating and editing categories
  */
 
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/hooks/use-loading-router";
 import { Card } from "../ui/card";
 import { Input } from "../ui/input";
 import { Textarea } from "../ui/textarea";

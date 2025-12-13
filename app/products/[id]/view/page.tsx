@@ -6,7 +6,8 @@
 "use client";
 
 import React from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useParams } from "next/navigation";
+import { useRouter } from "@/hooks/use-loading-router";
 import { useProduct } from "../../../src/services/products/hooks/use-products";
 import { useCategories } from "../../../src/services/categories/hooks/use-categories";
 import { useVendors } from "../../../src/services/vendors/hooks/use-vendors";

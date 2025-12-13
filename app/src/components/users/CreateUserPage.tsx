@@ -6,7 +6,7 @@
  */
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/hooks/use-loading-router";
 import { useCreateCustomer } from "../../services/customers/hooks/use-customers";
 import { UserForm } from "./UserForm";
 import { validateCustomerForm } from "../../lib/validations/customer.schema";

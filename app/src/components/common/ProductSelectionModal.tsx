@@ -160,10 +160,10 @@ export const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
         <Modal
             isOpen={isOpen}
             onClose={handleCancel}
-            className="max-w-6xl"
+            className=""
         >
             {/* Header */}
-            <div className="flex items-center justify-between w-full">
+            <div className="flex items-center justify-between w-full gap-30">
                 <div className="flex items-center gap-3">
                     <div className="p-2 bg-primary/10 rounded-lg">
                         <Package className="h-8 w-8 text-primary" />
@@ -187,143 +187,148 @@ export const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
 
             </div>
 
-            {/* Filters */}
-            <div className="flex items-center gap-4">
-                <Input
-                    value={searchTerm}
-                    onChange={(e) => handleSearchChange(e.target.value)}
-                    label="Search"
-                    variant="search"
-                />
-
-                {hasActiveFilters && (
-                    <Button
-                        variant="outline"
-                        onClick={handleClearFilters}
-                        className="h-9"
-                    >
-                        Clear filters
-                    </Button>
-                )}
-            </div>
-
             {/* Products Table */}
             {filteredProducts.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-16 bg-gray-50 rounded-lg">
+                <div className="flex flex-col items-center justify-center py-16 bg-gray-50 rounded-lg w-full">
                     <Package className="h-12 w-12 text-gray-400 mb-3" />
                     <p className="text-gray-500 font-medium">No products found</p>
                     <p className="text-sm text-gray-400 mt-1">Try adjusting your search</p>
                 </div>
             ) : (
-                <Table>
-                    <TableHeader>
-                        <TableRow isHeader>
-                            <TableHead className="w-12">
-                                <Checkbox
-                                    checked={allCurrentPageSelected}
-                                    onChange={handleSelectAll}
-                                />
-                            </TableHead>
-                            <TableHead>Product ID</TableHead>
-                            <TableHead>Image</TableHead>
-                            <TableHead>Product Name</TableHead>
-                            <TableHead>Category</TableHead>
-                            <TableHead>Vendor</TableHead>
-                            <TableHead>Stock</TableHead>
-                            <TableHead>Rating</TableHead>
-                            <TableHead>Status</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {filteredProducts.map((product) => (
-                            <TableRow
-                                key={product.id}
-                                className={`cursor-pointer transition-colors ${localSelectedIds.includes(product.id) ? 'bg-primary/5' : 'hover:bg-gray-50'
-                                    }`}
-                                onClick={() => handleToggleProduct(product.id)}
+                <>
+                    {/* Filters */}
+                    <div className="flex items-center gap-4 w-full">
+                        <Input
+                            value={searchTerm}
+                            onChange={(e) => handleSearchChange(e.target.value)}
+                            label="Search"
+                            variant="search"
+                        />
+
+                        {hasActiveFilters && (
+                            <Button
+                                variant="outline"
+                                onClick={handleClearFilters}
+                                className="h-9"
                             >
-                                <TableCell>
-                                    <div onClick={(e: React.MouseEvent) => e.stopPropagation()}>
-                                        <Checkbox
-                                            checked={localSelectedIds.includes(product.id)}
-                                            onChange={() => handleToggleProduct(product.id)}
-                                        />
-                                    </div>
-                                </TableCell>
-                                <TableCell className="font-mono text-sm">
-                                    {product.id}
-                                </TableCell>
-                                <TableCell>
-                                    <div className="w-12 h-12 relative rounded-lg overflow-hidden bg-primary/10 border border-primary/20">
-                                        {product.primary_image?.url ? (
-                                            <Image
-                                                src={product.primary_image.url}
-                                                alt={product.primary_image.alt_text || product.name_en}
-                                                fill
-                                                className="object-cover"
-                                            />
-                                        ) : (
-                                            <div className="w-full h-full flex items-center justify-center">
-                                                <Package className="h-5 w-5 text-primary" />
-                                            </div>
-                                        )}
-                                    </div>
-                                </TableCell>
-                                <TableCell className="font-semibold max-w-xs">
-                                    <div className="flex flex-col">
-                                        <span className="truncate">{product.name_en}</span>
-                                        <span className="text-sm text-gray-500 truncate">{product.name_ar}</span>
-                                    </div>
-                                </TableCell>
-                                <TableCell>
-                                    <div>
-                                        {product.category?.name || <span className="text-gray-400">—</span>}
-                                    </div>
-                                </TableCell>
-                                <TableCell>
-                                    <div>
-                                        {product.vendor?.name || <span className="text-gray-400">—</span>}
-                                    </div>
-                                </TableCell>
-                                <TableCell>
-                                    <span className="font-medium">{product.stock?.total_quantity ?? <span className="text-gray-400">—</span>}</span>
-                                </TableCell>
-                                <TableCell>
-                                    <div className="flex items-center justify-start gap-1">
-                                        <Star className="h-4 w-4 text-yellow-400 fill-yellow-400" />
-                                        <span className="font-semibold">{formatRating(product.average_rating)}</span>
-                                        {product.total_ratings ? (
-                                            <span className="text-xs text-gray-500">({product.total_ratings})</span>
-                                        ) : null}
-                                    </div>
-                                </TableCell>
-                                <TableCell>
-                                    <Badge variant={getStatusVariant(product.is_active)}>
-                                        {getStatusLabel(product.is_active)}
-                                    </Badge>
-                                </TableCell>
+                                Clear filters
+                            </Button>
+                        )}
+                    </div>
+
+                    <Table>
+                        <TableHeader>
+                            <TableRow isHeader>
+                                <TableHead className="w-12">
+                                    <Checkbox
+                                        checked={allCurrentPageSelected}
+                                        onChange={handleSelectAll}
+                                    />
+                                </TableHead>
+                                <TableHead>Product ID</TableHead>
+                                <TableHead>Image</TableHead>
+                                <TableHead>Product Name</TableHead>
+                                <TableHead>Category</TableHead>
+                                <TableHead>Vendor</TableHead>
+                                <TableHead>Stock</TableHead>
+                                <TableHead>Rating</TableHead>
+                                <TableHead>Status</TableHead>
                             </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-            )}
+                        </TableHeader>
+                        <TableBody>
+                            {filteredProducts.map((product) => (
+                                <TableRow
+                                    key={product.id}
+                                    className={`cursor-pointer transition-colors ${localSelectedIds.includes(product.id) ? 'bg-primary/5' : 'hover:bg-gray-50'
+                                        }`}
+                                    onClick={() => handleToggleProduct(product.id)}
+                                >
+                                    <TableCell>
+                                        <div onClick={(e: React.MouseEvent) => e.stopPropagation()}>
+                                            <Checkbox
+                                                checked={localSelectedIds.includes(product.id)}
+                                                onChange={() => handleToggleProduct(product.id)}
+                                            />
+                                        </div>
+                                    </TableCell>
+                                    <TableCell className="font-mono text-sm">
+                                        {product.id}
+                                    </TableCell>
+                                    <TableCell>
+                                        <div className="w-12 h-12 relative rounded-lg overflow-hidden bg-primary/10 border border-primary/20">
+                                            {product.primary_image?.url ? (
+                                                <Image
+                                                    src={product.primary_image.url}
+                                                    alt={product.primary_image.alt_text || product.name_en}
+                                                    fill
+                                                    className="object-cover"
+                                                />
+                                            ) : (
+                                                <div className="w-full h-full flex items-center justify-center">
+                                                    <Package className="h-5 w-5 text-primary" />
+                                                </div>
+                                            )}
+                                        </div>
+                                    </TableCell>
+                                    <TableCell className="font-semibold max-w-xs">
+                                        <div className="flex flex-col">
+                                            <span className="truncate">{product.name_en}</span>
+                                            <span className="text-sm text-gray-500 truncate">{product.name_ar}</span>
+                                        </div>
+                                    </TableCell>
+                                    <TableCell>
+                                        <div>
+                                            {product.category?.name || <span className="text-gray-400">—</span>}
+                                        </div>
+                                    </TableCell>
+                                    <TableCell>
+                                        <div>
+                                            {product.vendor?.name || <span className="text-gray-400">—</span>}
+                                        </div>
+                                    </TableCell>
+                                    <TableCell>
+                                        <span className="font-medium">{product.stock?.total_quantity ?? <span className="text-gray-400">—</span>}</span>
+                                    </TableCell>
+                                    <TableCell>
+                                        <div className="flex items-center justify-start gap-1">
+                                            <Star className="h-4 w-4 text-yellow-400 fill-yellow-400" />
+                                            <span className="font-semibold">{formatRating(product.average_rating)}</span>
+                                            {product.total_ratings ? (
+                                                <span className="text-xs text-gray-500">({product.total_ratings})</span>
+                                            ) : null}
+                                        </div>
+                                    </TableCell>
+                                    <TableCell>
+                                        <Badge variant={getStatusVariant(product.is_active)}>
+                                            {getStatusLabel(product.is_active)}
+                                        </Badge>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </>
+            )
+            }
 
             {/* Pagination */}
-            {filteredProducts.length > 0 && pagination && (
-                <Pagination
-                    pagination={{
-                        currentPage: pagination.page,
-                        pageSize: pagination.limit,
-                        totalItems: pagination.total,
-                        totalPages: pagination.totalPages,
-                        hasNextPage: pagination.page < pagination.totalPages,
-                        hasPreviousPage: pagination.page > 1,
-                    }}
-                    onPageChange={handlePageChange}
-                    onPageSizeChange={handlePageSizeChange}
-                    showPageSize={true}
-                />
-            )}
-        </Modal>
+            {
+                filteredProducts.length > 0 && pagination && (
+                    <Pagination
+                        pagination={{
+                            currentPage: pagination.page,
+                            pageSize: pagination.limit,
+                            totalItems: pagination.total,
+                            totalPages: pagination.totalPages,
+                            hasNextPage: pagination.page < pagination.totalPages,
+                            hasPreviousPage: pagination.page > 1,
+                        }}
+                        onPageChange={handlePageChange}
+                        onPageSizeChange={handlePageSizeChange}
+                        showPageSize={true}
+                    />
+                )
+            }
+        </Modal >
     );
 };

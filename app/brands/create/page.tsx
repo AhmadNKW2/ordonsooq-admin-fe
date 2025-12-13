@@ -5,7 +5,7 @@
  */
 
 import { useState, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/hooks/use-loading-router";
 import { useCreateBrand } from "../../src/services/brands/hooks/use-brands";
 import { useProducts } from "../../src/services/products/hooks/use-products";
 import { BrandForm } from "../../src/components/brands/BrandForm";

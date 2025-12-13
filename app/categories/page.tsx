@@ -6,7 +6,7 @@
  */
 
 import { useState, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/hooks/use-loading-router";
 import {
   useCategories,
   useDeleteCategory,

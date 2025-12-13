@@ -1,10 +1,13 @@
 export type BannerStatus = "active" | "inactive";
 
+export type BannerLanguage = "en" | "ar";
+
 export interface Banner {
   id: number;
   image: string;
   link?: string;
   visible: boolean;
+  language: BannerLanguage;
   sort_order: number;
   created_at: string;
   updated_at: string;

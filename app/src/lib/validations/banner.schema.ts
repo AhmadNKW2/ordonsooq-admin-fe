@@ -2,6 +2,7 @@ import { z } from "zod";
 
 export const bannerFormSchema = z.object({
   image: z.any().refine((val) => val !== null, "Image is required"),
+  language: z.enum(["en", "ar"], { message: "Language is required" }),
   link: z.string().optional().or(z.literal("")),
   visible: z.boolean().default(true),
 });

@@ -6,7 +6,8 @@
 "use client";
 
 import React from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useParams } from "next/navigation";
+import { useRouter } from "@/hooks/use-loading-router";
 import { ProductForm } from "../../src/components/products/ProductForm";
 import { ProductFormData } from "../../src/services/products/types/product-form.types";
 import { ProductDetail, MediaInputDto, UpdateProductDto } from "../../src/services/products/types/product.types";

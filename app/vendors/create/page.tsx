@@ -5,7 +5,7 @@
  */
 
 import { useState, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/hooks/use-loading-router";
 import { useCreateVendor } from "../../src/services/vendors/hooks/use-vendors";
 import { useProducts } from "../../src/services/products/hooks/use-products";
 import { VendorForm } from "../../src/components/vendors/VendorForm";

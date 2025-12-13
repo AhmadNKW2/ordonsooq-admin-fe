@@ -7,7 +7,7 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/hooks/use-loading-router";
 import { Button } from "../ui/button";
 import { PageHeader } from "../common/PageHeader";
 import {

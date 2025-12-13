@@ -5,7 +5,7 @@
  * Reusable form for creating and editing banners
  */
 
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/hooks/use-loading-router";
 import { Card } from "../ui/card";
 import { Toggle } from "../ui/toggle";
 import { ImageUpload, ImageUploadItem } from "../ui/image-upload";
@@ -13,17 +13,22 @@ import { PageHeader } from "../common/PageHeader";
 import { ImageIcon } from "lucide-react";
 import { Input } from "../ui/input";
 import { Textarea } from "../ui/textarea";
+import { Select } from "../ui/select";
+import { BannerLanguage } from "../../types/banners/banner.types";
 
 export interface BannerFormProps {
     mode: "create" | "edit";
     image: ImageUploadItem | null;
     link?: string;
     visible: boolean;
+    language: BannerLanguage;
     onImageChange: (value: ImageUploadItem | null) => void;
     onLinkChange: (value: string) => void;
     onVisibleChange: (value: boolean) => void;
+    onLanguageChange: (value: BannerLanguage) => void;
     formErrors: {
         image?: string;
+        language?: string;
         link?: string;
     };
     onSubmit: () => void;
@@ -36,9 +41,11 @@ export const BannerForm: React.FC<BannerFormProps> = ({
     image,
     link,
     visible,
+    language,
     onImageChange,
     onLinkChange,
     onVisibleChange,
+    onLanguageChange,
     formErrors,
     onSubmit,
     isSubmitting,
@@ -70,13 +77,24 @@ export const BannerForm: React.FC<BannerFormProps> = ({
                     {/* Image Upload */}
                     <Card className="p-6 space-y-4">
                         <h3 className="text-lg font-medium">Banner Details</h3>
+
+                        <Select
+                            label="Language"
+                            value={language}
+                            onChange={(value) => onLanguageChange(value as BannerLanguage)}
+                            error={formErrors.language}
+                            search={false}
+                            options={[
+                                { value: "en", label: "English" },
+                                { value: "ar", label: "Arabic" },
+                            ]}
+                        />
                         
                         <Input
                             label="Link URL"
                             value={link}
                             onChange={(e) => onLinkChange(e.target.value)}
                             error={formErrors.link}
-                            placeholder="https://example.com/page"
                         />
 
                         {/* Image Upload */}

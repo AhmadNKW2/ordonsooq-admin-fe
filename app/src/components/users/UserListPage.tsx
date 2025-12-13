@@ -6,7 +6,7 @@
  */
 
 import { useState, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/hooks/use-loading-router";
 import { useCustomers, useDeleteCustomer } from "../../services/customers/hooks/use-customers";
 import { Users, Shield, RefreshCw, AlertCircle, X, Mail, User } from "lucide-react";
 import { Card } from "../ui/card";

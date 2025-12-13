@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useEffect, use } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/hooks/use-loading-router";
 import { useBanner, useUpdateBanner } from "../../src/services/banners/hooks/use-banners";
 import { BannerForm } from "./../../src/components/banners/BannerForm";
 import { validateBannerForm } from "../../src/lib/validations/banner.schema";
 import { ImageUploadItem } from "../../src/components/ui/image-upload";
+import { BannerLanguage } from "../../src/types/banners/banner.types";
 
 export default function EditBannerPage({ params }: { params: Promise<{ id: string }> }) {
     const { id } = use(params);
@@ -17,6 +18,7 @@ export default function EditBannerPage({ params }: { params: Promise<{ id: strin
     const [image, setImage] = useState<ImageUploadItem | null>(null);
     const [link, setLink] = useState("");
     const [visible, setVisible] = useState(true);
+    const [language, setLanguage] = useState<BannerLanguage>("en");
     const [formErrors, setFormErrors] = useState<any>({});
 
     useEffect(() => {
@@ -24,6 +26,9 @@ export default function EditBannerPage({ params }: { params: Promise<{ id: strin
             const bannerData = banner.data;
             setLink(bannerData.link || "");
             setVisible(bannerData.visible);
+            if (bannerData.language) {
+                setLanguage(bannerData.language as BannerLanguage);
+            }
             if (bannerData.image) {
                 setImage({
                     id: "existing",
@@ -39,6 +44,7 @@ export default function EditBannerPage({ params }: { params: Promise<{ id: strin
     const handleSubmit = async () => {
         const validation = validateBannerForm({
             image,
+            language,
             link,
             visible,
         });
@@ -49,6 +55,7 @@ export default function EditBannerPage({ params }: { params: Promise<{ id: strin
         }
 
         const formData = new FormData();
+        formData.append("language", language);
         if (image?.file) formData.append("image", image.file);
         if (link) formData.append("link", link);
         formData.append("visible", String(visible));
@@ -75,9 +82,11 @@ export default function EditBannerPage({ params }: { params: Promise<{ id: strin
             image={image}
             link={link}
             visible={visible}
+            language={language}
             onImageChange={setImage}
             onLinkChange={setLink}
             onVisibleChange={setVisible}
+            onLanguageChange={setLanguage}
             formErrors={formErrors}
             onSubmit={handleSubmit}
             isSubmitting={updateBanner.isPending}

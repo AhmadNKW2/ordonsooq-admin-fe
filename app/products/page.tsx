@@ -6,7 +6,7 @@
  */
 
 import { useState, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/hooks/use-loading-router";
 import Image from "next/image";
 import { useProducts, useDeleteProduct, useProduct } from "../src/services/products/hooks/use-products";
 import { Plus, RefreshCw, Package, AlertCircle, Star, X } from "lucide-react";

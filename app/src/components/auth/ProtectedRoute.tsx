@@ -6,7 +6,8 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter, usePathname } from "next/navigation";
+import { usePathname } from "next/navigation";
+import { useRouter } from "@/hooks/use-loading-router";
 import { useAuth } from "../../contexts/auth.context";
 import { SessionExpirationModal } from "./SessionExpirationModal";
 import { sessionManager } from "../../lib/session/session-manager";

@@ -5,7 +5,8 @@
  */
 
 import { useState, useEffect, useMemo } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useParams } from "next/navigation";
+import { useRouter } from "@/hooks/use-loading-router";
 import {
   useCategory,
   useUpdateCategory,

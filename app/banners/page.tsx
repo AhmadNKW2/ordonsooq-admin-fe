@@ -5,7 +5,7 @@
  */
 
 import { useState, useEffect, useMemo } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/hooks/use-loading-router";
 import {
     useBanners,
     useDeleteBanner,
@@ -21,6 +21,7 @@ import { Input } from "../src/components/ui/input";
 import { Button } from "../src/components/ui/button";
 import { Pagination } from "../src/components/ui/pagination";
 import { PAGINATION } from "../src/lib/constants";
+import { Select } from "../src/components/ui/select";
 import {
     Table,
     TableBody,
@@ -148,10 +149,12 @@ export default function BannerListPage() {
     const [bannerToDelete, setBannerToDelete] = useState<Banner | null>(null);
     const [items, setItems] = useState<Banner[]>([]);
     const [searchTerm, setSearchTerm] = useState("");
+    const [languageFilter, setLanguageFilter] = useState<"" | "en" | "ar">("");
     const [queryParams, setQueryParams] = useState<{
         page: number;
         limit: number;
         search: string;
+        language?: "en" | "ar";
     }>({
         page: PAGINATION.defaultPage,
         limit: PAGINATION.defaultPageSize,
@@ -165,9 +168,12 @@ export default function BannerListPage() {
     // Update items when data changes
     useEffect(() => {
         if (data?.data) {
-            setItems(data.data);
+            const nextItems = languageFilter
+                ? data.data.filter((b) => (b as any).language === languageFilter)
+                : data.data;
+            setItems(nextItems);
         }
-    }, [data]);
+    }, [data, languageFilter]);
 
     const handleSearchChange = (value: string) => {
         setSearchTerm(value);
@@ -182,10 +188,25 @@ export default function BannerListPage() {
 
     const handleClearFilters = () => {
         setSearchTerm("");
+        setLanguageFilter("");
         setQueryParams({
             page: PAGINATION.defaultPage,
             limit: PAGINATION.defaultPageSize,
             search: "",
+        });
+    };
+
+    const handleLanguageChange = (value: string | string[]) => {
+        const lang = (value || "") as "" | "en" | "ar";
+        setLanguageFilter(lang);
+        setQueryParams((prev) => {
+            const next = { ...prev, page: 1 } as typeof prev;
+            if (lang) {
+                next.language = lang;
+            } else {
+                delete (next as any).language;
+            }
+            return next;
         });
     };
 
@@ -197,7 +218,7 @@ export default function BannerListPage() {
         setQueryParams((prev) => ({ ...prev, limit: pageSize, page: 1 }));
     };
 
-    const hasActiveFilters = queryParams.search !== "";
+    const hasActiveFilters = queryParams.search !== "" || !!queryParams.language;
 
     const sensors = useSensors(
         useSensor(PointerSensor),
@@ -270,6 +291,20 @@ export default function BannerListPage() {
                                 onChange={(e) => handleSearchChange(e.target.value)}
                                 label="Search"
                                 variant="search"
+                            />
+                        </div>
+
+                        <div className="w-full max-w-[220px]">
+                            <Select
+                                label="Language"
+                                value={languageFilter}
+                                onChange={handleLanguageChange}
+                                search={false}
+                                options={[
+                                    { value: "", label: "All" },
+                                    { value: "en", label: "English" },
+                                    { value: "ar", label: "Arabic" },
+                                ]}
                             />
                         </div>
 
