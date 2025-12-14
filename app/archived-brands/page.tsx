@@ -5,8 +5,9 @@
  * Mirrors archived vendors page with restore/delete flows
  */
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "@/hooks/use-loading-router";
+import { useLoading } from "../src/providers/loading-provider";
 import {
   useArchivedBrands,
   useRestoreBrand,
@@ -34,6 +35,7 @@ import { Brand, RestoreBrandDto, PermanentDeleteBrandDto } from "../src/services
 
 export default function ArchivedBrandsPage() {
   const router = useRouter();
+  const { setShowOverlay } = useLoading();
   const [searchTerm, setSearchTerm] = useState("");
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [restoreModalOpen, setRestoreModalOpen] = useState(false);
@@ -44,6 +46,11 @@ export default function ArchivedBrandsPage() {
   const { data: allBrands } = useBrands();
   const restoreBrand = useRestoreBrand();
   const permanentDeleteBrand = usePermanentDeleteBrand();
+
+  // Show loading overlay while data is loading
+  useEffect(() => {
+    setShowOverlay(isLoading);
+  }, [isLoading, setShowOverlay]);
 
   const filteredBrands = useMemo(() => {
     if (!brands || !Array.isArray(brands)) return [];
@@ -177,18 +184,13 @@ export default function ArchivedBrandsPage() {
         </Card>
       )}
 
-      {isLoading ? (
-        <div className="flex flex-col items-center justify-center py-16">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-          <div className="font-medium mt-4">Loading archived brands...</div>
-        </div>
-      ) : filteredBrands.length === 0 ? (
+      {!isLoading && filteredBrands.length === 0 ? (
         <EmptyState
           icon={<Archive />}
           title="No archived brands"
           description="Archived brands will appear here"
         />
-      ) : (
+      ) : !isLoading && (
         <Table>
           <TableHeader>
             <TableRow isHeader>

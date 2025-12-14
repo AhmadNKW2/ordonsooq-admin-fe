@@ -5,8 +5,9 @@
  * Main page component for displaying and managing products
  */
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "@/hooks/use-loading-router";
+import { useLoading } from "../src/providers/loading-provider";
 import Image from "next/image";
 import { useProducts, useDeleteProduct, useProduct } from "../src/services/products/hooks/use-products";
 import { Plus, RefreshCw, Package, AlertCircle, Star, X } from "lucide-react";
@@ -33,6 +34,7 @@ import { DeleteConfirmationModal } from "../src/components/common/DeleteConfirma
 
 export default function ProductsPage() {
   const router = useRouter();
+  const { setShowOverlay } = useLoading();
   const [queryParams, setQueryParams] = useState<ProductFilters>({
     page: PAGINATION.defaultPage,
     limit: PAGINATION.defaultPageSize,
@@ -46,6 +48,11 @@ export default function ProductsPage() {
   const { data, isLoading, isError, error, refetch } =
     useProducts(queryParams);
   const deleteProduct = useDeleteProduct();
+
+  // Show loading overlay while data is loading
+  useEffect(() => {
+    setShowOverlay(isLoading);
+  }, [isLoading, setShowOverlay]);
 
   // Fetch product details when viewing
   const { data: viewProductData, isLoading: isLoadingViewProduct } = useProduct(
@@ -208,18 +215,13 @@ export default function ProductsPage() {
       )}
 
       {/* Products Table */}
-      {isLoading ? (
-        <div className="flex flex-col items-center justify-center py-16">
-          <div className="animate-spin rounded-full h-12 w-12"></div>
-          <div className=" font-medium">Loading products...</div>
-        </div>
-      ) : products.length === 0 ? (
+      {!isLoading && products.length === 0 ? (
         <EmptyState
           icon={<Package />}
           title="No products found"
           description="Try adjusting your filters or add new products"
         />
-      ) : (
+      ) : !isLoading && (
         <Table>
           <TableHeader>
             <TableRow isHeader>

@@ -7,6 +7,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useParams } from "next/navigation";
 import { useRouter } from "@/hooks/use-loading-router";
+import { useLoading } from "../../src/providers/loading-provider";
 import {
   useVendor,
   useUpdateVendor,
@@ -23,6 +24,7 @@ export default function EditVendorPage() {
   const router = useRouter();
   const params = useParams();
   const vendorId = Number(params.id);
+  const { setShowOverlay } = useLoading();
 
   // Form state
   const [nameEn, setNameEn] = useState("");
@@ -139,13 +141,13 @@ export default function EditVendorPage() {
     }
   };
 
+  // Show loading overlay while data is loading
+  useEffect(() => {
+    setShowOverlay(isLoading);
+  }, [isLoading, setShowOverlay]);
+
   if (isLoading) {
-    return (
-      <div className="flex flex-col items-center justify-center py-16">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-        <div className="font-medium mt-4">Loading vendor...</div>
-      </div>
-    );
+    return null;
   }
 
   if (isError) {

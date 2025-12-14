@@ -5,8 +5,9 @@
  * Main page component for displaying and managing attributes
  */
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "@/hooks/use-loading-router";
+import { useLoading } from "../src/providers/loading-provider";
 import {
   useAttributes,
   useDeleteAttribute,
@@ -170,6 +171,7 @@ const SortableRow: React.FC<{
 
 export default function AttributesPage() {
   const router = useRouter();
+  const { setShowOverlay } = useLoading();
   const [searchTerm, setSearchTerm] = useState("");
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [viewModalOpen, setViewModalOpen] = useState(false);
@@ -182,6 +184,11 @@ export default function AttributesPage() {
 
   const { data: attributes, isLoading, isError, error, refetch } = useAttributes();
   const deleteAttribute = useDeleteAttribute();
+
+  // Show loading overlay while data is loading
+  useEffect(() => {
+    setShowOverlay(isLoading);
+  }, [isLoading, setShowOverlay]);
   const reorderAttributes = useReorderAttributes();
 
   // DnD sensors
@@ -345,18 +352,13 @@ export default function AttributesPage() {
       )}
 
       {/* Attributes Table */}
-      {isLoading ? (
-        <div className="flex flex-col items-center justify-center py-16">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-          <div className=" font-medium mt-4">Loading attributes...</div>
-        </div>
-      ) : filteredAttributes.length === 0 ? (
+      {!isLoading && filteredAttributes.length === 0 ? (
         <EmptyState
           icon={<Tag />}
           title="No attributes found"
           description="Try adjusting your filters or add new attributes"
         />
-      ) : (
+      ) : !isLoading && (
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}

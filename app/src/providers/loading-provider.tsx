@@ -40,14 +40,27 @@ const LoadingContext = createContext<LoadingContextType | undefined>(undefined);
  * Full-screen loading overlay with spinner
  */
 const LoadingOverlay: React.FC<{ show: boolean }> = ({ show }) => {
-  const [shouldRender, setShouldRender] = useState(show);
-  const [isVisible, setIsVisible] = useState(show);
+  const [shouldRender, setShouldRender] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
     if (show) {
       setShouldRender(true);
-      const raf = requestAnimationFrame(() => setIsVisible(true));
-      return () => cancelAnimationFrame(raf);
+
+      // Ensure at least one paint happens with the "hidden" classes applied,
+      // otherwise the entrance transition can be skipped (especially for fast,
+      // button-triggered navigations).
+      setIsVisible(false);
+      let raf1 = 0;
+      let raf2 = 0;
+      raf1 = requestAnimationFrame(() => {
+        raf2 = requestAnimationFrame(() => setIsVisible(true));
+      });
+
+      return () => {
+        cancelAnimationFrame(raf1);
+        cancelAnimationFrame(raf2);
+      };
     }
 
     setIsVisible(false);

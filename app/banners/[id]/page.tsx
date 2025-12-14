@@ -2,6 +2,7 @@
 
 import { useState, useEffect, use } from "react";
 import { useRouter } from "@/hooks/use-loading-router";
+import { useLoading } from "../../src/providers/loading-provider";
 import { useBanner, useUpdateBanner } from "../../src/services/banners/hooks/use-banners";
 import { BannerForm } from "./../../src/components/banners/BannerForm";
 import { validateBannerForm } from "../../src/lib/validations/banner.schema";
@@ -12,6 +13,7 @@ export default function EditBannerPage({ params }: { params: Promise<{ id: strin
     const { id } = use(params);
     const bannerId = Number(id);
     const router = useRouter();
+    const { setShowOverlay } = useLoading();
     const { data: banner, isLoading } = useBanner(bannerId);
     const updateBanner = useUpdateBanner();
 
@@ -68,12 +70,13 @@ export default function EditBannerPage({ params }: { params: Promise<{ id: strin
         }
     };
 
-    if (isLoading) {
-        return <div>Loading...</div>;
-    }
+    // Show loading overlay while data is loading
+    useEffect(() => {
+        setShowOverlay(isLoading);
+    }, [isLoading, setShowOverlay]);
 
-    if (!banner) {
-        return <div>Banner not found</div>;
+    if (isLoading || !banner) {
+        return null;
     }
 
     return (

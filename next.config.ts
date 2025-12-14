@@ -14,6 +14,11 @@ const nextConfig: NextConfig = {
         hostname: 'example.com',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'pub-b8afad6fa843477fb61b00764b315e24.r2.dev',
+        pathname: '/**',
+      },
     ],
     // Allow loading images from localhost (for development)
     dangerouslyAllowSVG: true,

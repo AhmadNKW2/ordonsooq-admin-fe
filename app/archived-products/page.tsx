@@ -5,8 +5,9 @@
  * Page component for displaying and managing archived products
  */
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "@/hooks/use-loading-router";
+import { useLoading } from "../src/providers/loading-provider";
 import Image from "next/image";
 import {
   useArchivedProducts,
@@ -35,6 +36,7 @@ import { Product } from "../src/services/products/types/product.types";
 
 export default function ArchivedProductsPage() {
   const router = useRouter();
+  const { setShowOverlay } = useLoading();
   const [searchTerm, setSearchTerm] = useState("");
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [restoreModalOpen, setRestoreModalOpen] = useState(false);
@@ -44,6 +46,11 @@ export default function ArchivedProductsPage() {
   const { data: productsData, isLoading, isError, error, refetch } = useArchivedProducts();
   const restoreProduct = useRestoreProduct();
   const permanentDeleteProduct = usePermanentDeleteProduct();
+
+  // Show loading overlay while data is loading
+  useEffect(() => {
+    setShowOverlay(isLoading);
+  }, [isLoading, setShowOverlay]);
 
   const products = productsData?.data || [];
 
@@ -183,18 +190,13 @@ export default function ArchivedProductsPage() {
       )}
 
       {/* Products Table */}
-      {isLoading ? (
-        <div className="flex flex-col items-center justify-center py-16">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-          <div className="font-medium mt-4">Loading archived products...</div>
-        </div>
-      ) : filteredProducts.length === 0 ? (
+      {!isLoading && filteredProducts.length === 0 ? (
         <EmptyState
           icon={<Archive />}
           title="No archived products"
           description="Archived products will appear here"
         />
-      ) : (
+      ) : !isLoading && (
         <Table>
           <TableHeader>
             <TableRow isHeader>

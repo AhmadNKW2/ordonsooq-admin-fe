@@ -13,7 +13,7 @@ import { PageHeader } from "../common/PageHeader";
 import { ImageIcon } from "lucide-react";
 import { Input } from "../ui/input";
 import { Textarea } from "../ui/textarea";
-import { Select } from "../ui/select";
+import { RadioCard } from "../ui/radio-card";
 import { BannerLanguage } from "../../types/banners/banner.types";
 
 export interface BannerFormProps {
@@ -78,17 +78,28 @@ export const BannerForm: React.FC<BannerFormProps> = ({
                     <Card className="p-6 space-y-4">
                         <h3 className="text-lg font-medium">Banner Details</h3>
 
-                        <Select
-                            label="Language"
-                            value={language}
-                            onChange={(value) => onLanguageChange(value as BannerLanguage)}
-                            error={formErrors.language}
-                            search={false}
-                            options={[
-                                { value: "en", label: "English" },
-                                { value: "ar", label: "Arabic" },
-                            ]}
-                        />
+                        <div className="space-y-2">
+                            <div className="text-sm font-medium">Language</div>
+                            <div className="flex gap-5">
+                                <RadioCard
+                                    name="banner-language"
+                                    value="en"
+                                    checked={language === "en"}
+                                    onChange={() => onLanguageChange("en" as BannerLanguage)}
+                                    label="English"
+                                />
+                                <RadioCard
+                                    name="banner-language"
+                                    value="ar"
+                                    checked={language === "ar"}
+                                    onChange={() => onLanguageChange("ar" as BannerLanguage)}
+                                    label="Arabic"
+                                />
+                            </div>
+                            {formErrors.language && (
+                                <span className="text-xs text-danger mt-1 block">{formErrors.language}</span>
+                            )}
+                        </div>
                         
                         <Input
                             label="Link URL"

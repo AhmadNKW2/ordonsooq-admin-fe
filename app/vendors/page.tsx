@@ -7,16 +7,18 @@
 
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { useRouter } from "@/hooks/use-loading-router";
+import { useLoading } from "../src/providers/loading-provider";
 import {
   useVendors,
   useArchiveVendor,
   useReorderVendors,
 } from "../src/services/vendors/hooks/use-vendors";
-import { Building2, RefreshCw, AlertCircle, X, GripVertical } from "lucide-react";
+import { Building2, RefreshCw, AlertCircle, GripVertical } from "lucide-react";
 import { Card } from "../src/components/ui/card";
 import { Button } from "../src/components/ui/button";
 import { PageHeader } from "../src/components/common/PageHeader";
 import { EmptyState } from "../src/components/common/EmptyState";
+import { FiltersCard } from "../src/components/common/FiltersCard";
 import { Input } from "../src/components/ui/input";
 import { Badge } from "../src/components/ui/badge";
 import { IconButton } from "../src/components/ui/icon-button";
@@ -173,6 +175,7 @@ const SortableVendorRow: React.FC<SortableVendorRowProps> = ({
 
 export default function VendorsPage() {
   const router = useRouter();
+  const { setShowOverlay } = useLoading();
   const [searchTerm, setSearchTerm] = useState("");
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [viewModalOpen, setViewModalOpen] = useState(false);
@@ -182,6 +185,11 @@ export default function VendorsPage() {
   const { data: vendors, isLoading, isError, error, refetch } = useVendors();
   const archiveVendor = useArchiveVendor();
   const reorderVendors = useReorderVendors();
+
+  // Show loading overlay while data is loading
+  useEffect(() => {
+    setShowOverlay(isLoading);
+  }, [isLoading, setShowOverlay]);
 
   // Local state for ordered vendors
   const [orderedVendors, setOrderedVendors] = useState<Vendor[]>([]);
@@ -281,10 +289,6 @@ export default function VendorsPage() {
     setSearchTerm(value);
   };
 
-  const handleClearFilters = () => {
-    setSearchTerm("");
-  };
-
   const hasActiveFilters = !!searchTerm;
 
   if (isError) {
@@ -324,8 +328,7 @@ export default function VendorsPage() {
 
       {/* Filters */}
       {(filteredVendors.length > 0 || hasActiveFilters) && (
-        <Card>
-          <h2 className="text-lg font-semibold">Filters</h2>
+        <FiltersCard>
           <div className="flex items-center gap-5">
             <div className="relative flex-1 max-w-sm">
               <Input
@@ -335,34 +338,18 @@ export default function VendorsPage() {
                 variant="search"
               />
             </div>
-
-            {hasActiveFilters && (
-              <Button
-                variant="outline"
-                onClick={handleClearFilters}
-                className="h-9"
-              >
-                <X className="mr-2 h-4 w-4" />
-                Clear filters
-              </Button>
-            )}
           </div>
-        </Card>
+        </FiltersCard>
       )}
 
       {/* Vendors Table */}
-      {isLoading ? (
-        <div className="flex flex-col items-center justify-center py-16">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-          <div className="font-medium mt-4">Loading vendors...</div>
-        </div>
-      ) : filteredVendors.length === 0 ? (
+      {!isLoading && filteredVendors.length === 0 ? (
         <EmptyState
           icon={<Building2 />}
           title="No vendors found"
           description="Try adjusting your filters or add new vendors"
         />
-      ) : (
+      ) : !isLoading && (
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}

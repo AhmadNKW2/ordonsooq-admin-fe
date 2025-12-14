@@ -7,6 +7,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "@/hooks/use-loading-router";
+import { useLoading } from "../../providers/loading-provider";
 import {
   useCustomer,
   useUpdateCustomer,
@@ -27,6 +28,7 @@ export interface EditUserPageProps {
 
 export const EditUserPage: React.FC<EditUserPageProps> = ({ userType, userId }) => {
   const router = useRouter();
+  const { setShowOverlay } = useLoading();
 
   const isAdmin = userType === "admin";
   const role: UserRole = isAdmin ? "admin" : "user";
@@ -134,13 +136,13 @@ export const EditUserPage: React.FC<EditUserPageProps> = ({ userType, userId }) 
     }
   };
 
+  // Show loading overlay while data is loading
+  useEffect(() => {
+    setShowOverlay(isLoading);
+  }, [isLoading, setShowOverlay]);
+
   if (isLoading) {
-    return (
-      <div className="flex flex-col items-center justify-center py-16">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-        <div className="font-medium mt-4">Loading {label.toLowerCase()}...</div>
-      </div>
-    );
+    return null;
   }
 
   if (isError) {

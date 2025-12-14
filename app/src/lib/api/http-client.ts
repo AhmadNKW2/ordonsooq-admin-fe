@@ -407,20 +407,39 @@ class HttpClient {
       headers['Authorization'] = authHeader;
     }
 
-    return fetch(url, {
-      method: "POST",
-      headers,
-      body: formData,
-      credentials: 'include', // Include cookies for auth
-    }).then(async (response) => {
-      if (!response.ok) {
-        await this.handleError(response, { endpoint, options: { method: 'POST', headers, body: formData, credentials: 'include' } });
+    return (async () => {
+      try {
+        const response = await fetch(url, {
+          method: "POST",
+          headers,
+          body: formData,
+          credentials: 'include', // Include cookies for auth
+        });
+
+        if (!response.ok) {
+          await this.handleError(response, {
+            endpoint,
+            options: { method: 'POST', headers, body: formData, credentials: 'include' },
+          });
+        }
+
+        const result = (await response.json()) as T;
+        invalidateAllQueries();
+        return result;
+      } catch (error) {
+        // If a 401 refresh+retry succeeded, handleError throws { __retryResponse }.
+        // Treat it as a success here to avoid upstream retrying the mutation and
+        // accidentally creating duplicates.
+        if ((error as any)?.__retryResponse) {
+          const retryResponse = (error as any).__retryResponse as Response;
+          const result = (await retryResponse.json()) as T;
+          invalidateAllQueries();
+          return result;
+        }
+
+        throw error;
       }
-      const result = await response.json();
-      // Invalidate all queries after successful mutation
-      invalidateAllQueries();
-      return result;
-    });
+    })();
   }
 
   /**
@@ -437,20 +456,36 @@ class HttpClient {
       headers['Authorization'] = authHeader;
     }
 
-    return fetch(url, {
-      method: "PATCH",
-      headers,
-      body: formData,
-      credentials: 'include', // Include cookies for auth
-    }).then(async (response) => {
-      if (!response.ok) {
-        await this.handleError(response, { endpoint, options: { method: 'PATCH', headers, body: formData, credentials: 'include' } });
+    return (async () => {
+      try {
+        const response = await fetch(url, {
+          method: "PATCH",
+          headers,
+          body: formData,
+          credentials: 'include', // Include cookies for auth
+        });
+
+        if (!response.ok) {
+          await this.handleError(response, {
+            endpoint,
+            options: { method: 'PATCH', headers, body: formData, credentials: 'include' },
+          });
+        }
+
+        const result = (await response.json()) as T;
+        invalidateAllQueries();
+        return result;
+      } catch (error) {
+        if ((error as any)?.__retryResponse) {
+          const retryResponse = (error as any).__retryResponse as Response;
+          const result = (await retryResponse.json()) as T;
+          invalidateAllQueries();
+          return result;
+        }
+
+        throw error;
       }
-      const result = await response.json();
-      // Invalidate all queries after successful mutation
-      invalidateAllQueries();
-      return result;
-    });
+    })();
   }
 
   /**

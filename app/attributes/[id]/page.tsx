@@ -10,6 +10,7 @@ import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useLoading } from "../../src/providers/loading-provider";
 import {
   useAttribute,
   useUpdateAttribute,
@@ -26,6 +27,7 @@ import { attributeSchema, type AttributeFormData } from "../../src/lib/validatio
 export default function AttributeEditPage() {
   const params = useParams();
   const attributeId = Number(params.id);
+  const { setShowOverlay } = useLoading();
 
   // React Hook Form with Zod
   const form = useForm<AttributeFormData>({
@@ -156,13 +158,13 @@ export default function AttributeEditPage() {
     }
   };
 
+  // Show loading overlay while data is loading
+  useEffect(() => {
+    setShowOverlay(isLoading);
+  }, [isLoading, setShowOverlay]);
+
   if (isLoading) {
-    return (
-      <div className="flex flex-col items-center justify-center py-16">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-        <div className="font-medium mt-4">Loading attribute...</div>
-      </div>
-    );
+    return null;
   }
 
   if (isError) {

@@ -7,6 +7,7 @@
 
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { useRouter } from "@/hooks/use-loading-router";
+import { useLoading } from "../src/providers/loading-provider";
 import {
   useBrands,
   useArchiveBrand,
@@ -169,6 +170,7 @@ const SortableBrandRow: React.FC<SortableBrandRowProps> = ({
 
 export default function BrandsPage() {
   const router = useRouter();
+  const { setShowOverlay } = useLoading();
   const [searchTerm, setSearchTerm] = useState("");
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [viewModalOpen, setViewModalOpen] = useState(false);
@@ -178,6 +180,11 @@ export default function BrandsPage() {
   const { data: brands, isLoading, isError, error, refetch } = useBrands();
   const archiveBrand = useArchiveBrand();
   const reorderBrands = useReorderBrands();
+
+  // Show loading overlay while data is loading
+  useEffect(() => {
+    setShowOverlay(isLoading);
+  }, [isLoading, setShowOverlay]);
 
   const [orderedBrands, setOrderedBrands] = useState<Brand[]>([]);
 
@@ -340,18 +347,13 @@ export default function BrandsPage() {
         </Card>
       )}
 
-      {isLoading ? (
-        <div className="flex flex-col items-center justify-center py-16">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-          <div className="font-medium mt-4">Loading brands...</div>
-        </div>
-      ) : filteredBrands.length === 0 ? (
+      {!isLoading && filteredBrands.length === 0 ? (
         <EmptyState
           icon={<Tags />}
           title="No brands found"
           description="Try adjusting your filters or add new brands"
         />
-      ) : (
+      ) : !isLoading && (
         <DndContext
           sensors={sensors}
           collisionDetection={closestCenter}

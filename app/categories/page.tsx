@@ -5,8 +5,9 @@
  * Main page component for displaying and managing categories
  */
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "@/hooks/use-loading-router";
+import { useLoading } from "../src/providers/loading-provider";
 import {
   useCategories,
   useDeleteCategory,
@@ -25,6 +26,7 @@ import { Category } from "../src/services/categories/types/category.types";
 
 export default function CategoriesPage() {
   const router = useRouter();
+  const { setShowOverlay } = useLoading();
   const [searchTerm, setSearchTerm] = useState("");
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [viewModalOpen, setViewModalOpen] = useState(false);
@@ -34,6 +36,11 @@ export default function CategoriesPage() {
   const { data: categories, isLoading, isError, error, refetch } = useCategories();
   const deleteCategory = useDeleteCategory();
   const reorderCategories = useReorderCategories();
+
+  // Show loading overlay while data is loading
+  useEffect(() => {
+    setShowOverlay(isLoading);
+  }, [isLoading, setShowOverlay]);
 
   // Filter categories based on search
   const filteredCategories = useMemo(() => {
@@ -176,18 +183,13 @@ export default function CategoriesPage() {
       )}
 
       {/* Categories Accordion */}
-      {isLoading ? (
-        <div className="flex flex-col items-center justify-center py-16">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-          <div className="font-medium mt-4">Loading categories...</div>
-        </div>
-      ) : filteredCategories.length === 0 ? (
+      {!isLoading && filteredCategories.length === 0 ? (
         <EmptyState
           icon={<Folder />}
           title="No categories found"
           description="Try adjusting your filters or add new categories"
         />
-      ) : (
+      ) : !isLoading && (
         <Card>
           <CategoryAccordion
             categories={filteredCategories}

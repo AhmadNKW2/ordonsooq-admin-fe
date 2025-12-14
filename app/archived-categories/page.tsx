@@ -5,8 +5,9 @@
  * Page component for displaying and managing archived categories
  */
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "@/hooks/use-loading-router";
+import { useLoading } from "../src/providers/loading-provider";
 import {
   useArchivedCategories,
   useRestoreCategory,
@@ -34,6 +35,7 @@ import { Category, RestoreCategoryDto, PermanentDeleteCategoryDto } from "../src
 
 export default function ArchivedCategoriesPage() {
   const router = useRouter();
+  const { setShowOverlay } = useLoading();
   const [searchTerm, setSearchTerm] = useState("");
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [restoreModalOpen, setRestoreModalOpen] = useState(false);
@@ -44,6 +46,11 @@ export default function ArchivedCategoriesPage() {
   const { data: allCategories } = useCategories();
   const restoreCategory = useRestoreCategory();
   const permanentDeleteCategory = usePermanentDeleteCategory();
+
+  // Show loading overlay while data is loading
+  useEffect(() => {
+    setShowOverlay(isLoading);
+  }, [isLoading, setShowOverlay]);
 
   // Filter categories based on search
   const filteredCategories = useMemo(() => {
@@ -180,18 +187,13 @@ export default function ArchivedCategoriesPage() {
       )}
 
       {/* Categories Table */}
-      {isLoading ? (
-        <div className="flex flex-col items-center justify-center py-16">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-          <div className="font-medium mt-4">Loading archived categories...</div>
-        </div>
-      ) : filteredCategories.length === 0 ? (
+      {!isLoading && filteredCategories.length === 0 ? (
         <EmptyState
           icon={<Archive />}
           title="No archived categories"
           description="Archived categories will appear here"
         />
-      ) : (
+      ) : !isLoading && (
         <Table>
           <TableHeader>
             <TableRow isHeader>

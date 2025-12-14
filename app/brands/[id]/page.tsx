@@ -7,6 +7,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useParams } from "next/navigation";
 import { useRouter } from "@/hooks/use-loading-router";
+import { useLoading } from "../../src/providers/loading-provider";
 import {
   useBrand,
   useUpdateBrand,
@@ -23,6 +24,7 @@ export default function EditBrandPage() {
   const router = useRouter();
   const params = useParams();
   const brandId = Number(params.id);
+  const { setShowOverlay } = useLoading();
 
   const [nameEn, setNameEn] = useState("");
   const [nameAr, setNameAr] = useState("");
@@ -134,13 +136,13 @@ export default function EditBrandPage() {
     }
   };
 
+  // Show loading overlay while data is loading
+  useEffect(() => {
+    setShowOverlay(isLoading);
+  }, [isLoading, setShowOverlay]);
+
   if (isLoading) {
-    return (
-      <div className="flex flex-col items-center justify-center py-16">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-        <div className="font-medium mt-4">Loading brand...</div>
-      </div>
-    );
+    return null;
   }
 
   if (isError) {

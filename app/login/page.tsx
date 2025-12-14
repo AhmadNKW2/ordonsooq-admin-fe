@@ -5,8 +5,9 @@
 
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useAuth } from "../src/contexts/auth.context";
+import { useLoading } from "../src/providers/loading-provider";
 import { Input } from "../src/components/ui/input";
 import { Button } from "../src/components/ui/button";
 import { Card } from "../src/components/ui/card";
@@ -14,10 +15,16 @@ import { AlertCircle } from "lucide-react";
 
 export default function LoginPage() {
   const { login, isLoading } = useAuth();
+  const { setShowOverlay } = useLoading();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Show loading overlay while checking auth
+  useEffect(() => {
+    setShowOverlay(isLoading);
+  }, [isLoading, setShowOverlay]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,14 +48,7 @@ export default function LoginPage() {
   };
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center ">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12"></div>
-          <p className="mt-4 ">Loading...</p>
-        </div>
-      </div>
-    );
+    return null;
   }
 
   return (

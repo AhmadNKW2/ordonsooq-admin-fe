@@ -5,8 +5,9 @@
  * Shared component for displaying and managing users (customers and admins)
  */
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "@/hooks/use-loading-router";
+import { useLoading } from "../../providers/loading-provider";
 import { useCustomers, useDeleteCustomer } from "../../services/customers/hooks/use-customers";
 import { Users, Shield, RefreshCw, AlertCircle, X, Mail, User } from "lucide-react";
 import { Card } from "../ui/card";
@@ -60,6 +61,12 @@ export const UserListPage: React.FC<UserListPageProps> = ({ userType }) => {
 
   const { data, isLoading, isError, error, refetch } = useCustomers(filters);
   const deleteCustomer = useDeleteCustomer();
+
+  // Show loading overlay while data is loading
+  const { setShowOverlay } = useLoading();
+  useEffect(() => {
+    setShowOverlay(isLoading);
+  }, [isLoading, setShowOverlay]);
 
   // Extract users and meta from response
   const users = data?.data ?? [];
@@ -176,18 +183,13 @@ export const UserListPage: React.FC<UserListPageProps> = ({ userType }) => {
       </Card>
 
       {/* Users Table */}
-      {isLoading ? (
-        <div className="flex flex-col items-center justify-center py-16">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-          <div className="font-medium mt-4">Loading {labelPlural.toLowerCase()}...</div>
-        </div>
-      ) : users.length === 0 ? (
+      {!isLoading && users.length === 0 ? (
         <EmptyState
           icon={<Icon />}
           title={`No ${labelPlural.toLowerCase()} found`}
           description={`Try adjusting your filters or add new ${labelPlural.toLowerCase()}`}
         />
-      ) : (
+      ) : !isLoading && (
         <>
           <Table>
             <TableHeader>

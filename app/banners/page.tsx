@@ -6,22 +6,22 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "@/hooks/use-loading-router";
+import { useLoading } from "../src/providers/loading-provider";
 import {
     useBanners,
     useDeleteBanner,
     useReorderBanners,
 } from "../src/services/banners/hooks/use-banners";
-import { ImageIcon, GripVertical, X, Search } from "lucide-react";
-import { Card } from "../src/components/ui/card";
+import { ImageIcon, GripVertical } from "lucide-react";
 import { PageHeader } from "../src/components/common/PageHeader";
 import { EmptyState } from "../src/components/common/EmptyState";
 import { Badge } from "../src/components/ui/badge";
 import { IconButton } from "../src/components/ui/icon-button";
 import { Input } from "../src/components/ui/input";
-import { Button } from "../src/components/ui/button";
 import { Pagination } from "../src/components/ui/pagination";
 import { PAGINATION } from "../src/lib/constants";
-import { Select } from "../src/components/ui/select";
+import { RadioCard } from "../src/components/ui/radio-card";
+import { FiltersCard } from "../src/components/common/FiltersCard";
 import {
     Table,
     TableBody,
@@ -125,6 +125,17 @@ const SortableRow: React.FC<{
                     {banner.visible ? "Visible" : "Hidden"}
                 </Badge>
             </TableCell>
+            <TableCell>
+                <div className="flex items-center gap-2">
+                    <Image
+                        src={banner.language === "ar" ? "/ar.svg" : "/en.svg"}
+                        alt={banner.language === "ar" ? "Arabic" : "English"}
+                        width={35}
+                        height={35}
+                        className="shrink-0"
+                    />
+                </div>
+            </TableCell>
             <TableCell className="text-right">
                 <div className="flex justify-end gap-2">
                     <IconButton
@@ -145,6 +156,7 @@ const SortableRow: React.FC<{
 
 export default function BannerListPage() {
     const router = useRouter();
+    const { setShowOverlay } = useLoading();
     const [deleteModalOpen, setDeleteModalOpen] = useState(false);
     const [bannerToDelete, setBannerToDelete] = useState<Banner | null>(null);
     const [items, setItems] = useState<Banner[]>([]);
@@ -168,12 +180,9 @@ export default function BannerListPage() {
     // Update items when data changes
     useEffect(() => {
         if (data?.data) {
-            const nextItems = languageFilter
-                ? data.data.filter((b) => (b as any).language === languageFilter)
-                : data.data;
-            setItems(nextItems);
+            setItems(data.data);
         }
-    }, [data, languageFilter]);
+    }, [data]);
 
     const handleSearchChange = (value: string) => {
         setSearchTerm(value);
@@ -186,17 +195,7 @@ export default function BannerListPage() {
         return () => clearTimeout(debounce);
     };
 
-    const handleClearFilters = () => {
-        setSearchTerm("");
-        setLanguageFilter("");
-        setQueryParams({
-            page: PAGINATION.defaultPage,
-            limit: PAGINATION.defaultPageSize,
-            search: "",
-        });
-    };
-
-    const handleLanguageChange = (value: string | string[]) => {
+    const handleLanguageChange = (value: string) => {
         const lang = (value || "") as "" | "en" | "ar";
         setLanguageFilter(lang);
         setQueryParams((prev) => {
@@ -264,9 +263,14 @@ export default function BannerListPage() {
         }
     };
 
-    if (isLoading) {
-        return <div>Loading...</div>;
-    }
+    // Show loading overlay while data is loading
+    useEffect(() => {
+        if (isLoading) {
+            setShowOverlay(true);
+        } else {
+            setShowOverlay(false);
+        }
+    }, [isLoading, setShowOverlay]);
 
     return (
         <div className="flex flex-col justify-center items-center gap-5 p-5">
@@ -282,10 +286,9 @@ export default function BannerListPage() {
 
             {/* Filters */}
             {(items.length > 0 || hasActiveFilters) && (
-                <Card>
-                    <h2 className="text-lg font-semibold mb-4">Filters</h2>
+                <FiltersCard>
                     <div className="flex items-center gap-5">
-                        <div className="relative flex-1 max-w-sm">
+                        <div className="relative flex-1">
                             <Input
                                 value={searchTerm}
                                 onChange={(e) => handleSearchChange(e.target.value)}
@@ -294,32 +297,38 @@ export default function BannerListPage() {
                             />
                         </div>
 
-                        <div className="w-full max-w-[220px]">
-                            <Select
-                                label="Language"
-                                value={languageFilter}
-                                onChange={handleLanguageChange}
-                                search={false}
-                                options={[
-                                    { value: "", label: "All" },
-                                    { value: "en", label: "English" },
-                                    { value: "ar", label: "Arabic" },
-                                ]}
-                            />
+                        <div className="w-full max-w-130">
+                            <div className="space-y-2">
+                                <div className="grid grid-cols-2 gap-5">
+                                    <RadioCard
+                                        name="banner-language-filter"
+                                        value="en"
+                                        checked={languageFilter === "en"}
+                                        onChange={() => handleLanguageChange("en")}
+                                        label={
+                                            <span className="inline-flex items-center gap-2">
+                                                <Image src="/en.svg" alt="" aria-hidden width={18} height={18} />
+                                                <span>English</span>
+                                            </span>
+                                        }
+                                    />
+                                    <RadioCard
+                                        name="banner-language-filter"
+                                        value="ar"
+                                        checked={languageFilter === "ar"}
+                                        onChange={() => handleLanguageChange("ar")}
+                                        label={
+                                            <span className="inline-flex items-center gap-2">
+                                                <Image src="/ar.svg" alt="" aria-hidden width={18} height={18} />
+                                                <span>Arabic</span>
+                                            </span>
+                                        }
+                                    />
+                                </div>
+                            </div>
                         </div>
-
-                        {hasActiveFilters && (
-                            <Button
-                                variant="outline"
-                                onClick={handleClearFilters}
-                                className="h-9"
-                            >
-                                <X className="mr-2 h-4 w-4" />
-                                Clear filters
-                            </Button>
-                        )}
                     </div>
-                </Card>
+                </FiltersCard>
             )}
 
             {items.length === 0 && !hasActiveFilters ? (
@@ -346,6 +355,7 @@ export default function BannerListPage() {
                                     <TableHead className="w-12">&nbsp;</TableHead>
                                     <TableHead>Image</TableHead>
                                     <TableHead>Visibility</TableHead>
+                                    <TableHead>Language</TableHead>
                                     <TableHead className="text-right">Actions</TableHead>
                                 </TableRow>
                             </TableHeader>
