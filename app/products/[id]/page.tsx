@@ -22,17 +22,24 @@ import { Card } from "../../src/components/ui/card";
 import { AlertCircle, RefreshCw } from "lucide-react";
 import { Button } from "../../src/components/ui/button";
 import { Attribute, AttributeValue } from "../../src/services/attributes/types/attribute.types";
+import { finishToastError, finishToastSuccess, showLoadingToast, updateLoadingToast } from "../../src/lib/toast";
 
 export default function EditProductPage() {
   const router = useRouter();
   const params = useParams();
-  const product_id = parseInt(params.id as string);
+  const product_id = Number(params?.id);
+  const isValidProductId = Number.isFinite(product_id);
 
-  const { data: productData, isLoading: productLoading, isError: productError, error: productErrorData, refetch: refetchProduct } = useProduct(product_id);
+  if (!isValidProductId) {
+    return null;
+  }
+
+  const { data: productData, isLoading: productLoading, isError: productError, error: productErrorData, refetch: refetchProduct } = useProduct(product_id, { enabled: isValidProductId });
   const { data: categoriesData, isLoading: categoriesLoading } = useCategories();
   const { data: vendorsData, isLoading: vendorsLoading } = useVendors();
   const { data: brandsData, isLoading: brandsLoading } = useBrands();
   const { data: attributesData, isLoading: attributesLoading } = useAttributes();
+
 
   // Transform backend data to frontend format
   const categories = categoriesData?.map(cat => ({
@@ -397,7 +404,7 @@ export default function EditProductPage() {
       shortDescriptionAr: product.short_description_ar || "",
     longDescriptionEn: product.long_description_en || "",
     longDescriptionAr: product.long_description_ar || "",
-    isActive: product.is_active,
+    visible: product.visible ?? product.is_active,
     
     // Attributes (for variant products)
     attributes: (product.attributes && product.attributes.length > 0) ? transformProductAttributes() : undefined,
@@ -422,13 +429,14 @@ export default function EditProductPage() {
   }, [product, attributesData]);
 
   const handleSubmit = async (data: ProductFormData) => {
+    const toastId = showLoadingToast("Updating product...");
     console.log('=== DEBUG: Edit Product handleSubmit called ===');
     console.log('ProductFormData received:', data);
     console.log('data.nameEn:', data.nameEn);
     console.log('data.nameAr:', data.nameAr);
     console.log('data.categoryIds:', data.categoryIds);
     console.log('data.vendorId:', data.vendorId);
-    console.log('data.isActive:', data.isActive);
+    console.log('data.visible:', data.visible);
     console.log('data.attributes:', data.attributes);
     console.log('data.singlePricing:', data.singlePricing);
     console.log('data.variantPricing:', data.variantPricing);
@@ -441,6 +449,27 @@ export default function EditProductPage() {
     console.log('data.variants:', data.variants);
     
     try {
+      const totalUploads =
+        (data.singleMedia?.filter(m => !!m.file).length ?? 0) +
+        (data.variantMedia?.reduce((sum, group) => {
+          return sum + (group.media?.filter(m => !!m.file).length ?? 0);
+        }, 0) ?? 0);
+
+      let completedUploads = 0;
+
+      if (totalUploads > 0) {
+        updateLoadingToast(toastId, {
+          title: "Uploading media",
+          subtitle: `0/${totalUploads} files`,
+          progress: 0,
+        });
+      } else {
+        updateLoadingToast(toastId, {
+          title: "Updating product",
+          subtitle: "Preparing request",
+          progress: 0,
+        });
+      }
       // ========== DETECT ATTRIBUTE CHANGES ==========
       // Get original attribute IDs and their controlling flags
       const originalAttrIds = new Set(
@@ -490,7 +519,8 @@ export default function EditProductPage() {
         long_description_ar: data.longDescriptionAr || '',
         category_ids: (data.categoryIds || []).map(id => parseInt(id)),
         vendor_id: data.vendorId ? parseInt(data.vendorId) : undefined,
-        is_active: data.isActive,
+        brand_id: data.brandId ? parseInt(data.brandId) : undefined,
+        visible: data.visible,
       };
 
 
@@ -667,7 +697,18 @@ export default function EditProductPage() {
         for (const media of data.singleMedia) {
           if (media.file) {
             // New file - upload first
+            updateLoadingToast(toastId, {
+              title: "Uploading media",
+              subtitle: `${completedUploads + 1}/${totalUploads} files`,
+              progress: totalUploads > 0 ? completedUploads / totalUploads : 0,
+            });
             const uploadResult = await mediaService.uploadMedia(media.file);
+            completedUploads += 1;
+            updateLoadingToast(toastId, {
+              title: "Uploading media",
+              subtitle: `${completedUploads}/${totalUploads} files`,
+              progress: totalUploads > 0 ? completedUploads / totalUploads : 0,
+            });
             mediaArray.push({
               media_id: uploadResult.data.id,
               is_primary: media.isPrimary,
@@ -700,7 +741,18 @@ export default function EditProductPage() {
           for (const media of variantMediaData.media) {
             if (media.file) {
               // New file - upload first
+              updateLoadingToast(toastId, {
+                title: "Uploading media",
+                subtitle: `${completedUploads + 1}/${totalUploads} files`,
+                progress: totalUploads > 0 ? completedUploads / totalUploads : 0,
+              });
               const uploadResult = await mediaService.uploadMedia(media.file);
+              completedUploads += 1;
+              updateLoadingToast(toastId, {
+                title: "Uploading media",
+                subtitle: `${completedUploads}/${totalUploads} files`,
+                progress: totalUploads > 0 ? completedUploads / totalUploads : 0,
+              });
               mediaArray.push({
                 media_id: uploadResult.data.id,
                 is_primary: media.isPrimary,
@@ -744,10 +796,17 @@ export default function EditProductPage() {
       console.log('product_id:', product_id);
       
       // Update product with PUT request (full update including media)
+      updateLoadingToast(toastId, {
+        title: "Updating product",
+        subtitle: "Sending request",
+        progress: 0.9,
+      });
       const updateResult = await productService.updateProduct(product_id, productPayload);
       
       console.log('=== DEBUG: Update Result ===');
       console.log('updateResult:', updateResult);
+
+      finishToastSuccess(toastId, "Product updated successfully");
       
     } catch (error: any) {
       console.error("=== DEBUG: Error updating product ===");
@@ -755,6 +814,8 @@ export default function EditProductPage() {
       console.error("Error message:", error?.message);
       console.error("Error response:", error?.response);
       console.error("Error data:", error?.response?.data);
+
+      finishToastError(toastId, error?.message || "Failed to update product");
     }
   };
 
@@ -765,17 +826,6 @@ export default function EditProductPage() {
       console.error("Error saving draft:", error);
     }
   };
-
-  if (productLoading || categoriesLoading || vendorsLoading || attributesLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b border-primary mx-auto"></div>
-          <p className="mt-4 ">Loading product data...</p>
-        </div>
-      </div>
-    );
-  }
 
   if (productError) {
     return (
@@ -808,7 +858,7 @@ export default function EditProductPage() {
     );
   }
 
-  if (!initialData) {
+  if (!productLoading && !productError && !initialData) {
     return (
       <div className="min-h-screen bg-bw2 p-8">
         <div className="mx-auto">

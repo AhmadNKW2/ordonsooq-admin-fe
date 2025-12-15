@@ -242,14 +242,14 @@ export function useToggleProductStatus(
   options?: UseMutationOptions<
     ApiResponse<Product>,
     ApiError,
-    { id: string | number; isActive: boolean }
+    { id: string | number; visible: boolean }
   >
 ) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, isActive }) =>
-      productService.toggleProductStatus(id, isActive),
+    mutationFn: ({ id, visible }) =>
+      productService.toggleProductStatus(id, visible),
     onSuccess: (response, variables, ...rest) => {
       // Invalidate specific product and list
       queryClient.invalidateQueries({

@@ -47,11 +47,12 @@ export function transformFormDataToDto(
     long_description_en: data.longDescriptionEn || '',
     long_description_ar: data.longDescriptionAr || '',
     category_ids: (data.categoryIds || []).map(id => parseInt(id)), // Changed to category_ids array
-    is_active: data.isActive,
+    visible: data.visible,
   };
 
   // Optional fields
   if (data.vendorId) dto.vendor_id = parseInt(data.vendorId);
+  if (data.brandId) dto.brand_id = parseInt(data.brandId);
 
   // Attributes
   if (data.attributes && data.attributes.length > 0) {
@@ -73,7 +74,8 @@ export function transformFormDataToDto(
       dto.prices = [{
         cost: data.singlePricing.cost,
         price: data.singlePricing.price,
-        sale_price: data.singlePricing.isSale ? data.singlePricing.salePrice : undefined,
+        // UI/validation treat `isSale` as true by default, so include sale price unless explicitly disabled
+        sale_price: data.singlePricing.isSale !== false ? data.singlePricing.salePrice : undefined,
       }];
     }
   } else {
@@ -202,7 +204,8 @@ function buildPrices(data: ProductFormData): PriceItem[] {
         combination,
         cost: pricing.cost,
         price: pricing.price,
-        sale_price: pricing.isSale ? pricing.salePrice : undefined,
+        // `isSale` defaults to true in the form, so only omit when explicitly false
+        sale_price: pricing.isSale !== false ? pricing.salePrice : undefined,
       });
     }
   }

@@ -354,7 +354,7 @@ export interface CreateProductDto {
   category_ids: number[]; // Changed from category_id to category_ids array
   vendor_id?: number;
   brand_id?: number;
-  is_active?: boolean;
+  visible?: boolean;
 
   // Attributes (for variant products)
   attributes?: ProductAttributeInput[];
@@ -461,7 +461,7 @@ export interface UpdateProductDto {
   category_ids?: number[]; // Changed from category_id to category_ids array
   vendor_id?: number;
   brand_id?: number;
-  is_active?: boolean;
+  visible?: boolean;
 
   // Attributes (for variant products)
   attributes?: ProductAttributeInput[];

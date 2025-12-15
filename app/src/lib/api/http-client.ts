@@ -6,7 +6,13 @@
 
 import { API_CONFIG } from "../constants";
 import { ApiError, ApiResponse } from "../../types/common.types";
-import { showErrorToast } from "../toast";
+import {
+  dismissToast,
+  finishToastError,
+  showErrorToast,
+  showLoadingToast,
+  updateLoadingToast,
+} from "../toast";
 import { sessionManager } from "../session/session-manager";
 import { invalidateAllQueries } from "../query-client";
 
@@ -30,6 +36,123 @@ class HttpClient {
   private isRedirecting: boolean = false;
 
   private static readonly AUTH_REFRESH_ENDPOINT = "/auth/refresh";
+
+  private static readonly REQUEST_TOAST_HEADER = "x-request-toast";
+  private static readonly SKIP_REQUEST_TOAST_HEADER = "x-skip-request-toast";
+
+  private emitApiLoading(delta: 1 | -1) {
+    if (typeof window === "undefined") return;
+    window.dispatchEvent(
+      new CustomEvent("os:api-loading", {
+        detail: { delta },
+      })
+    );
+  }
+
+  private shouldShowRequestToast(endpoint: string, options?: RequestInit): boolean {
+    // Avoid double-toasting for flows that already show richer multi-step progress
+    // (e.g. products create/edit aggregates uploads + final request).
+    if (endpoint.includes("/media/upload")) return false;
+    // Refresh requests should stay silent.
+    if (endpoint === HttpClient.AUTH_REFRESH_ENDPOINT) return false;
+    if (this.isSkipRequestToast(options)) return false;
+    return true;
+  }
+
+  private getRequestToastTitle(method: string): string {
+    switch (method.toUpperCase()) {
+      case "POST":
+        return "Saving";
+      case "PUT":
+      case "PATCH":
+        return "Updating";
+      case "DELETE":
+        return "Deleting";
+      default:
+        return "Processing";
+    }
+  }
+
+  private startRequestProgressToast(method: string, endpoint: string) {
+    if (typeof window === "undefined") {
+      return null;
+    }
+
+    const title = this.getRequestToastTitle(method);
+    const toastId = showLoadingToast("");
+
+    let progress = 0;
+    updateLoadingToast(toastId, {
+      title,
+      subtitle: endpoint,
+      progress,
+    });
+
+    const intervalId = window.setInterval(() => {
+      // Simulated progress: climb quickly at first, then slow down and cap at 90%
+      const increment = progress < 0.5 ? 0.06 : progress < 0.8 ? 0.03 : 0.015;
+      progress = Math.min(0.9, progress + increment);
+      updateLoadingToast(toastId, { title, subtitle: endpoint, progress });
+    }, 250);
+
+    const stop = () => {
+      window.clearInterval(intervalId);
+    };
+
+    const succeed = () => {
+      stop();
+      updateLoadingToast(toastId, { title, subtitle: endpoint, progress: 1 });
+      // Allow a single paint at 100%, then dismiss quickly to feel snappy.
+      window.setTimeout(() => dismissToast(toastId), 180);
+    };
+
+    const fail = (message: string) => {
+      stop();
+      finishToastError(toastId, message);
+    };
+
+    return { toastId, succeed, fail };
+  }
+
+  private hasRequestToastHeader(options?: RequestInit): boolean {
+    if (!options?.headers) return false;
+    try {
+      const headers = new Headers(options.headers);
+      return headers.get(HttpClient.REQUEST_TOAST_HEADER) === "1";
+    } catch {
+      return false;
+    }
+  }
+
+  private isSkipRequestToast(options?: RequestInit): boolean {
+    if (!options?.headers) return false;
+    try {
+      const headers = new Headers(options.headers);
+      return headers.get(HttpClient.SKIP_REQUEST_TOAST_HEADER) === "1";
+    } catch {
+      return false;
+    }
+  }
+
+  private stripInternalHeaders(options: RequestInit): RequestInit {
+    if (!options.headers) return options;
+    try {
+      const headers = new Headers(options.headers);
+      headers.delete(HttpClient.REQUEST_TOAST_HEADER);
+      headers.delete(HttpClient.SKIP_REQUEST_TOAST_HEADER);
+      return { ...options, headers };
+    } catch {
+      return options;
+    }
+  }
+
+  private shouldInvalidateAllQueries(endpoint: string): boolean {
+    // Blanket invalidation is expensive and can cause unrelated list queries
+    // (categories/vendors/brands/attributes) to refetch after file uploads.
+    // Media uploads are handled separately and shouldn't force global refetch.
+    if (endpoint.includes("/media/upload")) return false;
+    return true;
+  }
 
   private constructor() {
     this.baseURL = API_CONFIG.baseUrl;
@@ -257,7 +380,9 @@ class HttpClient {
     }
 
     // Show error toast notification (except for auth errors which redirect)
-    if (response.status !== 401) {
+    // If a request-level progress toast is active, it will be updated to error instead.
+    const suppressErrorToast = this.hasRequestToastHeader(originalRequest?.options);
+    if (response.status !== 401 && !suppressErrorToast) {
       showErrorToast(errorMessage);
     }
 
@@ -285,37 +410,46 @@ class HttpClient {
     // Apply request interceptors
     config = await this.applyRequestInterceptors(config);
 
+    // Global API loading overlay
+    this.emitApiLoading(1);
     try {
-      let response = await fetch(url, config);
+      try {
+        const fetchConfig = this.stripInternalHeaders(config);
+        let response = await fetch(url, fetchConfig);
 
-      // Apply response interceptors
-      response = await this.applyResponseInterceptors(response);
+        // Apply response interceptors
+        response = await this.applyResponseInterceptors(response);
 
-      if (!response.ok) {
-        await this.handleError(response, { endpoint, options: config });
-      }
+        if (!response.ok) {
+          await this.handleError(response, { endpoint, options: config });
+        }
 
-      const data = await response.json();
-      return data;
-    } catch (error) {
-      // Check if this is a retry response (successful after token refresh)
-      if ((error as any)?.__retryResponse) {
-        const retryResponse = (error as any).__retryResponse as Response;
-        const data = await retryResponse.json();
+        const data = await response.json();
         return data;
-      }
-      
-      if ((error as ApiError).statusCode) {
-        throw error;
-      }
+      } catch (error) {
+        // Check if this is a retry response (successful after token refresh)
+        if ((error as any)?.__retryResponse) {
+          const retryResponse = (error as any).__retryResponse as Response;
+          const data = await retryResponse.json();
+          return data;
+        }
 
-      // Network error or other fetch error
-      const networkError = "Network error. Please check your connection.";
-      showErrorToast(networkError);
-      throw {
-        message: networkError,
-        statusCode: 0,
-      } as ApiError;
+        if ((error as ApiError).statusCode) {
+          throw error;
+        }
+
+        // Network error or other fetch error
+        const networkError = "Network error. Please check your connection.";
+        if (!this.hasRequestToastHeader(config)) {
+          showErrorToast(networkError);
+        }
+        throw {
+          message: networkError,
+          statusCode: 0,
+        } as ApiError;
+      }
+    } finally {
+      this.emitApiLoading(-1);
     }
   }
 
@@ -341,56 +475,121 @@ class HttpClient {
    * POST request
    * Invalidates all queries on success to ensure fresh data
    */
-  public async post<T>(endpoint: string, data?: any): Promise<T> {
-    const result = await this.request<T>(endpoint, {
-      method: "POST",
-      body: JSON.stringify(data),
-    });
-    // Invalidate all queries after successful mutation
-    invalidateAllQueries();
-    return result;
+  public async post<T>(endpoint: string, data?: any, options: RequestInit = {}): Promise<T> {
+    const requestToast = this.shouldShowRequestToast(endpoint, options)
+      ? this.startRequestProgressToast("POST", endpoint)
+      : null;
+
+    try {
+      const result = await this.request<T>(endpoint, {
+        ...options,
+        method: "POST",
+        headers: {
+          ...(options.headers as any),
+          [HttpClient.REQUEST_TOAST_HEADER]: requestToast ? "1" : "0",
+        },
+        body: JSON.stringify(data),
+      });
+      // Invalidate all queries after successful mutation
+      if (this.shouldInvalidateAllQueries(endpoint)) {
+        invalidateAllQueries();
+      }
+      requestToast?.succeed();
+      return result;
+    } catch (error: any) {
+      requestToast?.fail(error?.message || "Request failed");
+      throw error;
+    }
   }
 
   /**
    * PUT request
    * Invalidates all queries on success to ensure fresh data
    */
-  public async put<T>(endpoint: string, data?: any): Promise<T> {
-    const result = await this.request<T>(endpoint, {
-      method: "PUT",
-      body: JSON.stringify(data),
-    });
-    // Invalidate all queries after successful mutation
-    invalidateAllQueries();
-    return result;
+  public async put<T>(endpoint: string, data?: any, options: RequestInit = {}): Promise<T> {
+    const requestToast = this.shouldShowRequestToast(endpoint, options)
+      ? this.startRequestProgressToast("PUT", endpoint)
+      : null;
+
+    try {
+      const result = await this.request<T>(endpoint, {
+        ...options,
+        method: "PUT",
+        headers: {
+          ...(options.headers as any),
+          [HttpClient.REQUEST_TOAST_HEADER]: requestToast ? "1" : "0",
+        },
+        body: JSON.stringify(data),
+      });
+      if (this.shouldInvalidateAllQueries(endpoint)) {
+        invalidateAllQueries();
+      }
+      requestToast?.succeed();
+      return result;
+    } catch (error: any) {
+      requestToast?.fail(error?.message || "Request failed");
+      throw error;
+    }
   }
 
   /**
    * PATCH request
    * Invalidates all queries on success to ensure fresh data
    */
-  public async patch<T>(endpoint: string, data?: any): Promise<T> {
-    const result = await this.request<T>(endpoint, {
-      method: "PATCH",
-      body: JSON.stringify(data),
-    });
-    // Invalidate all queries after successful mutation
-    invalidateAllQueries();
-    return result;
+  public async patch<T>(endpoint: string, data?: any, options: RequestInit = {}): Promise<T> {
+    const requestToast = this.shouldShowRequestToast(endpoint, options)
+      ? this.startRequestProgressToast("PATCH", endpoint)
+      : null;
+
+    try {
+      const result = await this.request<T>(endpoint, {
+        ...options,
+        method: "PATCH",
+        headers: {
+          ...(options.headers as any),
+          [HttpClient.REQUEST_TOAST_HEADER]: requestToast ? "1" : "0",
+        },
+        body: JSON.stringify(data),
+      });
+      if (this.shouldInvalidateAllQueries(endpoint)) {
+        invalidateAllQueries();
+      }
+      requestToast?.succeed();
+      return result;
+    } catch (error: any) {
+      requestToast?.fail(error?.message || "Request failed");
+      throw error;
+    }
   }
 
   /**
    * DELETE request
    * Invalidates all queries on success to ensure fresh data
    */
-  public async delete<T>(endpoint: string, data?: any): Promise<T> {
-    const result = await this.request<T>(endpoint, {
-      method: "DELETE",
-      ...(data && { body: JSON.stringify(data) }),
-    });
-    // Invalidate all queries after successful mutation
-    invalidateAllQueries();
-    return result;
+  public async delete<T>(endpoint: string, data?: any, options: RequestInit = {}): Promise<T> {
+    const requestToast = this.shouldShowRequestToast(endpoint, options)
+      ? this.startRequestProgressToast("DELETE", endpoint)
+      : null;
+
+    try {
+      const result = await this.request<T>(endpoint, {
+        ...options,
+        method: "DELETE",
+        headers: {
+          ...(options.headers as any),
+          [HttpClient.REQUEST_TOAST_HEADER]: requestToast ? "1" : "0",
+        },
+        ...(data && { body: JSON.stringify(data) }),
+      });
+      if (this.shouldInvalidateAllQueries(endpoint)) {
+        invalidateAllQueries();
+      }
+      requestToast?.succeed();
+      return result;
+    } catch (error: any) {
+      requestToast?.fail(error?.message || "Request failed");
+      throw error;
+    }
   }
 
   /**
@@ -400,6 +599,10 @@ class HttpClient {
   public postFormData<T>(endpoint: string, formData: FormData): Promise<T> {
     const url = `${this.baseURL}${endpoint}`;
 
+    const requestToast = this.shouldShowRequestToast(endpoint)
+      ? this.startRequestProgressToast("POST", endpoint)
+      : null;
+
     // Don't set Content-Type for FormData - browser will set it with boundary
     const headers: HeadersInit = {};
     const authHeader = (this.defaultHeaders as any).Authorization;
@@ -407,11 +610,16 @@ class HttpClient {
       headers['Authorization'] = authHeader;
     }
 
+    if (requestToast) {
+      (headers as any)[HttpClient.REQUEST_TOAST_HEADER] = "1";
+    }
+
     return (async () => {
+      this.emitApiLoading(1);
       try {
         const response = await fetch(url, {
           method: "POST",
-          headers,
+          headers: this.stripInternalHeaders({ headers }).headers as Headers,
           body: formData,
           credentials: 'include', // Include cookies for auth
         });
@@ -424,7 +632,10 @@ class HttpClient {
         }
 
         const result = (await response.json()) as T;
-        invalidateAllQueries();
+        if (this.shouldInvalidateAllQueries(endpoint)) {
+          invalidateAllQueries();
+        }
+        requestToast?.succeed();
         return result;
       } catch (error) {
         // If a 401 refresh+retry succeeded, handleError throws { __retryResponse }.
@@ -433,11 +644,17 @@ class HttpClient {
         if ((error as any)?.__retryResponse) {
           const retryResponse = (error as any).__retryResponse as Response;
           const result = (await retryResponse.json()) as T;
-          invalidateAllQueries();
+          if (this.shouldInvalidateAllQueries(endpoint)) {
+            invalidateAllQueries();
+          }
+          requestToast?.succeed();
           return result;
         }
 
+        requestToast?.fail((error as any)?.message || "Request failed");
         throw error;
+      } finally {
+        this.emitApiLoading(-1);
       }
     })();
   }
@@ -449,6 +666,10 @@ class HttpClient {
   public patchFormData<T>(endpoint: string, formData: FormData): Promise<T> {
     const url = `${this.baseURL}${endpoint}`;
 
+    const requestToast = this.shouldShowRequestToast(endpoint)
+      ? this.startRequestProgressToast("PATCH", endpoint)
+      : null;
+
     // Don't set Content-Type for FormData - browser will set it with boundary
     const headers: HeadersInit = {};
     const authHeader = (this.defaultHeaders as any).Authorization;
@@ -456,11 +677,16 @@ class HttpClient {
       headers['Authorization'] = authHeader;
     }
 
+    if (requestToast) {
+      (headers as any)[HttpClient.REQUEST_TOAST_HEADER] = "1";
+    }
+
     return (async () => {
+      this.emitApiLoading(1);
       try {
         const response = await fetch(url, {
           method: "PATCH",
-          headers,
+          headers: this.stripInternalHeaders({ headers }).headers as Headers,
           body: formData,
           credentials: 'include', // Include cookies for auth
         });
@@ -473,17 +699,26 @@ class HttpClient {
         }
 
         const result = (await response.json()) as T;
-        invalidateAllQueries();
+        if (this.shouldInvalidateAllQueries(endpoint)) {
+          invalidateAllQueries();
+        }
+        requestToast?.succeed();
         return result;
       } catch (error) {
         if ((error as any)?.__retryResponse) {
           const retryResponse = (error as any).__retryResponse as Response;
           const result = (await retryResponse.json()) as T;
-          invalidateAllQueries();
+          if (this.shouldInvalidateAllQueries(endpoint)) {
+            invalidateAllQueries();
+          }
+          requestToast?.succeed();
           return result;
         }
 
+        requestToast?.fail((error as any)?.message || "Request failed");
         throw error;
+      } finally {
+        this.emitApiLoading(-1);
       }
     })();
   }

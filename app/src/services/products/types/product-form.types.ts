@@ -92,7 +92,7 @@ export const productFormSchema = z.object({
   shortDescriptionAr: z.string().optional(),
   longDescriptionEn: z.string().optional(),
   longDescriptionAr: z.string().optional(),
-  isActive: z.boolean().default(true),
+  visible: z.boolean().default(true),
 
   // Attributes
   attributes: z.array(

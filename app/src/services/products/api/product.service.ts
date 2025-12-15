@@ -157,7 +157,8 @@ class ProductService extends BaseService<Product> {
   ): Promise<ApiResponse<{ product: Product }>> {
     return httpClient.post<ApiResponse<{ product: Product }>>(
       `${this.endpoint}`,
-      data
+      data,
+      { headers: { "x-skip-request-toast": "1" } }
     );
   }
 
@@ -180,7 +181,9 @@ class ProductService extends BaseService<Product> {
     id: string | number,
     data: UpdateProductDto
   ): Promise<ApiResponse<Product>> {
-    return this.update(id, data);
+    return httpClient.put<ApiResponse<Product>>(`${this.endpoint}/${id}`, data, {
+      headers: { "x-skip-request-toast": "1" },
+    });
   }
 
   /**
@@ -224,9 +227,9 @@ class ProductService extends BaseService<Product> {
    */
   async toggleProductStatus(
     id: string | number,
-    is_active: boolean
+    visible: boolean
   ): Promise<ApiResponse<Product>> {
-    return this.patch(id, { is_active });
+    return this.patch(id, { visible });
   }
 
   // ============================================

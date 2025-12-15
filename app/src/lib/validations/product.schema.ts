@@ -40,7 +40,7 @@ export const basicInformationSchema = z.object({
     .string()
     .min(1, "Required")
     .regex(ARABIC_PATTERN, "Must be in Arabic"),
-  isActive: z.boolean().default(true),
+  visible: z.boolean().default(true),
 });
 
 // ============================================
@@ -152,7 +152,7 @@ export const createProductSchema = (config: ProductFormConfig) => {
     shortDescriptionAr: z.string().min(1, "Required"),
     longDescriptionEn: z.string().min(1, "Required"),
     longDescriptionAr: z.string().min(1, "Required"),
-    isActive: z.boolean().default(true),
+    visible: z.boolean().default(true),
 
     // Attributes - optional
     attributes: z.array(productAttributeSchema).optional(),

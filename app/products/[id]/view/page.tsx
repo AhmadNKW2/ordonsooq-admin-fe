@@ -65,17 +65,6 @@ export default function ViewProductPage() {
     });
   };
 
-  if (productLoading || categoriesLoading || vendorsLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b border-primary mx-auto"></div>
-          <p className="mt-4 ">Loading product...</p>
-        </div>
-      </div>
-    );
-  }
-
   if (productError) {
     return (
       <div className="min-h-screen bg-bw2 p-8">

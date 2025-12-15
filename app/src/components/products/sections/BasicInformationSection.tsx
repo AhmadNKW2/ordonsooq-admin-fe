@@ -17,7 +17,7 @@ interface BasicInformationSectionProps {
         shortDescriptionAr?: string;
         longDescriptionEn?: string;
         longDescriptionAr?: string;
-        isActive?: boolean;
+        visible?: boolean;
     };
     errors: Record<string, string | boolean>;
     categories: Array<{ id: string; name: string; nameEn?: string; nameAr?: string }>;
@@ -171,7 +171,7 @@ export const BasicInformationSection: React.FC<BasicInformationSectionProps> = (
                 {/* Visibility Status */}
                 <div className="flex items-center justify-between bg-gray-50 rounded-lg p-3">
                     <p className="font-medium">Visibility Status</p>
-                    <Toggle checked={formData.isActive ?? true} onChange={(checked) => onChange("isActive", checked)} />
+                    <Toggle checked={formData.visible ?? true} onChange={(checked) => onChange("visible", checked)} />
                 </div>
             </div>
         </Card>

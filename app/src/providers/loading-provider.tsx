@@ -160,6 +160,9 @@ const LoadingProviderInner: React.FC<{ children: ReactNode }> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [showOverlay, setShowOverlay] = useState(false);
   const pathname = usePathname();
+  const apiPendingCountRef = useRef(0);
+  const navigationPendingRef = useRef(false);
+  const overlayActiveRef = useRef(false);
   const overlayStartedAtRef = useRef<number | null>(null);
   const overlayHideTimerRef = useRef<number | null>(null);
   const OVERLAY_MIN_VISIBLE_MS = 250;
@@ -187,28 +190,66 @@ const LoadingProviderInner: React.FC<{ children: ReactNode }> = ({
     }
   }, [clearOverlayHideTimer]);
 
-  // Start loading indicator
-  const startLoading = useCallback(() => {
+  const beginOverlay = useCallback(() => {
     clearOverlayHideTimer();
     overlayStartedAtRef.current = Date.now();
     setIsLoading(true);
     setShowOverlay(true);
     NProgress.start();
+    overlayActiveRef.current = true;
   }, [clearOverlayHideTimer]);
+
+  const endOverlayIfIdle = useCallback(() => {
+    if (navigationPendingRef.current || apiPendingCountRef.current > 0) {
+      return;
+    }
+    setIsLoading(false);
+    NProgress.done();
+    hideOverlayWithMinDuration();
+    overlayActiveRef.current = false;
+  }, [hideOverlayWithMinDuration]);
+
+  // Start loading indicator (navigation/manual)
+  const startLoading = useCallback(() => {
+    navigationPendingRef.current = true;
+    if (overlayActiveRef.current) return;
+    beginOverlay();
+  }, [beginOverlay]);
 
   // Stop loading indicator
   const stopLoading = useCallback(() => {
-    setIsLoading(false);
-    NProgress.done();
-    hideOverlayWithMinDuration();
-  }, [hideOverlayWithMinDuration]);
+    navigationPendingRef.current = false;
+    endOverlayIfIdle();
+  }, [endOverlayIfIdle]);
+
+  const startApiLoading = useCallback(() => {
+    apiPendingCountRef.current += 1;
+    if (overlayActiveRef.current) return;
+    beginOverlay();
+  }, [beginOverlay]);
+
+  const stopApiLoading = useCallback(() => {
+    apiPendingCountRef.current = Math.max(0, apiPendingCountRef.current - 1);
+    endOverlayIfIdle();
+  }, [endOverlayIfIdle]);
 
   // Handle navigation complete - called by NavigationTracker
   const handleNavigationComplete = useCallback(() => {
-    NProgress.done();
-    setIsLoading(false);
-    hideOverlayWithMinDuration();
-  }, [hideOverlayWithMinDuration]);
+    stopLoading();
+  }, [stopLoading]);
+
+  // Track all API requests globally (GET + mutations)
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const customEvent = event as CustomEvent<{ delta?: number }>;
+      const delta = customEvent?.detail?.delta;
+      if (delta === 1) startApiLoading();
+      if (delta === -1) stopApiLoading();
+    };
+
+    window.addEventListener("os:api-loading", handler as EventListener);
+    return () => window.removeEventListener("os:api-loading", handler as EventListener);
+  }, [startApiLoading, stopApiLoading]);
 
   // Intercept link clicks to start loading BEFORE navigation
   useEffect(() => {

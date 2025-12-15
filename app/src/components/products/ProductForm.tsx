@@ -64,7 +64,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
     shortDescriptionAr: "",
     longDescriptionEn: "",
     longDescriptionAr: "",
-    isActive: true,
+    visible: true,
     attributes: [],
     singlePricing: undefined,
     variantPricing: [],
@@ -97,7 +97,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
         shortDescriptionAr: "",
         longDescriptionEn: "",
         longDescriptionAr: "",
-        isActive: true,
+        visible: true,
         attributes: [],
         singlePricing: undefined,
         variantPricing: [],
@@ -163,7 +163,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
       shortDescriptionAr: formData.shortDescriptionAr || '',
       longDescriptionEn: formData.longDescriptionEn || '',
       longDescriptionAr: formData.longDescriptionAr || '',
-      isActive: formData.isActive ?? true,
+      visible: formData.visible ?? true,
       isWeightVariantBased: formData.isWeightVariantBased ?? false,
       isMediaVariantBased: formData.isMediaVariantBased ?? false,
       attributes: formData.attributes,
@@ -273,7 +273,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
           shortDescriptionAr: formData.shortDescriptionAr,
           longDescriptionEn: formData.longDescriptionEn,
           longDescriptionAr: formData.longDescriptionAr,
-          isActive: formData.isActive,
+          visible: formData.visible,
         }}
         errors={errors}
         categories={categories}

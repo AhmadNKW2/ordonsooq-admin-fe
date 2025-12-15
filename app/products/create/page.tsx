@@ -20,6 +20,7 @@ import { transformFormDataToDto, UploadedMediaReference } from "../../src/servic
 import { queryKeys } from "../../src/lib/query-keys";
 import { MediaInputDto } from "../../src/services/products/types/product.types";
 import { Attribute, AttributeValue } from "../../src/services/attributes/types/attribute.types";
+import { finishToastError, finishToastSuccess, showLoadingToast, updateLoadingToast } from "../../src/lib/toast";
 
 export default function CreateProductPage() {
   const router = useRouter();
@@ -63,9 +64,32 @@ export default function CreateProductPage() {
   })) || [];
 
   const handleSubmit = async (data: ProductFormData) => {
+    const toastId = showLoadingToast("Creating product...");
     try {
       // Transform form data to DTO and extract media files
       const { dto, mediaFiles } = transformFormDataToDto(data);
+
+      const totalUploads =
+        (mediaFiles.singleMedia?.filter(m => !!m.file).length ?? 0) +
+        (mediaFiles.variantMedia?.reduce((sum, group) => {
+          return sum + (group.media?.filter(m => !!m.file).length ?? 0);
+        }, 0) ?? 0);
+
+      let completedUploads = 0;
+
+      if (totalUploads > 0) {
+        updateLoadingToast(toastId, {
+          title: "Uploading media",
+          subtitle: `0/${totalUploads} files`,
+          progress: 0,
+        });
+      } else {
+        updateLoadingToast(toastId, {
+          title: "Creating product",
+          subtitle: "Preparing request",
+          progress: 0,
+        });
+      }
       
       // Step 1: Upload all media files first and collect media IDs
       const uploadedMedia: MediaInputDto[] = [];
@@ -74,7 +98,18 @@ export default function CreateProductPage() {
       if (mediaFiles.singleMedia && mediaFiles.singleMedia.length > 0) {
         for (const media of mediaFiles.singleMedia) {
           if (media.file) {
+            updateLoadingToast(toastId, {
+              title: "Uploading media",
+              subtitle: `${completedUploads + 1}/${totalUploads} files`,
+              progress: totalUploads > 0 ? completedUploads / totalUploads : 0,
+            });
             const uploadResult = await mediaService.uploadMedia(media.file);
+            completedUploads += 1;
+            updateLoadingToast(toastId, {
+              title: "Uploading media",
+              subtitle: `${completedUploads}/${totalUploads} files`,
+              progress: totalUploads > 0 ? completedUploads / totalUploads : 0,
+            });
             uploadedMedia.push({
               media_id: uploadResult.data.id,
               is_primary: media.isPrimary,
@@ -103,7 +138,18 @@ export default function CreateProductPage() {
 
           for (const media of variantMediaData.media) {
             if (media.file) {
+              updateLoadingToast(toastId, {
+                title: "Uploading media",
+                subtitle: `${completedUploads + 1}/${totalUploads} files`,
+                progress: totalUploads > 0 ? completedUploads / totalUploads : 0,
+              });
               const uploadResult = await mediaService.uploadMedia(media.file);
+              completedUploads += 1;
+              updateLoadingToast(toastId, {
+                title: "Uploading media",
+                subtitle: `${completedUploads}/${totalUploads} files`,
+                progress: totalUploads > 0 ? completedUploads / totalUploads : 0,
+              });
               uploadedMedia.push({
                 media_id: uploadResult.data.id,
                 is_primary: media.isPrimary,
@@ -121,14 +167,22 @@ export default function CreateProductPage() {
       }
       
       // Step 3: Create product with all data including media
+      updateLoadingToast(toastId, {
+        title: "Creating product",
+        subtitle: "Sending request",
+        progress: 0.9,
+      });
       await productService.createProduct(dto);
       
       // Invalidate products list query to refetch data
       await queryClient.invalidateQueries({ queryKey: queryKeys.products.lists() });
+
+      finishToastSuccess(toastId, "Product created successfully");
       
       router.push("/products");
     } catch (error: any) {
       console.error("Error creating product:", error);
+      finishToastError(toastId, error?.message || "Failed to create product");
     }
   };
 
@@ -139,17 +193,6 @@ export default function CreateProductPage() {
       console.error("Error saving draft:", error);
     }
   };
-
-  if (categoriesLoading || vendorsLoading || brandsLoading || attributesLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b border-primary mx-auto"></div>
-          <p className="mt-4 ">Loading form data...</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <ProductForm
