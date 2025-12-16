@@ -133,14 +133,16 @@ export default function ProductsPage() {
     (key) => queryParams[key as keyof ProductFilters] !== undefined && key !== 'page' && key !== 'limit'
   );
 
-  const getStatusVariant = (isActive?: boolean): 'default' | 'success' | 'danger' => {
-    if (isActive) return "success";
+  const getVisibilityVariant = (
+    visible?: boolean
+  ): "default" | "success" | "danger" => {
+    if (visible) return "success";
     return "danger";
   };
 
-  const getStatusLabel = (isActive?: boolean) => {
-    if (isActive) return "Active";
-    return "Inactive";
+  const getVisibilityLabel = (visible?: boolean) => {
+    if (visible) return "Visible";
+    return "Hidden";
   };
 
   const formatRating = (rating?: number | string | null) => {
@@ -232,7 +234,7 @@ export default function ProductsPage() {
               <TableHead>Vendor</TableHead>
               <TableHead>Stock</TableHead>
               <TableHead>Rating</TableHead>
-              <TableHead>Status</TableHead>
+              <TableHead>Visibility</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -287,8 +289,12 @@ export default function ProductsPage() {
                   </div>
                 </TableCell>
                 <TableCell>
-                  <Badge variant={getStatusVariant(product.is_active)}>
-                    {getStatusLabel(product.is_active)}
+                  <Badge
+                    variant={getVisibilityVariant(
+                      product.visible ?? product.is_active
+                    )}
+                  >
+                    {getVisibilityLabel(product.visible ?? product.is_active)}
                   </Badge>
                 </TableCell>
                 <TableCell>
