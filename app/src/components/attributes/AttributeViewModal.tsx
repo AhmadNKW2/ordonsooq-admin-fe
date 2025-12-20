@@ -213,10 +213,6 @@ export const AttributeViewModal: React.FC<AttributeViewModalProps> = ({
                       <TableCell>
                         {value.color_code ? (
                           <div className="flex items-center gap-2">
-                            <div
-                              className="w-6 h-6 rounded-full border border-black/20 shadow-s1"
-                              style={{ backgroundColor: value.color_code }}
-                            />
                             <span className="text-sm font-mono text-gray-500">
                               {value.color_code}
                             </span>

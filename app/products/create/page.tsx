@@ -31,12 +31,7 @@ export default function CreateProductPage() {
   const { data: attributesData, isLoading: attributesLoading } = useAttributes();
 
   // Transform backend data to frontend format
-  const categories = categoriesData?.map(cat => ({
-    id: cat.id.toString(),
-    name: cat.name_en,
-    nameEn: cat.name_en,
-    nameAr: cat.name_ar,
-  })) || [];
+  const categories = categoriesData || [];
 
   const vendors = vendorsData?.map(vendor => ({
     id: vendor.id.toString(),

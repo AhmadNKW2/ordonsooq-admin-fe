@@ -11,6 +11,7 @@ import { useLoading } from "../../src/providers/loading-provider";
 import {
   useCategory,
   useUpdateCategory,
+  useCategories,
 } from "../../src/services/categories/hooks/use-categories";
 import { CategoryForm } from "../../src/components/categories/CategoryForm";
 import { Card } from "../../src/components/ui/card";
@@ -51,6 +52,8 @@ export default function EditCategoryPage() {
     error,
     refetch,
   } = useCategory(categoryId);
+
+  const { data: allCategories } = useCategories();
 
   const updateCategory = useUpdateCategory();
 
@@ -247,11 +250,12 @@ export default function EditCategoryPage() {
       onParentIdChange={setParentId}
       onProductIdsChange={setProductIds}
       formErrors={formErrors}
-      parentCategories={availableParents}
+      parentCategories={allCategories || []}
       assignedProducts={assignedProducts}
       onSubmit={handleSubmit}
       isSubmitting={updateCategory.isPending}
       submitButtonText="Save Changes"
+      currentCategoryId={categoryId}
     />
   );
 }

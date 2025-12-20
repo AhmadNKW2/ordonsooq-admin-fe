@@ -4,6 +4,7 @@ import {
     Attribute,
     SinglePricing,
     VariantPricing,
+    VariantCombination,
 } from "../../../services/products/types/product-form.types";
 import { Checkbox } from "../../ui/checkbox";
 import { Card } from "@/components/ui";
@@ -15,6 +16,7 @@ import {
 
 interface PricingSectionProps {
     attributes: Attribute[];
+    variants: VariantCombination[];
     singlePricing?: SinglePricing;
     variantPricing: VariantPricing[];
     onChangeSingle: (pricing: SinglePricing) => void;
@@ -98,6 +100,7 @@ const PricingInputs: React.FC<PricingInputsProps> = ({
 
 export const PricingSection: React.FC<PricingSectionProps> = ({
     attributes,
+    variants,
     singlePricing,
     variantPricing,
     onChangeSingle,
@@ -112,7 +115,18 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
     const shouldShowSinglePricing = pricingAttributes.length === 0;
 
     // Generate all combinations for pricing attributes
-    const combinations = generateCombinations(pricingAttributes);
+    const allCombinations = generateCombinations(pricingAttributes);
+
+    // Filter combinations based on valid variants
+    const combinations = allCombinations.filter(combo => {
+        if (variants.length === 0) return true; // Show all if variants not yet initialized
+        return variants.some(variant => {
+            if (variant.active === false) return false;
+            return Object.entries(combo.attributeValues).every(([key, value]) => {
+                return variant.attributeValues[key] === value;
+            });
+        });
+    });
 
     const handleSinglePricingChange = (field: keyof SinglePricing, value: string) => {
         const numValue = value === "" ? undefined : parseFloat(value);

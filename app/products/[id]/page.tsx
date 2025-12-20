@@ -42,12 +42,7 @@ export default function EditProductPage() {
 
 
   // Transform backend data to frontend format
-  const categories = categoriesData?.map(cat => ({
-    id: cat.id.toString(),
-    name: cat.name_en,
-    nameEn: cat.name_en,
-    nameAr: cat.name_ar,
-  })) || [];
+  const categories = categoriesData || [];
 
   const vendors = vendorsData?.map(vendor => ({
     id: vendor.id.toString(),
@@ -551,8 +546,10 @@ export default function EditProductPage() {
         console.log('=== DEBUG: Pricing control changed, will use only new pricing data ===');
       }
       
-      if (!data.attributes || data.attributes.length === 0) {
-        // Single pricing - no combination
+      const hasPricingAttributes = data.attributes?.some(a => a.controlsPricing);
+
+      if (!hasPricingAttributes) {
+        // Single pricing - no combination (either no attributes, or attributes don't control pricing)
         if (data.singlePricing) {
           productPayload.prices = [{
             cost: data.singlePricing.cost,

@@ -22,7 +22,7 @@ export const Table: React.FC<TableProps> = ({
 
   return (
     <TableContext.Provider value={{ isEmpty, setIsEmpty }}>
-      {isEmpty ? (
+      {isEmpty && (
         <div className="w-full rounded-r1 border border-primary/20 shadow-s1 bg-white">
           <div className="flex flex-col items-center justify-center py-20 px-6">
             <div className="bg-primary/10 w-24 h-24 rounded-full flex items-center justify-center mb-6 shadow-s1 ring-4 ring-white">
@@ -35,13 +35,13 @@ export const Table: React.FC<TableProps> = ({
             </p>
           </div>
         </div>
-      ) : (
-        <div className="w-full overflow-x-auto overflow-y-visible rounded-r1 border border-primary/20 shadow-s1">
-          <table className={`w-full border-collapse bg-white ${className}`} style={{ tableLayout: 'fixed' }}>
-            {children}
-          </table>
-        </div>
       )}
+      
+      <div className={`w-full overflow-x-auto overflow-y-visible rounded-r1 border border-primary/20 shadow-s1 ${isEmpty ? 'hidden' : ''}`}>
+        <table className={`w-full border-collapse bg-white ${className}`} style={{ tableLayout: 'fixed' }}>
+          {children}
+        </table>
+      </div>
     </TableContext.Provider>
   );
 };

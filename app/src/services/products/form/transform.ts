@@ -168,14 +168,38 @@ interface StockItem {
  * Groups by pricing-controlling attributes only
  */
 function buildPrices(data: ProductFormData): PriceItem[] {
-  if (!data.variantPricing || data.variantPricing.length === 0) {
-    return [];
-  }
-
   // Get pricing-controlling attribute IDs
   const pricingControllingAttrIds = (data.attributes || [])
     .filter(attr => attr.controlsPricing)
     .map(attr => attr.id);
+
+  // If there are attributes but none controls pricing, UI uses single pricing
+  // that should apply to all variants (no combination).
+  if (pricingControllingAttrIds.length === 0) {
+    if (data.singlePricing) {
+      return [{
+        cost: data.singlePricing.cost,
+        price: data.singlePricing.price,
+        sale_price: data.singlePricing.isSale !== false ? data.singlePricing.salePrice : undefined,
+      }];
+    }
+
+    // Fallback: if variant pricing exists, use the first entry as the single price.
+    if (data.variantPricing && data.variantPricing.length > 0) {
+      const first = data.variantPricing[0];
+      return [{
+        cost: first.cost,
+        price: first.price,
+        sale_price: first.isSale !== false ? first.salePrice : undefined,
+      }];
+    }
+
+    return [];
+  }
+
+  if (!data.variantPricing || data.variantPricing.length === 0) {
+    return [];
+  }
 
   // Build unique prices based on pricing-controlling attributes
   const priceMap = new Map<string, PriceItem>();

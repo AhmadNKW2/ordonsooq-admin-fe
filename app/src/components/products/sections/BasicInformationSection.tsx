@@ -5,6 +5,8 @@ import { Select } from "../../ui/select";
 import { Checkbox } from "../../ui/checkbox";
 import { Card } from "@/components/ui";
 import { Toggle } from "@/components/ui/toggle";
+import { Category } from "../../../services/categories/types/category.types";
+import { CategoryTreeSelect } from "../CategoryTreeSelect";
 
 interface BasicInformationSectionProps {
     formData: {
@@ -20,7 +22,7 @@ interface BasicInformationSectionProps {
         visible?: boolean;
     };
     errors: Record<string, string | boolean>;
-    categories: Array<{ id: string; name: string; nameEn?: string; nameAr?: string }>;
+    categories: Category[];
     vendors: Array<{ id: string; name: string; nameEn?: string; nameAr?: string }>;
     brands: Array<{ id: string; name: string; nameEn?: string; nameAr?: string }>;
     onChange: (field: string, value: any) => void;
@@ -112,25 +114,11 @@ export const BasicInformationSection: React.FC<BasicInformationSectionProps> = (
                 />
 
                 {/* Category, Vendor */}
-                <Select
-                    id="categoryIds"
+                <CategoryTreeSelect
                     label="Categories"
-                    value={formData.categoryIds || []}
-                    onChange={(value) => {
-                        // Always ensure we send an array of category IDs
-                        const categoryIds = Array.isArray(value) ? value : (value ? [value] : []);
-                        onChange("categoryIds", categoryIds as string[]);
-                    }}
-                    options={[
-                        ...categories.map((category) => ({
-                            value: category.id,
-                            label: category.nameEn && category.nameAr
-                                ? `${category.nameEn} - ${category.nameAr}`
-                                : category.name,
-                        })),
-                    ]}
-                    search={true}
-                    multiple={true}
+                    categories={categories}
+                    selectedIds={formData.categoryIds || []}
+                    onChange={(ids) => onChange("categoryIds", ids)}
                     error={errors.categoryIds}
                 />
 

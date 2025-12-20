@@ -37,35 +37,46 @@ interface LoadingContextType {
 const LoadingContext = createContext<LoadingContextType | undefined>(undefined);
 
 /**
- * Full-screen loading overlay with spinner
+ * Full-screen loading overlay with spinner and progress bar
  */
 const LoadingOverlay: React.FC<{ show: boolean }> = ({ show }) => {
   const [shouldRender, setShouldRender] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
+  const [progress, setProgress] = useState(0);
 
   useEffect(() => {
+    let interval: NodeJS.Timeout;
+    
     if (show) {
       setShouldRender(true);
+      setProgress(0);
 
-      // Ensure at least one paint happens with the "hidden" classes applied,
-      // otherwise the entrance transition can be skipped (especially for fast,
-      // button-triggered navigations).
+      // Ensure at least one paint happens with the "hidden" classes applied
       setIsVisible(false);
-      let raf1 = 0;
-      let raf2 = 0;
-      raf1 = requestAnimationFrame(() => {
-        raf2 = requestAnimationFrame(() => setIsVisible(true));
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => setIsVisible(true));
       });
 
-      return () => {
-        cancelAnimationFrame(raf1);
-        cancelAnimationFrame(raf2);
-      };
+      // Simulate progress
+      interval = setInterval(() => {
+        setProgress((prev) => {
+          if (prev >= 90) return prev;
+          // Slow down as we get closer to 90
+          const remaining = 90 - prev;
+          const add = Math.random() * (remaining / 5); 
+          return prev + Math.max(0.5, add);
+        });
+      }, 200);
+    } else {
+      setIsVisible(false);
+      setProgress(100);
+      const timeout = window.setTimeout(() => setShouldRender(false), 300);
+      return () => window.clearTimeout(timeout);
     }
 
-    setIsVisible(false);
-    const timeout = window.setTimeout(() => setShouldRender(false), 220);
-    return () => window.clearTimeout(timeout);
+    return () => {
+      if (interval) clearInterval(interval);
+    };
   }, [show]);
 
   if (!shouldRender) return null;
@@ -73,61 +84,64 @@ const LoadingOverlay: React.FC<{ show: boolean }> = ({ show }) => {
   return (
     <div
       className={
-        "fixed inset-0 z-9999 flex items-center justify-center backdrop-blur-sm transition-all duration-200 ease-out " +
-        (isVisible ? "opacity-100 bg-black/35" : "opacity-0 bg-black/0")
+        "fixed inset-0 z-[9999] flex items-center justify-center transition-all duration-300 ease-out " +
+        (isVisible ? "opacity-100 backdrop-blur-md bg-white/30 dark:bg-black/30" : "opacity-0 backdrop-blur-none bg-transparent")
       }
       aria-busy="true"
       aria-live="polite"
     >
-      {/* Subtle animated background blobs */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div
-          className={
-            "absolute -top-24 -left-24 h-80 w-80 rounded-full bg-primary/25 blur-3xl transition-all duration-300 " +
-            (isVisible ? "opacity-100" : "opacity-0")
-          }
-        />
-        <div
-          className={
-            "absolute -bottom-28 -right-24 h-96 w-96 rounded-full bg-secondary/20 blur-3xl transition-all duration-300 delay-75 " +
-            (isVisible ? "opacity-100" : "opacity-0")
-          }
-        />
-        <div
-          className={
-            "absolute top-1/3 left-1/2 h-72 w-72 -translate-x-1/2 rounded-full bg-primary2/20 blur-3xl transition-all duration-300 delay-150 " +
-            (isVisible ? "opacity-100" : "opacity-0")
-          }
-        />
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className={
+          "absolute top-1/4 left-1/4 w-96 h-96 bg-primary/20 rounded-full blur-3xl mix-blend-multiply animate-blob transition-opacity duration-500 " +
+          (isVisible ? "opacity-100" : "opacity-0")
+        }></div>
+        <div className={
+          "absolute top-1/3 right-1/4 w-96 h-96 bg-secondary/20 rounded-full blur-3xl mix-blend-multiply animate-blob animation-delay-2000 transition-opacity duration-500 " +
+          (isVisible ? "opacity-100" : "opacity-0")
+        }></div>
+        <div className={
+          "absolute bottom-1/4 left-1/3 w-96 h-96 bg-pink-300/20 rounded-full blur-3xl mix-blend-multiply animate-blob animation-delay-4000 transition-opacity duration-500 " +
+          (isVisible ? "opacity-100" : "opacity-0")
+        }></div>
       </div>
 
-      {/* Foreground card */}
       <div
         className={
-          "relative flex flex-col items-center gap-4 rounded-r1 border border-white/10 bg-white/10 px-8 py-6 shadow-s1 backdrop-blur-md transition-all duration-200 ease-out " +
-          (isVisible ? "opacity-100 scale-100 translate-y-0" : "opacity-0 scale-95 translate-y-2")
+          "relative flex flex-col items-center justify-center p-8 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 dark:border-gray-700/30 min-w-[280px] transform transition-all duration-300 " +
+          (isVisible ? "scale-100 translate-y-0" : "scale-95 translate-y-4")
         }
       >
-        {/* Dual rotating rings spinner */}
-        <div className="relative h-16 w-16">
-          <div className="absolute inset-0 rounded-full bg-primary/10 blur-xl" />
-          {/* Outer ring - clockwise */}
-          <div
-            className="absolute inset-0 rounded-full border-[3px] border-transparent border-t-primary border-r-primary/50 animate-spin"
-            style={{ animationDuration: "0.9s" }}
-          />
-          {/* Inner ring - counter-clockwise */}
-          <div
-            className="absolute inset-2 rounded-full border-[3px] border-transparent border-b-secondary border-l-secondary/50 animate-spin"
-            style={{ animationDuration: "1.25s", animationDirection: "reverse" }}
-          />
-          {/* Center dot */}
-          <div className="absolute inset-5 rounded-full bg-linear-to-br from-secondary to-primary animate-pulse" />
+        {/* Logo or Icon Area */}
+        <div className="mb-6 relative">
+          <div className="absolute inset-0 bg-gradient-to-tr from-primary to-secondary rounded-full blur-lg opacity-40 animate-pulse"></div>
+          <div className="relative bg-white dark:bg-gray-800 rounded-full p-4 shadow-lg">
+             {/* Custom Spinner */}
+            <svg className="w-12 h-12 text-primary animate-spin" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+          </div>
         </div>
 
-        <div className="text-center">
-          <div className="text-sm font-semibold text-white">Loading</div>
-          <div className="mt-1 text-xs text-white/70">Please wait…</div>
+        {/* Text */}
+        <div className="text-center mb-6">
+          <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-1">Loading</h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Please wait while we prepare everything...</p>
+        </div>
+
+        {/* Progress Bar */}
+        <div className="w-full h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden relative">
+          <div 
+            className="absolute top-0 left-0 h-full bg-gradient-to-r from-primary via-purple-500 to-secondary transition-all duration-300 ease-out rounded-full"
+            style={{ width: `${progress}%` }}
+          >
+            <div className="absolute inset-0 bg-white/30 w-full h-full animate-[shimmer_2s_infinite] skew-x-12"></div>
+          </div>
+        </div>
+        
+        {/* Percentage (Optional) */}
+        <div className="mt-2 text-xs font-medium text-gray-400 dark:text-gray-500 w-full text-right">
+          {Math.round(progress)}%
         </div>
       </div>
     </div>

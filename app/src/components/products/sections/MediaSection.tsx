@@ -3,6 +3,7 @@ import {
     Attribute,
     MediaItem,
     VariantMedia,
+    VariantCombination,
 } from "../../../services/products/types/product-form.types";
 import { Card } from "@/components/ui";
 import {
@@ -14,6 +15,7 @@ import { ImageUpload, ImageUploadItem } from "../../ui/image-upload";
 
 interface MediaSectionProps {
     attributes: Attribute[];
+    variants: VariantCombination[];
     isMediaVariantBased: boolean;
     singleMedia: MediaItem[];
     variantMedia: VariantMedia[];
@@ -26,6 +28,7 @@ interface MediaSectionProps {
 
 export const MediaSection: React.FC<MediaSectionProps> = ({
     attributes,
+    variants,
     isMediaVariantBased,
     singleMedia,
     variantMedia,
@@ -39,7 +42,18 @@ export const MediaSection: React.FC<MediaSectionProps> = ({
     const mediaAttributes = getControllingAttributes(attributes, 'controlsMedia');
 
     // Generate all combinations for media attributes
-    const combinations = generateCombinations(mediaAttributes);
+    const allCombinations = generateCombinations(mediaAttributes);
+
+    // Filter combinations based on valid variants
+    const combinations = allCombinations.filter(combo => {
+        if (variants.length === 0) return true;
+        return variants.some(variant => {
+            if (variant.active === false) return false;
+            return Object.entries(combo.attributeValues).every(([key, value]) => {
+                return variant.attributeValues[key] === value;
+            });
+        });
+    });
 
     // Convert MediaItem[] to ImageUploadItem[] for the ImageUpload component
     const toImageUploadItems = (media: MediaItem[]): ImageUploadItem[] => {

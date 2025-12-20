@@ -60,6 +60,7 @@ interface SortableParentCategoryProps {
   onSubcategoryReorder: (parentId: number, reordered: Category[]) => void;
   isDraggingParent: boolean;
   canDrag: boolean;
+  allChildren: Record<number, Category[]>;
 }
 
 const SortableParentCategory: React.FC<SortableParentCategoryProps> = ({
@@ -72,6 +73,7 @@ const SortableParentCategory: React.FC<SortableParentCategoryProps> = ({
   onSubcategoryReorder,
   isDraggingParent,
   canDrag,
+  allChildren,
 }) => {
   const {
     attributes: dndAttributes,
@@ -198,6 +200,8 @@ const SortableParentCategory: React.FC<SortableParentCategoryProps> = ({
               onDelete={onDelete}
               onReorder={(reordered) => onSubcategoryReorder(category.id, reordered)}
               isDraggingParent={isDraggingParent}
+              allChildren={allChildren}
+              onSubcategoryReorder={onSubcategoryReorder}
             />
           ) : (
             <div className="text-sm text-gray-500 pl-4 py-2">
@@ -215,13 +219,15 @@ const SortableParentCategory: React.FC<SortableParentCategoryProps> = ({
 // ============================================
 interface SubcategoryListProps {
   parentId: number;
-  parentIndex: number;
+  parentIndex: number | string;
   subcategories: Category[];
   onView: (category: Category) => void;
   onEdit: (category: Category) => void;
   onDelete: (category: Category) => void;
   onReorder: (reordered: Category[]) => void;
   isDraggingParent: boolean;
+  allChildren: Record<number, Category[]>;
+  onSubcategoryReorder: (parentId: number, reordered: Category[]) => void;
 }
 
 const SubcategoryList: React.FC<SubcategoryListProps> = ({
@@ -233,6 +239,8 @@ const SubcategoryList: React.FC<SubcategoryListProps> = ({
   onDelete,
   onReorder,
   isDraggingParent,
+  allChildren,
+  onSubcategoryReorder,
 }) => {
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -287,6 +295,8 @@ const SubcategoryList: React.FC<SubcategoryListProps> = ({
               onView={onView}
               onEdit={onEdit}
               onDelete={onDelete}
+              allChildren={allChildren}
+              onSubcategoryReorder={onSubcategoryReorder}
             />
           ))}
         </div>
@@ -304,6 +314,8 @@ interface SortableSubcategoryProps {
   onView: (category: Category) => void;
   onEdit: (category: Category) => void;
   onDelete: (category: Category) => void;
+  allChildren: Record<number, Category[]>;
+  onSubcategoryReorder: (parentId: number, reordered: Category[]) => void;
 }
 
 const SortableSubcategory: React.FC<SortableSubcategoryProps> = ({
@@ -312,6 +324,8 @@ const SortableSubcategory: React.FC<SortableSubcategoryProps> = ({
   onView,
   onEdit,
   onDelete,
+  allChildren,
+  onSubcategoryReorder,
 }) => {
   const {
     attributes: dndAttributes,
@@ -330,10 +344,11 @@ const SortableSubcategory: React.FC<SortableSubcategoryProps> = ({
     opacity: isDragging ? 0.5 : 1,
   };
 
-  return (
+  const children = allChildren[subcategory.id] || [];
+  const hasChildren = children.length > 0;
+
+  const content = (
     <div
-      ref={setNodeRef}
-      style={style}
       className={`flex items-center justify-between w-full p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-all duration-200 ${
         isDragging ? "ring-2 ring-primary bg-primary/5 shadow-lg" : ""
       }`}
@@ -348,6 +363,7 @@ const SortableSubcategory: React.FC<SortableSubcategoryProps> = ({
           }`}
           {...dndAttributes}
           {...listeners}
+          onClick={(e) => e.stopPropagation()}
         >
           <GripVertical
             className={`h-4 w-4 transition-colors duration-200 ${
@@ -357,7 +373,7 @@ const SortableSubcategory: React.FC<SortableSubcategoryProps> = ({
         </div>
 
         {/* Display Index */}
-        <div className="w-10 text-center font-mono text-xs text-gray-500">
+        <div className="w-16 text-center font-mono text-xs text-gray-500">
           {displayIndex}
         </div>
 
@@ -380,27 +396,73 @@ const SortableSubcategory: React.FC<SortableSubcategoryProps> = ({
         </div>
       </div>
       <div className="flex items-center gap-2">
+        {hasChildren && (
+          <Badge variant="secondary">{children.length} sub</Badge>
+        )}
         <Badge variant={subcategory.visible ? "success" : "danger"}>
           {subcategory.visible ? "Visible" : "Hidden"}
         </Badge>
-        <div className="flex gap-1">
+        <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
           <IconButton
             variant="view"
-            onClick={() => onView(subcategory)}
+            onClick={(e) => {
+              e.stopPropagation();
+              onView(subcategory);
+            }}
             title="View subcategory"
           />
           <IconButton
             variant="edit"
-            onClick={() => onEdit(subcategory)}
+            onClick={(e) => {
+              e.stopPropagation();
+              onEdit(subcategory);
+            }}
             title="Edit subcategory"
           />
           <IconButton
             variant="delete"
-            onClick={() => onDelete(subcategory)}
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(subcategory);
+            }}
             title="Delete subcategory"
           />
         </div>
       </div>
+    </div>
+  );
+
+  if (hasChildren) {
+    return (
+      <div ref={setNodeRef} style={style}>
+        <Accordion type="single" collapsible className="w-full">
+          <AccordionItem value={`item-${subcategory.id}`} className="border-0">
+            <AccordionTrigger className="hover:no-underline py-0 pr-2">
+              {content}
+            </AccordionTrigger>
+            <AccordionContent>
+              <SubcategoryList
+                parentId={subcategory.id}
+                parentIndex={displayIndex}
+                subcategories={children}
+                onView={onView}
+                onEdit={onEdit}
+                onDelete={onDelete}
+                onReorder={(reordered) => onSubcategoryReorder(subcategory.id, reordered)}
+                isDraggingParent={false}
+                allChildren={allChildren}
+                onSubcategoryReorder={onSubcategoryReorder}
+              />
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
+      </div>
+    );
+  }
+
+  return (
+    <div ref={setNodeRef} style={style}>
+      {content}
     </div>
   );
 };
@@ -423,19 +485,21 @@ export default function CategoryAccordion({
 
   // Group categories by parent
   const parentCategories = useMemo(() => {
-    return categories.filter((cat) => !cat.parent_id);
+    return categories;
   }, [categories]);
 
   const childrenByParent = useMemo(() => {
-    return categories.reduce((acc, cat) => {
-      if (cat.parent_id) {
-        if (!acc[cat.parent_id]) {
-          acc[cat.parent_id] = [];
+    const map: Record<number, Category[]> = {};
+    const traverse = (cats: Category[]) => {
+      cats.forEach((cat) => {
+        if (cat.children && cat.children.length > 0) {
+          map[cat.id] = cat.children;
+          traverse(cat.children);
         }
-        acc[cat.parent_id].push(cat);
-      }
-      return acc;
-    }, {} as Record<number, Category[]>);
+      });
+    };
+    traverse(categories);
+    return map;
   }, [categories]);
 
   // Local state for ordering
@@ -605,6 +669,7 @@ export default function CategoryAccordion({
                 onSubcategoryReorder={handleSubcategoryReorder}
                 isDraggingParent={isDraggingParent}
                 canDrag={canDrag}
+                allChildren={orderedChildren}
               />
             );
           })}

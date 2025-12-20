@@ -102,28 +102,6 @@ const SortableRow: React.FC<{
       <TableCell className="font-mono text-sm text-gray-500">{displayIndex}</TableCell>
       <TableCell className="font-semibold">
         <div className="flex items-center gap-2">
-          {attribute.is_color && (
-            <div className="flex items-center gap-1">
-              {attribute.values && attribute.values.length > 0 ? (
-                attribute.values.slice(0, 4).map((value) => (
-                  <div
-                    key={value.id}
-                    className="w-6 h-6 rounded-full shadow-s2 border border-black/30"
-                    style={{ backgroundColor: value.color_code || '#ccc' }}
-                    title={value.value_en}
-                  />
-                ))
-              ) : (
-                <div
-                  className="w-6 h-6 rounded-full border-2 border-dashed border-gray-300"
-                  title="Color attribute"
-                />
-              )}
-              {attribute.values && attribute.values.length > 4 && (
-                <span className="text-xs text-gray-500">+{attribute.values.length - 4}</span>
-              )}
-            </div>
-          )}
           <div className="flex flex-col">
             <span>{attribute.name_en}</span>
             <span className="text-sm text-gray-500">

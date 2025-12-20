@@ -2,8 +2,8 @@ import React from 'react';
 
 export const sidebarConfig = {
   header: {
-    title: 'TH30 Admin',
-    subtitle: 'Dashboard v1.0',
+    title: 'ordonsooq Admin',
+    subtitle: 'Management Console',
     logo: (
       <div className="w-8 h-8 bg-primary rounded-r1 flex items-center justify-center">
         <svg

@@ -50,7 +50,7 @@ export const AttributesSection: React.FC<AttributesSectionProps> = ({
             controlsMedia: false,
         };
 
-        onChange([...attributes, newAttribute], 'stock');
+        onChange([...attributes, newAttribute]);
         setSelectedPredefined("");
     };
 

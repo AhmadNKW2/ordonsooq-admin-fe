@@ -16,6 +16,7 @@ import { PageHeader } from "../common/PageHeader";
 import { Folder } from "lucide-react";
 import { Category } from "../../services/categories/types/category.types";
 import { ProductsTableSection, ProductItem } from "../common/ProductsTableSection";
+import { CategoryTreeSelect } from "../products/CategoryTreeSelect";
 
 interface CategoryFormProps {
   mode: "create" | "edit";
@@ -48,6 +49,7 @@ interface CategoryFormProps {
   onSubmit: () => void;
   isSubmitting: boolean;
   submitButtonText: string;
+  currentCategoryId?: number; // Add this to exclude self from parent options
 }
 
 export const CategoryForm: React.FC<CategoryFormProps> = ({
@@ -75,6 +77,7 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({
   onSubmit,
   isSubmitting,
   submitButtonText,
+  currentCategoryId,
 }) => {
   const router = useRouter();
 
@@ -82,15 +85,11 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({
     router.push("/categories");
   };
 
-  // Filter to only root categories for parent options
-  const availableParents = parentCategories.filter((cat) => !cat.parent_id);
-
-  const parentOptions = [
-    ...availableParents.map((cat) => ({
-      value: cat.id.toString(),
-      label: `${cat.name_en} - ${cat.name_ar}`,
-    })),
-  ];
+  // Filter out current category and its children from parent options if in edit mode
+  const availableParents = parentCategories.filter((cat) => {
+    if (!currentCategoryId) return true;
+    return cat.id !== currentCategoryId;
+  });
 
   return (
     <div className="flex flex-col justify-center items-center gap-5 p-5">
@@ -162,14 +161,15 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({
             />
           )}
           {/* Parent Category */}
-          <Select
+          <CategoryTreeSelect
             label="Parent Category"
-            value={parentId?.toString() || ""}
-            onChange={(value) => {
-              const val = Array.isArray(value) ? value[0] : value;
+            categories={availableParents}
+            selectedIds={parentId ? [parentId.toString()] : []}
+            onChange={(ids) => {
+              const val = ids.length > 0 ? ids[0] : null;
               onParentIdChange(val ? Number(val) : null);
             }}
-            options={parentOptions}
+            singleSelect={true}
           />
 
           {/* Visibility Status */}

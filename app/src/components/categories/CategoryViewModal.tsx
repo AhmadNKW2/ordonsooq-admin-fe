@@ -79,11 +79,11 @@ export const CategoryViewModal: React.FC<CategoryViewModalProps> = ({
         {/* Timestamps */}
         <Card noFlex variant="nested" className="flex justify-between items-center">
           <Calendar className="w-4 h-4" />
-          <span>Created: {formatDate(category.created_at)}</span>
+          <span>Created: {formatDate(category.createdAt)}</span>
         </Card>
         <Card noFlex variant="nested" className="flex justify-between items-center">
           <Calendar className="w-4 h-4" />
-          <span>Updated: {formatDate(category.updated_at)}</span>
+          <span>Updated: {formatDate(category.updatedAt)}</span>
         </Card>
 
         {/* Actions */}

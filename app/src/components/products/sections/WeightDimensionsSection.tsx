@@ -5,6 +5,7 @@ import {
     Attribute,
     WeightDimensions,
     VariantWeightDimensions,
+    VariantCombination,
 } from "../../../services/products/types/product-form.types";
 import { Card } from "@/components/ui";
 import {
@@ -15,6 +16,7 @@ import {
 
 interface WeightDimensionsSectionProps {
     attributes: Attribute[];
+    variants: VariantCombination[];
     isWeightVariantBased: boolean;
     singleWeightDimensions?: WeightDimensions;
     variantWeightDimensions: VariantWeightDimensions[];
@@ -103,6 +105,7 @@ const WeightInputs: React.FC<WeightInputsProps> = ({
 
 export const WeightDimensionsSection: React.FC<WeightDimensionsSectionProps> = ({
     attributes,
+    variants,
     isWeightVariantBased,
     singleWeightDimensions,
     variantWeightDimensions,
@@ -116,7 +119,18 @@ export const WeightDimensionsSection: React.FC<WeightDimensionsSectionProps> = (
     const weightAttributes = getControllingAttributes(attributes, 'controlsWeightDimensions');
 
     // Generate all combinations for weight attributes
-    const combinations = generateCombinations(weightAttributes);
+    const allCombinations = generateCombinations(weightAttributes);
+
+    // Filter combinations based on valid variants
+    const combinations = allCombinations.filter(combo => {
+        if (variants.length === 0) return true;
+        return variants.some(variant => {
+            if (variant.active === false) return false;
+            return Object.entries(combo.attributeValues).every(([key, value]) => {
+                return variant.attributeValues[key] === value;
+            });
+        });
+    });
 
     const handleSingleChange = (field: keyof WeightDimensions, value: string) => {
         const numValue = parseFloat(value) || undefined;

@@ -26,6 +26,7 @@ export interface VariantCombination {
   id: string;
   attributeValues: { [attrId: string]: string };
   stock: number;
+  active?: boolean;
 }
 
 // Pricing Configuration
@@ -199,6 +200,7 @@ export const productFormSchema = z.object({
       id: z.string(),
       attributeValues: z.record(z.string(), z.string()),
       stock: z.number().min(0, "Stock is required"),
+      active: z.boolean().optional(),
     })
   ).optional(),
 });

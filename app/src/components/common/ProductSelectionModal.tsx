@@ -137,12 +137,12 @@ export const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
         onClose();
     };
 
-    const getStatusVariant = (isActive?: boolean): 'default' | 'success' | 'danger' => {
-        return isActive ? "success" : "danger";
+    const getVisibilityVariant = (visible?: boolean): 'default' | 'success' | 'danger' => {
+        return visible ? "success" : "danger";
     };
 
-    const getStatusLabel = (isActive?: boolean) => {
-        return isActive ? "Active" : "Inactive";
+    const getVisibilityLabel = (visible?: boolean) => {
+        return visible ? "Visible" : "Hidden";
     };
 
     const formatRating = (rating?: number | string | null) => {
@@ -232,7 +232,7 @@ export const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
                                 <TableHead>Vendor</TableHead>
                                 <TableHead>Stock</TableHead>
                                 <TableHead>Rating</TableHead>
-                                <TableHead>Status</TableHead>
+                                <TableHead>Visibility</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -299,8 +299,8 @@ export const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
                                         </div>
                                     </TableCell>
                                     <TableCell>
-                                        <Badge variant={getStatusVariant(product.is_active)}>
-                                            {getStatusLabel(product.is_active)}
+                                        <Badge variant={getVisibilityVariant(product.visible ?? product.is_active)}>
+                                            {getVisibilityLabel(product.visible ?? product.is_active)}
                                         </Badge>
                                     </TableCell>
                                 </TableRow>

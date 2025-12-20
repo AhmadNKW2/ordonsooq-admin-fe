@@ -14,13 +14,14 @@ const baseCategorySchema = z.object({
   description_ar: z.string().optional().nullable(),
   image: z.string().optional().nullable(),
   visible: z.boolean().optional(),
-  is_active: z.boolean(),
+  is_active: z.boolean().optional(),
   parent_id: z.number().optional().nullable(),
   level: z.number().optional(),
+  sortOrder: z.number().optional(),
   status: z.enum(["active", "archived"]).optional(),
   archived_at: z.string().or(z.date()).optional().nullable(),
-  created_at: z.string().or(z.date()).optional(),
-  updated_at: z.string().or(z.date()).optional(),
+  createdAt: z.string().or(z.date()).optional(),
+  updatedAt: z.string().or(z.date()).optional(),
 });
 
 // Archived Product (included in archived category response)
@@ -49,6 +50,7 @@ export interface ArchivedSubcategory {
 // Category type with optional children and archived data
 export type Category = z.infer<typeof baseCategorySchema> & {
   children?: Category[];
+  parent?: Category | null;
   // Included in archived category list response
   archivedProducts?: ArchivedCategoryProduct[];
   archivedSubcategories?: ArchivedSubcategory[];

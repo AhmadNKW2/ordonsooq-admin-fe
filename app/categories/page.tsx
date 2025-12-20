@@ -48,12 +48,28 @@ export default function CategoriesPage() {
     if (!searchTerm) return categories;
     
     const term = searchTerm.toLowerCase();
-    return categories.filter(
-      (cat) =>
-        cat.name_en.toLowerCase().includes(term) ||
-        cat.name_ar.includes(searchTerm) ||
-        cat.id.toString().includes(term)
-    );
+    
+    const filterRecursive = (cats: Category[]): Category[] => {
+      return cats.reduce((acc, cat) => {
+        const matches = 
+          cat.name_en.toLowerCase().includes(term) ||
+          cat.name_ar.includes(searchTerm) ||
+          cat.id.toString().includes(term);
+        
+        const filteredChildren = cat.children ? filterRecursive(cat.children) : [];
+        
+        if (matches || filteredChildren.length > 0) {
+          acc.push({
+            ...cat,
+            children: filteredChildren
+          });
+        }
+        
+        return acc;
+      }, [] as Category[]);
+    };
+
+    return filterRecursive(categories);
   }, [categories, searchTerm]);
 
   // Get parent category for view modal

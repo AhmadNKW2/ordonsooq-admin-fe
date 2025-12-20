@@ -260,13 +260,7 @@ const SortableValueRow: React.FC<SortableValueRowProps> = ({
       {isColor && (
         <TableCell>
           {value.color_code ? (
-            <div className="flex items-center gap-2">
-              <div
-                className="w-6 h-6 rounded-full transition-all shadow-s1 border border-black/20"
-                style={{ backgroundColor: value.color_code }}
-              />
-              <span className="text-sm text-gray-500">{value.color_code}</span>
-            </div>
+            <span className="text-sm text-gray-500">{value.color_code}</span>
           ) : (
             <span className="text-gray-400">—</span>
           )}
