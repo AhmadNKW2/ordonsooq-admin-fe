@@ -16,7 +16,7 @@ import {
     rectSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Eye, Star, Upload, RefreshCw } from "lucide-react";
+import { BadgeCheck, Eye, Star, Upload, RefreshCw } from "lucide-react";
 import { Button } from "./button";
 import { Modal } from "./modal";
 
@@ -26,6 +26,7 @@ export interface ImageUploadItem {
     preview: string;
     type: "image" | "video";
     isPrimary?: boolean;
+    isGroupPrimary?: boolean;
     order: number;
 }
 
@@ -39,11 +40,13 @@ interface SortableImageItemProps {
     item: ImageUploadItem;
     onRemove: (id: string) => void;
     onSetPrimary?: (id: string) => void;
+    onSetGroupPrimary?: (id: string) => void;
     onPreview?: (url: string) => void;
     hasPrimary?: boolean;
+    hasGroupPrimary?: boolean;
 }
 
-const SortableImageItem = ({ item, onRemove, onSetPrimary, onPreview, hasPrimary }: SortableImageItemProps) => {
+const SortableImageItem = ({ item, onRemove, onSetPrimary, onSetGroupPrimary, onPreview, hasPrimary, hasGroupPrimary }: SortableImageItemProps) => {
     const {
         attributes,
         listeners,
@@ -66,7 +69,7 @@ const SortableImageItem = ({ item, onRemove, onSetPrimary, onPreview, hasPrimary
             style={style}
             {...attributes}
             {...listeners}
-            className={`w-40 h-40 relative group border rounded-r1 overflow-hidden border-primary/20 ${hasPrimary && item.isPrimary ? 'border-primary' : ''}`}
+            className={`w-40 h-40 relative group border rounded-r1 overflow-hidden border-primary/20 ${hasPrimary && item.isPrimary ? 'border-primary ring-2 ring-primary' : ''} `}
         >
             {item.type === "image" ? (
                 <Image
@@ -79,13 +82,32 @@ const SortableImageItem = ({ item, onRemove, onSetPrimary, onPreview, hasPrimary
                 <video src={item.preview} className="object-cover w-full h-full" />
             )}
 
-            {hasPrimary && item.isPrimary && (
+            {/* {hasPrimary && item.isPrimary && (
                 <div className="absolute top-2 left-2 bg-primary text-white text-xs px-2 py-1 rounded z-10">
                     Primary
                 </div>
+            )} */}
+
+            {hasGroupPrimary && item.isGroupPrimary && (
+                <div className="absolute top-2 left-2 bg-yellow-500/80 text-white text-xs px-2 py-1 rounded z-10">
+                    Group Primary
+                </div>
             )}
 
-            <div className="flex justify-center items-center gap-2 absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-all duration-300 z-20">
+            <div className="flex justify-center items-center gap-1 absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-all duration-300 z-20">
+                {hasGroupPrimary && onSetGroupPrimary && !item.isGroupPrimary && (
+                    <button
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onSetGroupPrimary(item.id);
+                        }}
+                        className="bg-secondary/50 p-3 rounded-r1 text-sm transition-all duration-300 ease-in-out hover:bg-secondary/75 active:bg-secondary/90 group/secondary"
+                    >
+                        <Star className="text-secondary group-hover/secondary:text-white transition-all duration-300" />
+                    </button>
+                )}
+
                 {hasPrimary && onSetPrimary && !item.isPrimary && (
                     <button
                         onPointerDown={(e) => e.stopPropagation()}
@@ -93,9 +115,9 @@ const SortableImageItem = ({ item, onRemove, onSetPrimary, onPreview, hasPrimary
                             e.stopPropagation();
                             onSetPrimary(item.id);
                         }}
-                        className="bg-secondary/50 p-3 rounded-r1 text-sm transition-all duration-300 ease-in-out hover:bg-secondary/75 active:bg-secondary/90 group/secondary"
+                        className="bg-primary/50 p-3 rounded-r1 text-sm transition-all duration-300 ease-in-out hover:bg-primary/75 active:bg-primary/90 group/primary"
                     >
-                        <Star className="text-secondary group-hover/secondary:text-white transition-all duration-300" />
+                        <BadgeCheck className="text-primary3 group-hover/primary:text-white transition-all duration-300" />
                     </button>
                 )}
                 {onPreview && (
@@ -134,6 +156,10 @@ export interface ImageUploadProps {
     isMulti?: boolean;
     /** Enable primary image selection */
     hasPrimary?: boolean;
+    /** Enable group primary selection */
+    hasGroupPrimary?: boolean;
+    /** Auto-set item primary when adding the first file (only within this upload list) */
+    autoSetPrimaryOnFirstAdd?: boolean;
     /** Accept file types */
     accept?: string;
     /** Placeholder text */
@@ -155,6 +181,8 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
     onChange,
     isMulti = true,
     hasPrimary = false,
+    hasGroupPrimary = false,
+    autoSetPrimaryOnFirstAdd = true,
     accept = "image/*,video/*",
     placeholder = "or drag and drop images/videos here",
     showPreview = true,
@@ -193,7 +221,10 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
 
         const filesToProcess = isMulti ? Array.from(files) : [files[0]];
         const hasAnyPrimary = currentValue.some((m) => m.isPrimary);
-        const shouldSetFirstAsPrimary = hasPrimary && !hasAnyPrimary && currentValue.length === 0;
+        const hasAnyGroupPrimary = currentValue.some((m) => m.isGroupPrimary);
+        const shouldSetFirstAsPrimary =
+            autoSetPrimaryOnFirstAdd && hasPrimary && !hasAnyPrimary && currentValue.length === 0;
+        const shouldSetFirstAsGroupPrimary = hasGroupPrimary && !hasAnyGroupPrimary && currentValue.length === 0;
 
         const newMediaItems: ImageUploadItem[] = filesToProcess.map((file, index) => ({
             id: `media-${Date.now()}-${index}`,
@@ -201,6 +232,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
             preview: URL.createObjectURL(file),
             type: file.type.startsWith("video") ? "video" : "image",
             isPrimary: shouldSetFirstAsPrimary && index === 0,
+            isGroupPrimary: shouldSetFirstAsGroupPrimary && index === 0,
             order: currentValue.length + index,
         }));
 
@@ -233,6 +265,16 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
             }));
         }
 
+        // If the removed media was group primary, set the first remaining as group primary
+        if (hasGroupPrimary && mediaToRemove?.isGroupPrimary && filtered.length > 0) {
+            const sortedByOrder = [...filtered].sort((a, b) => a.order - b.order);
+            const firstItemId = sortedByOrder[0].id;
+            filtered = filtered.map((m) => ({
+                ...m,
+                isGroupPrimary: m.id === firstItemId,
+            }));
+        }
+
         onChange(filtered);
     };
 
@@ -242,6 +284,16 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
         const updated = currentValue.map((m) => ({
             ...m,
             isPrimary: m.id === mediaId,
+        }));
+        onChange(updated);
+    };
+
+    const handleSetGroupPrimary = (mediaId: string) => {
+        if (!hasGroupPrimary || !onChange) return;
+
+        const updated = currentValue.map((m) => ({
+            ...m,
+            isGroupPrimary: m.id === mediaId,
         }));
         onChange(updated);
     };
@@ -426,8 +478,10 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
                                     item={item}
                                     onRemove={handleRemove}
                                     onSetPrimary={hasPrimary ? handleSetPrimary : undefined}
+                                    onSetGroupPrimary={hasGroupPrimary ? handleSetGroupPrimary : undefined}
                                     onPreview={showPreview ? setPreviewImage : undefined}
                                     hasPrimary={hasPrimary}
+                                    hasGroupPrimary={hasGroupPrimary}
                                 />
                             ))}
                         </div>

@@ -337,6 +337,7 @@ export interface StockInputWithCombination {
 export interface MediaInputDto {
   media_id: number;        // ID from /api/media/upload
   is_primary?: boolean;    // Default: false
+  is_group_primary?: boolean; // Default: false
   sort_order?: number;     // Default: 0
   combination?: Record<string, number>; // For variant media
 }
@@ -376,6 +377,7 @@ export interface UpdateMediaDto {
   media_id: number;
   sort_order?: number;
   is_primary?: boolean;
+  is_group_primary?: boolean;
 }
 
 export interface DeleteMediaDto {
@@ -387,6 +389,7 @@ export interface ReorderMediaDto {
   media_id: number;
   sort_order: number;
   is_primary?: boolean;
+  is_group_primary?: boolean;
 }
 
 export interface MediaManagementDto {

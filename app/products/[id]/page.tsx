@@ -303,6 +303,7 @@ export default function EditProductPage() {
         type: m.type as 'image' | 'video',
         order: m.sort_order,
         isPrimary: m.is_primary,
+        isGroupPrimary: m.is_group_primary,
       }));
   };
 
@@ -331,6 +332,7 @@ export default function EditProductPage() {
         type: m.type as 'image' | 'video',
         order: m.sort_order,
         isPrimary: m.is_primary,
+        isGroupPrimary: m.is_group_primary,
       });
     });
 
@@ -709,6 +711,7 @@ export default function EditProductPage() {
             mediaArray.push({
               media_id: uploadResult.data.id,
               is_primary: media.isPrimary,
+              is_group_primary: media.isGroupPrimary,
               sort_order: media.order,
             });
           } else {
@@ -718,6 +721,7 @@ export default function EditProductPage() {
               mediaArray.push({
                 media_id: mediaId,
                 is_primary: media.isPrimary,
+                is_group_primary: media.isGroupPrimary,
                 sort_order: media.order,
               });
             }
@@ -753,6 +757,7 @@ export default function EditProductPage() {
               mediaArray.push({
                 media_id: uploadResult.data.id,
                 is_primary: media.isPrimary,
+                is_group_primary: media.isGroupPrimary,
                 sort_order: media.order,
                 combination: Object.keys(combination).length > 0 ? combination : undefined,
               });
@@ -763,6 +768,7 @@ export default function EditProductPage() {
                 mediaArray.push({
                   media_id: mediaId,
                   is_primary: media.isPrimary,
+                  is_group_primary: media.isGroupPrimary,
                   sort_order: media.order,
                   combination: Object.keys(combination).length > 0 ? combination : undefined,
                 });

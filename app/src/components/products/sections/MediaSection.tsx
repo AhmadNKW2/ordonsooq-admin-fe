@@ -63,6 +63,7 @@ export const MediaSection: React.FC<MediaSectionProps> = ({
             preview: m.preview,
             type: m.type,
             isPrimary: m.isPrimary,
+            isGroupPrimary: m.isGroupPrimary,
             order: m.order,
         }));
     };
@@ -75,76 +76,53 @@ export const MediaSection: React.FC<MediaSectionProps> = ({
             preview: item.preview,
             type: item.type,
             isPrimary: item.isPrimary ?? false,
+            isGroupPrimary: item.isGroupPrimary ?? false,
             order: item.order,
         }));
     };
 
-    // Handle single media change with cross-variant primary management
+    const ensureGroupHasGroupPrimary = (items: MediaItem[]): MediaItem[] => {
+        if (!items || items.length === 0) return [];
+        if (items.some((m) => m.isGroupPrimary)) return items;
+        const sorted = [...items].sort((a, b) => a.order - b.order);
+        const groupPrimaryId = sorted[0].id;
+        return items.map((m) => ({
+            ...m,
+            isGroupPrimary: m.id === groupPrimaryId,
+        }));
+    };
+
+    // Handle single media change: enforce single product-level primary
     const handleSingleMediaChange = (items: ImageUploadItem[]) => {
         const mediaItems = toMediaItems(items);
-        
-        // Check if any item was set as primary
-        const newPrimary = mediaItems.find((m) => m.isPrimary);
-        
-        if (newPrimary && variantMedia.length > 0) {
-            // Clear primary from all variant media
-            const clearedVariantMedia = variantMedia.map((vm) => ({
-                ...vm,
-                media: vm.media.map((m) => ({ ...m, isPrimary: false })),
-            }));
-            onChangeVariant(clearedVariantMedia);
+
+        // If single media now has a primary, clear primaries from all variant groups
+        if (mediaItems.some((m) => m.isPrimary) && variantMedia.length > 0) {
+            onChangeVariant(
+                variantMedia.map((vm) => ({
+                    ...vm,
+                    media: vm.media.map((m) => ({ ...m, isPrimary: false })),
+                }))
+            );
         }
-        
-        // If removing media that was primary and no new primary is set, 
-        // try to set a new primary from remaining items
-        if (mediaItems.length > 0 && !mediaItems.some((m) => m.isPrimary)) {
-            // Check if we had a primary before
-            const hadPrimary = singleMedia.some((m) => m.isPrimary);
-            if (hadPrimary) {
-                // Set the first item as primary
-                mediaItems[0].isPrimary = true;
-            }
-        } else if (mediaItems.length === 0) {
-            // If all single media removed, check if we need to set a variant media as primary
-            const anyVariantHasPrimary = variantMedia.some((vm) => vm.media.some((m) => m.isPrimary));
-            if (!anyVariantHasPrimary && variantMedia.length > 0) {
-                const firstVariantWithMedia = variantMedia.find((vm) => vm.media.length > 0);
-                if (firstVariantWithMedia) {
-                    const updatedVariantMedia = variantMedia.map((vm) => ({
-                        ...vm,
-                        media: vm.media.map((m, idx) => ({
-                            ...m,
-                            isPrimary: vm.key === firstVariantWithMedia.key && idx === 0,
-                        })),
-                    }));
-                    onChangeVariant(updatedVariantMedia);
-                }
-            }
-        }
-        
+
         onChangeSingle(mediaItems);
     };
 
-    // Handle variant media change with cross-variant primary management
+    // Handle variant media change: enforce single product-level primary, allow multiple group primaries (one per group)
     const handleVariantMediaChange = (key: string, items: ImageUploadItem[]) => {
         const combo = combinations.find((c) => c.key === key);
         if (!combo) return;
 
         const mediaItems = toMediaItems(items);
-        
-        // Check if any item was set as primary
-        const newPrimary = mediaItems.find((m) => m.isPrimary);
-        
         let updatedVariantMedia = variantMedia.filter((vm) => vm.key !== key);
-        
-        if (newPrimary) {
-            // Clear primary from single media
+
+        // If this group sets the product primary, clear primary from single media and all other variant groups.
+        if (mediaItems.some((m) => m.isPrimary)) {
             if (singleMedia.some((m) => m.isPrimary)) {
-                const clearedSingleMedia = singleMedia.map((m) => ({ ...m, isPrimary: false }));
-                onChangeSingle(clearedSingleMedia);
+                onChangeSingle(singleMedia.map((m) => ({ ...m, isPrimary: false })));
             }
-            
-            // Clear primary from other variants
+
             updatedVariantMedia = updatedVariantMedia.map((vm) => ({
                 ...vm,
                 media: vm.media.map((m) => ({ ...m, isPrimary: false })),
@@ -159,35 +137,6 @@ export const MediaSection: React.FC<MediaSectionProps> = ({
             };
             onChangeVariant([...updatedVariantMedia, updated]);
         } else {
-            // If all media removed from this variant
-            // Check if we need to reassign primary
-            const wasRemovingPrimary = variantMedia
-                .find((vm) => vm.key === key)
-                ?.media.some((m) => m.isPrimary);
-            
-            if (wasRemovingPrimary) {
-                // Try to set a new primary from single media first
-                if (singleMedia.length > 0) {
-                    const updatedSingleMedia = singleMedia.map((m, idx) => ({
-                        ...m,
-                        isPrimary: idx === 0,
-                    }));
-                    onChangeSingle(updatedSingleMedia);
-                } else {
-                    // Try to set from other variants
-                    const otherVariantWithMedia = updatedVariantMedia.find((vm) => vm.media.length > 0);
-                    if (otherVariantWithMedia) {
-                        updatedVariantMedia = updatedVariantMedia.map((vm) => ({
-                            ...vm,
-                            media: vm.media.map((m, idx) => ({
-                                ...m,
-                                isPrimary: vm.key === otherVariantWithMedia.key && idx === 0,
-                            })),
-                        }));
-                    }
-                }
-            }
-            
             onChangeVariant(updatedVariantMedia);
         }
     };
@@ -195,7 +144,7 @@ export const MediaSection: React.FC<MediaSectionProps> = ({
     // Get variant media using shared utility
     const getMedia = (key: string, attributeValues?: { [attrId: string]: string }): MediaItem[] => {
         const match = getVariantData(key, variantMedia, attributeValues);
-        return match?.media || [];
+        return ensureGroupHasGroupPrimary(match?.media || []);
     };
 
     // Single mode (not variant-based)
@@ -220,6 +169,7 @@ export const MediaSection: React.FC<MediaSectionProps> = ({
                     onChange={handleSingleMediaChange}
                     isMulti={true}
                     hasPrimary={true}
+                    autoSetPrimaryOnFirstAdd={true}
                     error={errors['singleMedia'] ? String(errors['singleMedia']) : undefined}
                 />
             </Card>
@@ -272,6 +222,8 @@ export const MediaSection: React.FC<MediaSectionProps> = ({
                             onChange={(items) => handleVariantMediaChange(combo.key, items)}
                             isMulti={true}
                             hasPrimary={true}
+                            hasGroupPrimary={true}
+                            autoSetPrimaryOnFirstAdd={false}
                         />
                     </Card>
                 );

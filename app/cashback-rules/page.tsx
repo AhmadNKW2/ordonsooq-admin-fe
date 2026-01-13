@@ -1,0 +1,189 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "@/hooks/use-loading-router";
+import { useLoading } from "../src/providers/loading-provider";
+import {
+  useCashbackRules,
+  useDeleteCashbackRule,
+} from "../src/services/cashback-rules/hooks/use-cashback-rules";
+import type { CashbackRule } from "../src/services/cashback-rules/types/cashback-rule.types";
+import { PageHeader } from "../src/components/common/PageHeader";
+import { Card } from "../src/components/ui/card";
+import { Button } from "../src/components/ui/button";
+import { Input } from "../src/components/ui/input";
+import { Badge } from "../src/components/ui/badge";
+import { EmptyState } from "../src/components/common/EmptyState";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "../src/components/ui/table";
+import { DeleteConfirmationModal } from "../src/components/common/DeleteConfirmationModal";
+import { Wallet, Plus, Trash2, Pencil, RefreshCw } from "lucide-react";
+
+export default function CashbackRulesPage() {
+  const router = useRouter();
+  const { setShowOverlay } = useLoading();
+  const [search, setSearch] = useState("");
+  const [ruleToDelete, setRuleToDelete] = useState<CashbackRule | null>(null);
+
+  const { data: rules, isLoading, isError, error, refetch } = useCashbackRules();
+  const deleteRule = useDeleteCashbackRule();
+
+  useEffect(() => {
+    setShowOverlay(isLoading);
+  }, [isLoading, setShowOverlay]);
+
+  const filteredRules = useMemo(() => {
+    const list = Array.isArray(rules) ? rules : [];
+    if (!search.trim()) return list;
+    const term = search.trim().toLowerCase();
+    return list.filter((r) => {
+      return (
+        String(r.id).includes(term) ||
+        String(r.name ?? "").toLowerCase().includes(term) ||
+        String(r.type ?? "").toLowerCase().includes(term)
+      );
+    });
+  }, [rules, search]);
+
+  const handleConfirmDelete = async () => {
+    if (!ruleToDelete) return;
+    await deleteRule.mutateAsync(ruleToDelete.id);
+    setRuleToDelete(null);
+  };
+
+  return (
+    <div className="p-6 space-y-6">
+      <PageHeader
+        icon={<Wallet />}
+        title="Cashback Rules"
+        description="Manage cashback rules applied to orders"
+        action={{
+          label: "Create Rule",
+          onClick: () => router.push("/cashback-rules/create"),
+        }}
+      />
+
+      <Card className="p-4">
+        <div className="flex items-center gap-3">
+          <div className="flex-1">
+            <Input
+              label="Search"
+              placeholder="Search by id, name, type..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              isSearch
+            />
+          </div>
+          <Button variant="outline" onClick={() => refetch()} color="var(--color-primary)">
+            <RefreshCw className="w-4 h-4" />
+          </Button>
+          <Button onClick={() => router.push("/cashback-rules/create")}
+            color="var(--color-primary)"
+          >
+            <Plus className="w-4 h-4" />
+            New
+          </Button>
+        </div>
+      </Card>
+
+      {isError ? (
+        <div>
+          <EmptyState
+            icon={<Wallet />}
+            title="Failed to load cashback rules"
+            description={(error as any)?.message || "Please try again."}
+          />
+          <div className="flex justify-center">
+            <Button onClick={() => refetch()} color="var(--color-primary)">
+              Retry
+            </Button>
+          </div>
+        </div>
+      ) : filteredRules.length === 0 ? (
+        <div>
+          <EmptyState
+            icon={<Wallet />}
+            title="No cashback rules"
+            description="Create your first cashback rule to start rewarding customers."
+          />
+          <div className="flex justify-center">
+            <Button onClick={() => router.push("/cashback-rules/create")} color="var(--color-primary)">
+              Create Rule
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <Card className="p-0 overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-24">ID</TableHead>
+                <TableHead>Name</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead>Value</TableHead>
+                <TableHead>Min Order</TableHead>
+                <TableHead>Max Cashback</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="w-32">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredRules.map((rule) => (
+                <TableRow key={rule.id} className="hover:bg-primary/5">
+                  <TableCell className="font-mono">#{rule.id}</TableCell>
+                  <TableCell className="font-medium">{rule.name}</TableCell>
+                  <TableCell>{String(rule.type)}</TableCell>
+                  <TableCell>{String(rule.value)}</TableCell>
+                  <TableCell>{rule.minOrderAmount ?? "-"}</TableCell>
+                  <TableCell>{rule.maxCashbackAmount ?? "-"}</TableCell>
+                  <TableCell>
+                    <Badge variant={rule.isActive ? "success" : "danger"}>
+                      {rule.isActive ? "Active" : "Inactive"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        onClick={() => router.push(`/cashback-rules/${rule.id}`)}
+                        color="var(--color-primary)"
+                        className="px-2"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => setRuleToDelete(rule)}
+                        color="var(--color-danger)"
+                        className="px-2"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </Card>
+      )}
+
+      <DeleteConfirmationModal
+        isOpen={!!ruleToDelete}
+        onClose={() => setRuleToDelete(null)}
+        onConfirm={handleConfirmDelete}
+        isLoading={deleteRule.isPending}
+        title="Delete cashback rule?"
+        message={`This will delete \"${ruleToDelete?.name ?? ""}\".`}
+        confirmText="Delete"
+        confirmVariant="danger"
+      />
+    </div>
+  );
+}

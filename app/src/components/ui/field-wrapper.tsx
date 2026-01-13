@@ -69,7 +69,7 @@ export const FieldWrapper: React.FC<FieldWrapperProps> = ({
                         className={`absolute ${labelLeftOffset} rounded-r1 p-1 bg-white font-medium transition-all duaration-300 pointer-events-none z-10 ${showLabel
                             ? 'top-0 -translate-y-1/2  text-xs'
                             : 'top-1/2 -translate-y-1/2 text-primary2 text-sm'
-                            } ${error && showLabel ? 'text-danger' : ''} peer-autofill:top-0 peer-autofill:-translate-y-1/2 peer-autofill: peer-autofill:text-xs`}
+                            } ${error && showLabel ? 'text-danger' : ''}`}
                     >
                         {label}
                     </label>
@@ -82,7 +82,7 @@ export const FieldWrapper: React.FC<FieldWrapperProps> = ({
 };
 
 // Shared field styles constant
-export const FIELD_BASE_CLASSES = 'min-h-13 border rounded-r1 placeholder-primary/60 bg-white focus:outline-none focus:border-secondary focus:shadow-s2 transition-all duaration-300 disabled:cursor-not-allowed aria-disabled:cursor-not-allowed [&:-webkit-autofill]:bg-white [&:-webkit-autofill]: [&:-webkit-autofill]:shadow-[0_0_0px_1000px_theme(colors.secondary)_inset]';
+export const FIELD_BASE_CLASSES = 'min-h-13 border rounded-r1 placeholder-primary/60 bg-white focus:outline-none focus:border-secondary focus:shadow-s2 transition-all duaration-300 disabled:cursor-not-allowed aria-disabled:cursor-not-allowed';
 
 // Shared icon styles for consistent appearance across all field components
 export const FIELD_ICON_CLASSES = 'h-4 w-4 text-primary/60';

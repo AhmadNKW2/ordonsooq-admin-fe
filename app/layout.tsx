@@ -6,9 +6,7 @@ import "nprogress/nprogress.css";
 import { QueryProvider } from "./src/providers/query-provider";
 import { LoadingProvider } from "./src/providers/loading-provider";
 import { AuthProvider } from "./src/contexts/auth.context";
-import { AppSidebar } from './src/components/sidebar/app-sidebar';
-import { sidebarConfig } from './src/components/sidebar/sidebar.config';
-import { ProtectedRoute } from "./src/components/auth/ProtectedRoute";
+import { AppShell } from "./src/components/layout/AppShell";
 import { ToastContainer, Slide } from "react-toastify";
 
 const lato = Lato({
@@ -43,18 +41,7 @@ export default function RootLayout({
         <QueryProvider>
           <LoadingProvider>
             <AuthProvider>
-              <ProtectedRoute>
-                <div className="flex h-screen bg-primary/10">
-                  <AppSidebar
-                    groups={sidebarConfig.groups}
-                    header={sidebarConfig.header}
-                    footer={sidebarConfig.footer}
-                  />
-                  <main className="flex-1 overflow-auto">
-                    {children}
-                  </main>
-                </div>
-              </ProtectedRoute>
+              <AppShell>{children}</AppShell>
             </AuthProvider>
           </LoadingProvider>
           <ToastContainer

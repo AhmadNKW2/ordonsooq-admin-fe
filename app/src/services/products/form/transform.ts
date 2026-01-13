@@ -22,6 +22,7 @@ export interface MediaUploadData {
 export interface UploadedMediaReference {
   mediaId: number;
   isPrimary: boolean;
+  isGroupPrimary?: boolean;
   sortOrder: number;
   combination?: Record<string, number>;
 }
@@ -138,6 +139,7 @@ export function buildMediaArray(
   return uploadedMedia.map(media => ({
     media_id: media.mediaId,
     is_primary: media.isPrimary,
+    is_group_primary: media.isGroupPrimary,
     sort_order: media.sortOrder,
     combination: media.combination,
   }));

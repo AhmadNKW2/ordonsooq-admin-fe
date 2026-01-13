@@ -73,6 +73,7 @@ export interface MediaItem {
   type: "image" | "video";
   order: number;
   isPrimary: boolean;
+  isGroupPrimary?: boolean;
 }
 
 export interface VariantMedia {
@@ -172,6 +173,7 @@ export const productFormSchema = z.object({
         type: z.enum(["image", "video"]),
         order: z.number(),
         isPrimary: z.boolean(),
+        isGroupPrimary: z.boolean().optional(),
       })
     )
     .optional(),
@@ -188,6 +190,7 @@ export const productFormSchema = z.object({
             type: z.enum(["image", "video"]),
             order: z.number(),
             isPrimary: z.boolean(),
+            isGroupPrimary: z.boolean().optional(),
           })
         ),
       })

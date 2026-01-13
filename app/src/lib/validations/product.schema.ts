@@ -107,6 +107,7 @@ export const mediaItemSchema = z.object({
   type: z.enum(["image", "video"]),
   order: z.number(),
   isPrimary: z.boolean(),
+  isGroupPrimary: z.boolean().optional(),
 });
 
 export const variantMediaSchema = z.object({

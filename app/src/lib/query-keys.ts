@@ -26,6 +26,17 @@ export const queryKeys = {
       [...queryKeys.orders.details(), id] as const,
   },
 
+  // Cashback Rules
+  cashbackRules: {
+    all: ["cashback-rules"] as const,
+    lists: () => [...queryKeys.cashbackRules.all, "list"] as const,
+    list: (params?: Record<string, any>) =>
+      [...queryKeys.cashbackRules.lists(), params] as const,
+    details: () => [...queryKeys.cashbackRules.all, "detail"] as const,
+    detail: (id: string | number) =>
+      [...queryKeys.cashbackRules.details(), id] as const,
+  },
+
   // Categories
   categories: {
     all: ["categories"] as const,

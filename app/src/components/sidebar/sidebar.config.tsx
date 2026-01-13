@@ -179,6 +179,40 @@ export const sidebarConfig = {
             </svg>
           ),
         },
+        {
+          href: '/orders',
+          label: 'Orders',
+          icon: (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 17v-2a4 4 0 014-4h6m0 0l-3-3m3 3l-3 3M7 7h10M7 11h4M7 15h4M5 21h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v14a2 2 0 002 2z"
+              />
+            </svg>
+          ),
+        },
+        {
+          href: '/cashback-rules',
+          label: 'Cashback Rules',
+          icon: (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-2"
+              />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M20 12H9m0 0l3-3m-3 3l3 3"
+              />
+            </svg>
+          ),
+        },
       ],
     },
     {

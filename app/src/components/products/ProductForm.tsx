@@ -112,7 +112,6 @@ export const ProductForm: React.FC<ProductFormProps> = ({
         ...initialData,
       });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isEditMode, initialDataJson]);
 
   // Build dynamic Zod schema based on form state
@@ -172,6 +171,52 @@ export const ProductForm: React.FC<ProductFormProps> = ({
     const filteredVariantWeight = filterVariantData(formData.variantWeightDimensions);
     const filteredVariantMedia = filterVariantData(formData.variantMedia);
 
+    const ensureSinglePrimaryForProduct = (data: ProductFormData): ProductFormData => {
+      const singleMedia = data.singleMedia ? [...data.singleMedia] : undefined;
+      const variantMedia = data.variantMedia
+        ? data.variantMedia.map((vm) => ({
+            ...vm,
+            media: [...vm.media],
+          }))
+        : undefined;
+
+      const flattened: Array<{ source: 'single' | 'variant'; groupKey?: string; item: MediaItem }> = [];
+
+      if (singleMedia && singleMedia.length > 0) {
+        singleMedia
+          .slice()
+          .sort((a, b) => a.order - b.order)
+          .forEach((m) => flattened.push({ source: 'single', item: m }));
+      }
+
+      if (variantMedia && variantMedia.length > 0) {
+        variantMedia
+          .slice()
+          .sort((a, b) => String(a.key).localeCompare(String(b.key)))
+          .forEach((vm) => {
+            vm.media
+              .slice()
+              .sort((a, b) => a.order - b.order)
+              .forEach((m) => flattened.push({ source: 'variant', groupKey: vm.key, item: m }));
+          });
+      }
+
+      const allItems = flattened.map((x) => x.item);
+      if (allItems.length === 0) return data;
+
+      const currentPrimary = allItems.find((m) => m.isPrimary);
+      const primaryId = currentPrimary ? currentPrimary.id : allItems[0].id;
+
+      const nextSingle = singleMedia?.map((m) => ({ ...m, isPrimary: m.id === primaryId })) ?? singleMedia;
+      const nextVariant =
+        variantMedia?.map((vm) => ({
+          ...vm,
+          media: vm.media.map((m) => ({ ...m, isPrimary: m.id === primaryId })),
+        })) ?? variantMedia;
+
+      return { ...data, singleMedia: nextSingle, variantMedia: nextVariant };
+    };
+
     // Cast to ProductFormData for validation (with defaults)
     const dataToValidate: ProductFormData = {
       nameEn: formData.nameEn || '',
@@ -196,7 +241,9 @@ export const ProductForm: React.FC<ProductFormProps> = ({
       variants: (formData.variants || []).filter(v => v.active !== false),
     };
 
-    const isValid = validateForm(dataToValidate);
+    const normalizedData = ensureSinglePrimaryForProduct(dataToValidate);
+
+    const isValid = validateForm(normalizedData);
     console.log('isValid:', isValid);
     console.log('errors after validation:', errors);
 
@@ -209,7 +256,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
 
     setIsSubmitting(true);
     try {
-      await onSubmit(dataToValidate);
+      await onSubmit(normalizedData);
     } catch (error) {
       console.error("Failed to submit form:", error);
     } finally {
