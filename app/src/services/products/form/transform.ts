@@ -3,7 +3,7 @@
  */
 
 import { ProductFormData, MediaItem } from "../types/product-form.types";
-import { CreateProductDto, VariantInput, MediaInputDto } from "../types/product.types";
+import { CreateProductDto, MediaInputDto } from "../types/product.types";
 
 /**
  * Media upload data structure - contains files that need to be uploaded
@@ -63,9 +63,6 @@ export function transformFormDataToDto(
       controls_media: attr.controlsMedia,
       controls_weight: attr.controlsWeightDimensions,
     }));
-
-    // Variants (all combinations with stock)
-    dto.variants = buildVariantsArray(data);
   }
 
   // ========== PRICING ==========
@@ -313,52 +310,3 @@ function buildStocks(data: ProductFormData): StockItem[] {
   return stocks;
 }
 
-/**
- * Build variants array from form data
- * Each variant contains attribute_value_ids and stock_quantity
- */
-function buildVariantsArray(data: ProductFormData): VariantInput[] {
-  const variants: VariantInput[] = [];
-
-  // Use data.variants which contains all combinations with stock
-  if (!data.variants || data.variants.length === 0) {
-    return variants;
-  }
-
-  for (const variant of data.variants) {
-    // Get all attribute value IDs from the combination
-    const attributeValueIds = getAttributeValueIds(variant.attributeValues);
-    
-    if (attributeValueIds.length === 0) {
-      console.warn('Skipping variant: no valid attribute value IDs');
-      continue;
-    }
-
-    variants.push({
-      attribute_value_ids: attributeValueIds,
-      stock_quantity: variant.stock || 0,
-    });
-  }
-
-  return variants;
-}
-
-/**
- * Get attribute value IDs from attributeValues map
- */
-function getAttributeValueIds(attributeValues: { [attrId: string]: string }): number[] {
-  const ids: number[] = [];
-  
-  for (const valueId of Object.values(attributeValues)) {
-    if (valueId === undefined || valueId === null || valueId === '') {
-      continue;
-    }
-    
-    const numericId = parseInt(valueId, 10);
-    if (!isNaN(numericId)) {
-      ids.push(numericId);
-    }
-  }
-  
-  return ids;
-}

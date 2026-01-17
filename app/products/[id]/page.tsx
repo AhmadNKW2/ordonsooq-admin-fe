@@ -76,8 +76,8 @@ export default function EditProductPage() {
   const buildAttributeValuesMap = (combinations: any[]): { [attrId: string]: string } => {
     const map: { [attrId: string]: string } = {};
     combinations?.forEach((combo: any) => {
-      const attrId = combo.attribute_value?.attribute_id?.toString();
-      const valueId = combo.attribute_value_id?.toString();
+      const attrId = (combo.attribute_id || combo.attribute_value?.attribute_id)?.toString();
+      const valueId = (combo.value_id || combo.attribute_value_id)?.toString();
       if (attrId && valueId) {
         map[attrId] = valueId;
       }
@@ -132,8 +132,8 @@ export default function EditProductPage() {
     
     product.variants?.forEach((variant: any) => {
       variant.combinations?.forEach((combo: any) => {
-        const attrId = combo.attribute_value?.attribute_id?.toString();
-        const valueId = combo.attribute_value_id?.toString();
+        const attrId = (combo.attribute_id || combo.attribute_value?.attribute_id)?.toString();
+        const valueId = (combo.value_id || combo.attribute_value_id)?.toString();
         if (attrId && valueId) {
           if (!attributeValuesUsed[attrId]) {
             attributeValuesUsed[attrId] = new Set();

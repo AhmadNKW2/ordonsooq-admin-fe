@@ -195,7 +195,7 @@ export const CategoryTreeSelect: React.FC<CategoryTreeSelectProps> = ({
   singleSelect = false,
   label,
   error,
-  placeholder = "Select categories...",
+  placeholder = "",
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isFocused, setIsFocused] = useState(false);

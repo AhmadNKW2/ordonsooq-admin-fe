@@ -227,29 +227,37 @@ export default function ProductsPage() {
         <Table>
           <TableHeader>
             <TableRow isHeader>
-              <TableHead>#</TableHead>
-              <TableHead>Image</TableHead>
-              <TableHead>Product Name</TableHead>
-              <TableHead>Category</TableHead>
-              <TableHead>Vendor</TableHead>
-              <TableHead>Stock</TableHead>
-              <TableHead>Rating</TableHead>
-              <TableHead>Visibility</TableHead>
-              <TableHead>Actions</TableHead>
+              <TableHead width="5%">#</TableHead>
+              <TableHead width="7%">Image</TableHead>
+              <TableHead width="12%">Product Name</TableHead>
+              <TableHead width="9%">Category</TableHead>
+              <TableHead width="11%">Brand</TableHead>
+              <TableHead width="11%">Vendor</TableHead>
+              <TableHead width="9%">Price</TableHead>
+              <TableHead width="9%">Stock</TableHead>
+              <TableHead width="9%">Rating</TableHead>
+              <TableHead width="9%">Visibility</TableHead>
+              <TableHead width="9%">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {products.map((product) => (
+            {products.map((product) => {
+               // Helper to find image
+               const imageUrl = product.variants?.length && product.variants[0].media?.url 
+                 ? product.variants[0].media.url 
+                 : (product.media?.length ? product.media[0].image?.url : null);
+
+               return (
               <TableRow key={product.id}>
                 <TableCell className="font-mono text-sm">
                   {product.id}
                 </TableCell>
                 <TableCell>
-                  <div className="w-12 h-12 relative rounded-lg overflow-hidden bg-primary/10 border border-primary/20">
-                    {product.primary_image?.url ? (
+                  <div className="w-15 h-15 relative rounded-lg overflow-hidden bg-primary/10 border border-primary/20">
+                    {imageUrl ? (
                       <Image
-                        src={product.primary_image.url}
-                        alt={product.primary_image.alt_text || product.name_en}
+                        src={imageUrl}
+                        alt={product.name_en || ""}
                         fill
                         className="object-cover"
                       />
@@ -262,22 +270,80 @@ export default function ProductsPage() {
                 </TableCell>
                 <TableCell className="max-w-xs">
                   <div className="flex flex-col">
-                    <span className="truncate">{product.name_en}</span>
-                    <span className="text-sm text-gray-500 truncate">{product.name_ar}</span>
+                    <span className="truncate" title={product.name_en}>{product.name_en}</span>
+                    <span className="text-sm text-gray-500 truncate" title={product.name_ar}>{product.name_ar}</span>
                   </div>
                 </TableCell>
                 <TableCell>
-                  <div>
-                    {product.category?.name_en || product.category?.name || <span className="text-gray-400">—</span>}
+                    {product.categories && product.categories.length > 0 ? (
+                       <Badge variant="default2" className="w-fit">
+                         {product.categories[0].name_en}
+                       </Badge>
+                    ) : (
+                      <span className="text-gray-400">—</span>
+                    )}
+                </TableCell>
+                <TableCell>
+                   {(product.brand?.name_en || product.brand?.logo) ? (
+                      <div className="flex items-center gap-2">
+                         {product.brand.logo && (
+                            <div className="w-15 h-15 relative overflow-hidden border border-primary/20 rounded-lg">
+                              <Image src={product.brand.logo} alt={product.brand.name_en || ""} fill className="object-contain" />
+                            </div>
+                         )}
+                         <span className="text-sm">{product.brand.name_en || <span className="text-gray-400">—</span>}</span>
+                      </div>
+                   ) : (
+                      <span className="text-gray-400">—</span>
+                   )}
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-2">
+                    {product.vendor?.logo && (
+                       <div className="w-15 h-15 relative overflow-hidden border border-primary/20 rounded-lg">
+                         <Image src={product.vendor.logo} alt={product.vendor.name_en || ""} fill className="object-contain" />
+                       </div>
+                    )}
+                    <span className="text-sm">{product.vendor?.name_en || product.vendor?.name || <span className="text-gray-400">—</span>}</span>
                   </div>
                 </TableCell>
                 <TableCell>
-                  <div>
-                    {product.vendor?.name_en || product.vendor?.name || <span className="text-gray-400">—</span>}
-                  </div>
+                   {(() => {
+                      const price = product.variants?.length 
+                        ? product.variants[0].price 
+                        : (Array.isArray(product.price) ? product.price[0] : product.price);
+                      
+                      if (!price) return <span className="text-gray-400">—</span>;
+
+                      const regularPrice = typeof price === 'object' ? price.price : price;
+                      const salePrice = typeof price === 'object' ? price.sale_price : product.sale_price;
+
+                      return (
+                        <div className="flex flex-col">
+                          {salePrice ? (
+                            <>
+                              <span className="font-semibold">{salePrice}</span>
+                              <span className="text-xs text-gray-500 line-through">{regularPrice}</span>
+                            </>
+                          ) : (
+                             <span className="font-semibold">{regularPrice}</span>
+                          )}
+                        </div>
+                      )
+                   })()}
                 </TableCell>
                 <TableCell>
-                  <span className="font-medium">{product.stock?.total_quantity ?? <span className="text-gray-400">—</span>}</span>
+                  {(() => {
+                    const stock = product.variants?.length 
+                      ? product.variants.reduce((acc: number, v: any) => acc + (v.quantity || 0), 0)
+                      : (product.quantity ?? 0);
+                    
+                    return (
+                        <Badge variant={stock > 0 ? "success" : "danger"}>
+                            {stock > 0 ? `${stock} in stock` : "Out of stock"}
+                        </Badge>
+                    )
+                  })()}
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center justify-start gap-1">
@@ -326,7 +392,8 @@ export default function ProductsPage() {
                   </div>
                 </TableCell>
               </TableRow>
-            ))}
+            );
+          })}
           </TableBody>
         </Table>
       )}

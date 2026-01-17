@@ -46,7 +46,7 @@ async function proxy(req: Request, ctx: { params: Promise<{ path: string[] }> })
   // Copy headers except ones Next/Vercel manage.
   upstreamResp.headers.forEach((value, key) => {
     const lower = key.toLowerCase();
-    if (lower === "content-encoding" || lower === "transfer-encoding" || lower === "connection") return;
+    if (lower === "content-encoding" || lower === "transfer-encoding" || lower === "connection" || lower === "content-length") return;
     if (lower === "set-cookie") return; // handled separately
     resHeaders.set(key, value);
   });

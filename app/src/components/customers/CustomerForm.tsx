@@ -243,7 +243,6 @@ export const UserForm: React.FC<UserFormProps> = ({
               onClick={() => setIsProductModalOpen(true)}
               disabled={isUpdatingWishlist}
             >
-              <Pencil className="h-4 w-4 mr-2" />
               Edit Products
             </Button>
           </div>
@@ -262,7 +261,6 @@ export const UserForm: React.FC<UserFormProps> = ({
                 className="mt-3"
                 disabled={isUpdatingWishlist}
               >
-                <Pencil className="h-4 w-4 mr-2" />
                 Edit Products
               </Button>
             </div>

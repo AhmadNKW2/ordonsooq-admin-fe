@@ -13,6 +13,7 @@ import {
   useUpdateCustomer,
   useUpdateUserWishlist,
 } from "../../services/customers/hooks/use-customers";
+import { useOrders } from "../../services/orders/hooks/use-orders";
 import { UserForm } from "./UserForm";
 import { Card } from "../ui/card";
 import { Button } from "../ui/button";
@@ -62,6 +63,16 @@ export const EditUserPage: React.FC<EditUserPageProps> = ({ userType, userId }) 
 
   const updateCustomer = useUpdateCustomer();
   const updateWishlist = useUpdateUserWishlist();
+
+  // Fetch orders (optimally we should filter by userId in the API, but for now we filter client-side if API doesn't support it)
+  // Or we can assume listOrders returns all orders.
+  const { data: allOrders } = useOrders();
+  
+  const userOrders = useMemo(() => {
+    if (!allOrders || !Array.isArray(allOrders)) return [];
+    // Filter orders where user.id matches userId or any other linkage
+    return allOrders.filter(o => o.user?.id === userId || (o as any).userId === userId);
+  }, [allOrders, userId]);
 
   // Get current wishlist product IDs (only for customers)
   const currentWishlistProductIds = useMemo(
@@ -239,6 +250,7 @@ export const EditUserPage: React.FC<EditUserPageProps> = ({ userType, userId }) 
       onProductIdsChange={setProductIds}
       onWishlistChange={!isAdmin ? handleWishlistChange : undefined}
       isUpdatingWishlist={!isAdmin ? updateWishlist.isPending : false}
+      orders={!isAdmin ? userOrders : undefined}
       formErrors={formErrors}
       onSubmit={handleSubmit}
       isSubmitting={updateCustomer.isPending}

@@ -37,6 +37,8 @@ import {
   PaginatedApiResponse,
 } from "../../../types/common.types";
 import { httpClient } from "../../../lib/api/http-client";
+import { getQueryClient } from "../../../lib/query-client";
+import { queryKeys } from "../../../lib/query-keys";
 
 // Product Attributes
 export interface ProductAttributeDto {
@@ -155,11 +157,13 @@ class ProductService extends BaseService<Product> {
   async createProduct(
     data: CreateProductDto
   ): Promise<ApiResponse<{ product: Product }>> {
-    return httpClient.post<ApiResponse<{ product: Product }>>(
+    const response = await httpClient.post<ApiResponse<{ product: Product }>>(
       `${this.endpoint}`,
       data,
       { headers: { "x-skip-request-toast": "1" } }
     );
+    getQueryClient().invalidateQueries({ queryKey: queryKeys.products.all });
+    return response;
   }
 
   /**
@@ -168,10 +172,12 @@ class ProductService extends BaseService<Product> {
   async createProductWithFiles(
     formData: FormData
   ): Promise<ApiResponse<Product>> {
-    return httpClient.postFormData<ApiResponse<Product>>(
+    const response = await httpClient.postFormData<ApiResponse<Product>>(
       `${this.endpoint}/`,
       formData
     );
+    getQueryClient().invalidateQueries({ queryKey: queryKeys.products.all });
+    return response;
   }
 
   /**
@@ -181,23 +187,29 @@ class ProductService extends BaseService<Product> {
     id: string | number,
     data: UpdateProductDto
   ): Promise<ApiResponse<Product>> {
-    return httpClient.put<ApiResponse<Product>>(`${this.endpoint}/${id}`, data, {
+    const response = await httpClient.put<ApiResponse<Product>>(`${this.endpoint}/${id}`, data, {
       headers: { "x-skip-request-toast": "1" },
     });
+    getQueryClient().invalidateQueries({ queryKey: queryKeys.products.all });
+    return response;
   }
 
   /**
    * Archive a product (soft delete)
    */
   async archiveProduct(id: string | number): Promise<ApiResponse<void>> {
-    return httpClient.post<ApiResponse<void>>(`${this.endpoint}/${id}/archive`);
+    const response = await httpClient.post<ApiResponse<void>>(`${this.endpoint}/${id}/archive`);
+    getQueryClient().invalidateQueries({ queryKey: queryKeys.products.all });
+    return response;
   }
 
   /**
    * Restore an archived product
    */
   async restoreProduct(id: string | number, data?: RestoreProductDto): Promise<ApiResponse<Product>> {
-    return httpClient.post<ApiResponse<Product>>(`${this.endpoint}/${id}/restore`, data);
+    const response = await httpClient.post<ApiResponse<Product>>(`${this.endpoint}/${id}/restore`, data);
+    getQueryClient().invalidateQueries({ queryKey: queryKeys.products.all });
+    return response;
   }
 
   /**
@@ -211,7 +223,9 @@ class ProductService extends BaseService<Product> {
    * Permanently delete a product
    */
   async permanentDeleteProduct(id: string | number): Promise<ApiResponse<void>> {
-    return httpClient.delete<ApiResponse<void>>(`${this.endpoint}/${id}/permanent`);
+    const response = await httpClient.delete<ApiResponse<void>>(`${this.endpoint}/${id}/permanent`);
+    getQueryClient().invalidateQueries({ queryKey: queryKeys.products.all });
+    return response;
   }
 
   /**
@@ -229,7 +243,9 @@ class ProductService extends BaseService<Product> {
     id: string | number,
     visible: boolean
   ): Promise<ApiResponse<Product>> {
-    return this.patch(id, { visible });
+    const response = await this.patch(id, { visible });
+    getQueryClient().invalidateQueries({ queryKey: queryKeys.products.all });
+    return response;
   }
 
   // ============================================

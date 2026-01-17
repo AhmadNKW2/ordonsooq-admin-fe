@@ -151,6 +151,10 @@ class HttpClient {
     // (categories/vendors/brands/attributes) to refetch after file uploads.
     // Media uploads are handled separately and shouldn't force global refetch.
     if (endpoint.includes("/media/upload")) return false;
+    
+    // Products have their own specific cache invalidation in ProductService
+    if (endpoint.includes("/products")) return false;
+    
     return true;
   }
 

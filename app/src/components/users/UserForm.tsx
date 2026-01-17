@@ -25,7 +25,9 @@ import {
 import { Users, Heart, Package, Pencil, Shield } from "lucide-react";
 import { UserRole, WishlistItem } from "../../services/customers/types/customer.types";
 import { ProductSelectionModal } from "../common/ProductSelectionModal";
-import { ProductsTableSection, ProductItem } from "../common/ProductsTableSection";
+import { ProductItem } from "../common/ProductsTableSection";
+import { OrdersTableSection } from "../common/OrdersTableSection";
+import type { Order } from "../../services/orders/types/order.types";
 
 interface UserFormProps {
   mode: "create" | "edit";
@@ -49,6 +51,7 @@ interface UserFormProps {
   onProductIdsChange?: (productIds: number[]) => void;
   onWishlistChange?: (productIds: number[]) => void;
   isUpdatingWishlist?: boolean;
+  orders?: Order[];
   formErrors: {
     firstName?: string;
     lastName?: string;
@@ -88,6 +91,7 @@ export const UserForm: React.FC<UserFormProps> = ({
   onProductIdsChange,
   onWishlistChange,
   isUpdatingWishlist = false,
+  orders = [],
   formErrors,
   onSubmit,
   isSubmitting,
@@ -195,6 +199,7 @@ export const UserForm: React.FC<UserFormProps> = ({
               value={role}
               onChange={(value) => onRoleChange(value as UserRole)}
               options={roleOptions}
+              disabled={userType === 'customer'}
             />
           )}
 
@@ -211,17 +216,13 @@ export const UserForm: React.FC<UserFormProps> = ({
         </div>
       </Card>
 
-      {/* Products Section - for assigning products */}
-      <Card>
-        <ProductsTableSection
-          title={`${isAdmin ? "Admin" : "Customer"} Products`}
-          products={assignedProducts}
-          onProductsChange={onProductIdsChange || (() => {})}
-          emptyMessage={`No products assigned to this ${isAdmin ? "admin" : "customer"}`}
-          editButtonText="Edit Products"
-          modalTitle={`Manage ${isAdmin ? "Admin" : "Customer"} Products`}
+      {/* Customer Orders Section - Only show for customers */}
+      {!isAdmin && mode === 'edit' && (
+        <OrdersTableSection
+          orders={orders}
+          title="Customer Orders"
         />
-      </Card>
+      )}
 
       {/* Wishlist Section - Only show in edit mode for customers */}
       {mode === "edit" && !isAdmin && (
@@ -243,7 +244,6 @@ export const UserForm: React.FC<UserFormProps> = ({
               onClick={() => setIsProductModalOpen(true)}
               disabled={isUpdatingWishlist}
             >
-              <Pencil className="h-4 w-4 mr-2" />
               Edit Products
             </Button>
           </div>
@@ -262,7 +262,6 @@ export const UserForm: React.FC<UserFormProps> = ({
                 className="mt-3"
                 disabled={isUpdatingWishlist}
               >
-                <Pencil className="h-4 w-4 mr-2" />
                 Edit Products
               </Button>
             </div>
