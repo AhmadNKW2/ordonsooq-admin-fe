@@ -112,21 +112,43 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
     const pricingAttributes = getControllingAttributes(attributes, 'controlsPricing');
 
     // If no attributes control pricing or no attributes have values, always show single pricing
+    // Update: If we have attributes but NO attributes control pricing, we show single pricing.
+    // If we have attributes controlling pricing, but no combinations (no values selected), we show the "Please select..." message.
     const shouldShowSinglePricing = pricingAttributes.length === 0;
 
     // Generate all combinations for pricing attributes
     const allCombinations = generateCombinations(pricingAttributes);
 
     // Filter combinations based on valid variants
+    // Fix: don't filter rigorously if variants are still initializing/empty 
+    // to avoid "Please select attributes" flicker or lock
     const combinations = allCombinations.filter(combo => {
-        if (variants.length === 0) return true; // Show all if variants not yet initialized
-        return variants.some(variant => {
-            if (variant.active === false) return false;
-            return Object.entries(combo.attributeValues).every(([key, value]) => {
-                return variant.attributeValues[key] === value;
+        if (!variants || variants.length === 0) return true; 
+
+        // Check if this pricing combo is compatible with any active variant
+        const isCompatibleWithVariant = variants.some(variant => {
+             // If variant is inactive, ignore it? Maybe we still want to price it?
+             // Assuming active check is desired:
+             // if (variant.active === false) return false;
+             
+             // Check if variant matches the pricing combination
+             // A variant matches if for every pricing-controlling attribute, it has the same value
+             return Object.entries(combo.attributeValues).every(([key, value]) => {
+                return variant.attributeValues?.[key] === value;
             });
         });
+        
+        return isCompatibleWithVariant;
     });
+
+    // Debugging
+    // console.log('[PricingSection] debug:', {
+    //    totalAttrs: attributes.length,
+    //    pricingAttrs: pricingAttributes.length,
+    //    allCombinations: allCombinations.length,
+    //    filteredCombinations: combinations.length,
+    //    variantsCount: variants?.length
+    // });
 
     const handleSinglePricingChange = (field: keyof SinglePricing, value: string) => {
         const numValue = value === "" ? undefined : parseFloat(value);

@@ -24,8 +24,7 @@ export const categoryFormSchema = z.object({
     .string()
     .min(1, "Arabic name is required")
     .min(2, "Name must be at least 2 characters")
-    .max(100, "Name must be less than 100 characters")
-    .regex(ARABIC_PATTERN, "Name must be in Arabic"),
+    .max(100, "Name must be less than 100 characters"),
   
   description_en: z
     .string()
@@ -37,7 +36,6 @@ export const categoryFormSchema = z.object({
   description_ar: z
     .string()
     .max(500, "Description must be less than 500 characters")
-    .regex(ARABIC_PATTERN, "Description must be in Arabic")
     .optional()
     .or(z.literal("")),
   
@@ -129,8 +127,6 @@ export function validateCategoryForm(data: {
     errors.name_ar = "Name must be at least 2 characters";
   } else if (data.name_ar.length > 100) {
     errors.name_ar = "Name must be less than 100 characters";
-  } else if (!ARABIC_PATTERN.test(data.name_ar)) {
-    errors.name_ar = "Name must be in Arabic";
   }
 
   // Description English validation (optional)
@@ -143,8 +139,6 @@ export function validateCategoryForm(data: {
   // Description Arabic validation (optional)
   if (data.description_ar && data.description_ar.length > 500) {
     errors.description_ar = "Description must be less than 500 characters";
-  } else if (data.description_ar && !ARABIC_PATTERN.test(data.description_ar)) {
-    errors.description_ar = "Description must be in Arabic";
   }
 
   // Image validation (optional)

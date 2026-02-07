@@ -125,10 +125,72 @@ export const productSchema = z.object({
   archived_by: z.number().optional().nullable(),
   created_at: z.string().or(z.date()).optional(),
   updated_at: z.string().or(z.date()).optional(),
+  
+  // New API Structure Support
+  media_groups: z.record(z.string(), z.any()).optional(),
+  price_groups: z.record(z.string(), z.any()).optional(),
+  weight_groups: z.record(z.string(), z.any()).optional(),
+  attributes: z.record(z.string(), z.any()).optional(),
 });
 
-// TypeScript type inferred from schema
-export type Product = z.infer<typeof productSchema>;
+// Helper interfaces for new API structure
+export interface ProductMediaItem {
+  id: number;
+  url: string;
+  type: string;
+  alt_text: string | null;
+  is_primary: boolean;
+  is_group_primary: boolean;
+}
+
+export interface ProductMediaGroup {
+  media: ProductMediaItem[];
+}
+
+export interface ProductPriceGroup {
+  price: string;
+  sale_price: string | null;
+}
+
+export interface ProductWeightGroup {
+  weight: string;
+  dimensions: {
+    length: string;
+    width: string;
+    height: string;
+  }
+}
+
+export interface ProductAttributeValue {
+  name_en: string;
+  name_ar: string;
+  color_code: string | null;
+}
+
+export interface ProductAttribute {
+  name_en: string;
+  name_ar: string;
+  values: Record<string, ProductAttributeValue>;
+}
+
+export interface ProductVariant {
+  id: number;
+  is_active: boolean;
+  quantity: number;
+  attribute_values: Record<string, number>;
+  price_group_id: string;
+  media_group_id: string;
+  weight_group_id: string;
+}
+
+// TypeScript type inferred from schema with extensions for strict types
+export type Product = z.infer<typeof productSchema> & {
+  media_groups?: Record<string, ProductMediaGroup>;
+  price_groups?: Record<string, ProductPriceGroup>;
+  weight_groups?: Record<string, ProductWeightGroup>;
+  attributes?: Record<string, ProductAttribute>;
+  variants?: ProductVariant[];
+};
 
 // Extended Product with relations (for detail view)
 export interface ProductMedia {
@@ -173,7 +235,7 @@ export interface ProductStock {
   updated_at?: string | Date;
 }
 
-export interface ProductDetail extends Omit<Product, 'vendor' | 'category' | 'stock'> {
+export interface ProductDetail extends Omit<Product, 'vendor' | 'category' | 'stock' | 'attributes'> {
   category?: Category | null;
   vendor?: {
     id: number;

@@ -8,6 +8,7 @@ export interface AttributeValue {
   attribute_id: number;
   value_en: string;
   value_ar: string;
+  parent_value_id?: number | null;
   color_code: string | null;
   image_url: string | null;
   sort_order: number;
@@ -23,11 +24,16 @@ export interface Attribute {
   name_ar: string;
   type: string;
   is_color: boolean;
+  unit_en?: string | null;
+  unit_ar?: string | null;
+  parent_id?: number | null;
+  parent_value_id?: number | null;
   sort_order: number;
   is_active: boolean;
   created_at?: string;
   updated_at?: string;
   values?: AttributeValue[];
+  children?: Attribute[];
 }
 
 // DTOs for API operations
@@ -36,6 +42,10 @@ export interface Attribute {
 export interface CreateAttributeDto {
   name_en: string;
   name_ar: string;
+  unit_en?: string;
+  unit_ar?: string;
+  parent_id?: number | null;
+  parent_value_id?: number | null;
   is_color?: boolean;
   is_active?: boolean;
   values?: CreateAttributeValueDto[];
@@ -45,6 +55,7 @@ export interface CreateAttributeDto {
 export interface CreateAttributeValueDto {
   value_en: string;
   value_ar: string;
+  parent_value_id?: number | null;
   color_code?: string | null;
   is_active?: boolean;
 }
@@ -54,6 +65,7 @@ export interface UpdateAttributeValueInDto {
   id?: number; // Optional for new values
   value_en?: string;
   value_ar?: string;
+  parent_value_id?: number | null;
   color_code?: string | null;
   is_active?: boolean;
   sort_order?: number;
@@ -63,6 +75,10 @@ export interface UpdateAttributeValueInDto {
 export interface UpdateAttributeDto {
   name_en?: string;
   name_ar?: string;
+  unit_en?: string;
+  unit_ar?: string;
+  parent_id?: number | null;
+  parent_value_id?: number | null;
   is_color?: boolean;
   is_active?: boolean;
   sort_order?: number;

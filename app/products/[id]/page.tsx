@@ -19,7 +19,7 @@ import { useProduct } from "../../src/services/products/hooks/use-products";
 import { productService } from "../../src/services/products/api/product.service";
 import { mediaService } from "../../src/services/media/api/media.service";
 import { Card } from "../../src/components/ui/card";
-import { AlertCircle, RefreshCw } from "lucide-react";
+import { AlertCircle, RefreshCw, Loader2 } from "lucide-react";
 import { Button } from "../../src/components/ui/button";
 import { Attribute, AttributeValue } from "../../src/services/attributes/types/attribute.types";
 import { finishToastError, finishToastSuccess, showLoadingToast, updateLoadingToast } from "../../src/lib/toast";
@@ -60,13 +60,20 @@ export default function EditProductPage() {
 
   const attributes = attributesData?.map((attr: Attribute) => ({
     id: attr.id.toString(),
+    parentId: attr.parent_id?.toString(), // Added parentId
+    parentValueId: attr.parent_value_id?.toString(), // Added parentValueId for attribute linking
     name: attr.name_en,
     displayName: attr.name_ar,
-    values: attr.values?.map((val: AttributeValue) => ({
-      id: val.id.toString(),
-      value: val.value_en,
-      displayValue: val.value_ar,
-    })) || [],
+    values: attr.values?.map((val: AttributeValue) => {
+      const pId = val.parent_value_id !== null && val.parent_value_id !== undefined ? val.parent_value_id.toString() : undefined;
+      // console.log(`[EditProduct] Value: ${val.value_en} (ID: ${val.id}) -> Parent: ${pId}`);
+      return {
+        id: val.id.toString(),
+        parentId: pId,
+        value: val.value_en,
+        displayValue: val.value_ar,
+      };
+    }) || [],
   })) || [];
 
   // Transform product data to form initial data
@@ -125,25 +132,80 @@ export default function EditProductPage() {
 
   // Transform attributes from product data
   const transformProductAttributes = () => {
-    if (!product?.attributes || product.attributes.length === 0) return undefined;
+    // Handle new dictionary format (Record<string, ProductAttribute>)
+    if (product?.attributes && !Array.isArray(product.attributes) && Object.keys(product.attributes).length > 0) {
+      // Determines which attributes are actually used in variants to set control flags correctly
+      const usedAttributeIds = new Set<string>();
+      if (product.variants && Array.isArray(product.variants)) {
+         product.variants.forEach((v: any) => {
+            if (v.attribute_values) {
+                Object.keys(v.attribute_values).forEach(k => usedAttributeIds.add(k));
+            }
+         });
+      }
+
+      return Object.entries(product.attributes).map(([attrId, attrData]: [string, any], index) => {
+        // Find the full attribute details from available attributes (to get all values if needed)
+        // or construct from the product data
+        
+        // Map values from the dictionary to array
+        const values = attrData.values ? Object.entries(attrData.values).map(([valId, valData]: [string, any], vIdx) => ({
+          id: valId,
+          value: valData.name_en || valData.value_en,
+          displayValue: valData.name_ar || valData.value_ar,
+          order: vIdx
+        })) : [];
+
+        const isUsedInVariants = usedAttributeIds.has(attrId);
+
+        return {
+          id: attrId,
+          name: attrData.name_en,
+          values,
+          order: index,
+          // Defaults for control flags as they might not be in the simple dict
+          // Only attributes used in variants should control pricing/weights to avoiding empty combinations blocks
+          controlsPricing: isUsedInVariants, 
+          controlsWeightDimensions: isUsedInVariants && Object.keys((product as any)?.weight_groups || {}).length > 1,
+          controlsMedia: isUsedInVariants && Object.keys((product as any)?.media_groups || {}).length > 1,
+        };
+      });
+    }
+
+    if (!product?.attributes || (Array.isArray(product.attributes) && product.attributes.length === 0)) return undefined;
     
     // Get unique attribute values used across all variants
     const attributeValuesUsed: { [attrId: string]: Set<string> } = {};
     
     product.variants?.forEach((variant: any) => {
-      variant.combinations?.forEach((combo: any) => {
-        const attrId = (combo.attribute_id || combo.attribute_value?.attribute_id)?.toString();
-        const valueId = (combo.value_id || combo.attribute_value_id)?.toString();
-        if (attrId && valueId) {
-          if (!attributeValuesUsed[attrId]) {
-            attributeValuesUsed[attrId] = new Set();
+      // Handle legacy combination format
+      if (variant.combinations) {
+        variant.combinations.forEach((combo: any) => {
+          const attrId = (combo.attribute_id || combo.attribute_value?.attribute_id)?.toString();
+          const valueId = (combo.value_id || combo.attribute_value_id)?.toString();
+          if (attrId && valueId) {
+            if (!attributeValuesUsed[attrId]) {
+              attributeValuesUsed[attrId] = new Set();
+            }
+            attributeValuesUsed[attrId].add(valueId);
           }
-          attributeValuesUsed[attrId].add(valueId);
-        }
-      });
+        });
+      }
+      
+      // Handle new attribute_values dictionary format
+      if (variant.attribute_values) {
+        Object.entries(variant.attribute_values).forEach(([attrId, valId]) => {
+             if (attrId && valId) {
+                if (!attributeValuesUsed[attrId]) {
+                  attributeValuesUsed[attrId] = new Set();
+                }
+                attributeValuesUsed[attrId].add(valId.toString());
+             }
+        });
+      }
     });
 
-    return product.attributes.map((attr: any, index: number) => {
+    return (product.attributes as any[]).map((attr: any, index: number) => {
       const attrId = attr.attribute_id?.toString() || attr.attribute?.id?.toString();
       const attrName = attr.attribute?.name_en || '';
       
@@ -175,8 +237,43 @@ export default function EditProductPage() {
   // Transform variant pricing from prices array
   const transformVariantPricing = () => {
     // Only for variant products (products with attributes)
-    if (!product?.attributes || product.attributes.length === 0) return undefined;
+    // Check if attributes exist (either as array or object)
+    const hasAttributes = Array.isArray(product?.attributes) ? product.attributes.length > 0 : (product?.attributes && Object.keys(product.attributes).length > 0);
+    if (!hasAttributes) return undefined;
     
+    // NEW: Handle pricing via variants linking to price_groups
+    if (product?.price_groups && product?.variants) {
+       return product.variants.map((variant: any) => {
+          const pgId = variant.price_group_id?.toString();
+          if (!pgId || !product.price_groups![pgId]) return null;
+          
+          const pg = product.price_groups![pgId];
+          
+          // Convert attribute_values { "1": 5 } to { "1": "5" }
+          const attributeValues: { [key: string]: string } = {};
+          if (variant.attribute_values) {
+             Object.entries(variant.attribute_values).forEach(([k, v]) => {
+                if (v !== null && v !== undefined) attributeValues[k] = v.toString();
+             });
+          }
+          
+          const key = generateVariantKey(attributeValues);
+          
+          // Avoid duplicates if multiple variants map to same pricing logic representation? 
+          // Actually the form typically iterates unique combinations. 
+          // But here we are just mapping initial data.
+          
+          return {
+             key,
+             attributeValues,
+             cost: pg.cost ? parseFloat(pg.cost) : 0,
+             price: parseFloat(pg.price),
+             isSale: !!pg.sale_price,
+             salePrice: pg.sale_price ? parseFloat(pg.sale_price) : undefined
+          };
+       }).filter(Boolean);
+    }
+
     // Use prices array with groupValues or combination for variant pricing
     const prices = (product as any).prices;
     if (prices && prices.length > 0) {
@@ -200,6 +297,36 @@ export default function EditProductPage() {
 
   // Transform variant weight/dimensions from weights array
   const transformVariantWeightDimensions = () => {
+    // NEW: Handle weights via variants linking to weight_groups
+    if (product?.weight_groups && product?.variants) {
+         // Filter unique weight entries per combination key to avoid duplicates in list?
+         // Actually, let's just map all variants that have valid weight groups.
+         return product.variants.map((variant: any) => {
+          const wgId = variant.weight_group_id?.toString();
+          if (!wgId || !product.weight_groups![wgId]) return null;
+          
+          const wg = product.weight_groups![wgId];
+          
+          // Convert attribute_values
+          const attributeValues: { [key: string]: string } = {};
+          if (variant.attribute_values) {
+             Object.entries(variant.attribute_values).forEach(([k, v]) => {
+                if (v !== null && v !== undefined) attributeValues[k] = v.toString();
+             });
+          }
+          const key = generateVariantKey(attributeValues);
+          
+          return {
+            key,
+            attributeValues,
+            weight: wg.weight ? parseFloat(wg.weight) : undefined,
+            length: wg.dimensions?.length ? parseFloat(wg.dimensions.length) : undefined,
+            width: wg.dimensions?.width ? parseFloat(wg.dimensions.width) : undefined,
+            height: wg.dimensions?.height ? parseFloat(wg.dimensions.height) : undefined,
+          };
+       }).filter(Boolean);
+    }
+
     // Use weights array with groupValues or combination for variant weights
     const weights = (product as any).weights;
     if (!weights || weights.length === 0) return undefined;
@@ -225,12 +352,21 @@ export default function EditProductPage() {
     if (product?.variants && product.variants.length > 0) {
       return product.variants.map((variant: any) => {
         const stock = product.stock?.find((s: any) => s.variant_id === variant.id);
-        const attributeValues = buildAttributeValuesMap(variant.combinations);
+        
+        let attributeValues: {[key:string]: string} = {};
+        
+        if (variant.combinations) {
+             attributeValues = buildAttributeValuesMap(variant.combinations);
+        } else if (variant.attribute_values) {
+           Object.entries(variant.attribute_values).forEach(([k, v]) => {
+                if (v !== null && v !== undefined) attributeValues[k] = v.toString();
+           });
+        }
         
         return {
           id: variant.id.toString(),
           attributeValues,
-          stock: stock?.quantity || 0,
+          stock: variant.quantity ?? stock?.quantity ?? 0,
         };
       });
     }
@@ -254,8 +390,9 @@ export default function EditProductPage() {
   const isWeightVariantBased = () => {
     // Check if any attribute controls weight (from product attributes)
     const productAttributes = product?.attributes;
-    if (productAttributes && productAttributes.length > 0) {
-      if (productAttributes.some((attr: any) => attr.controls_weight === true)) {
+    if (productAttributes) {
+      const attrs = Array.isArray(productAttributes) ? productAttributes : Object.values(productAttributes);
+      if (attrs.some((attr: any) => attr.controls_weight === true)) {
         return true;
       }
     }
@@ -264,8 +401,11 @@ export default function EditProductPage() {
     const weights = (product as any)?.weights;
     if (weights && weights.length > 0) {
       // If any weight has groupValues, it's variant-based
-      return weights.some((w: any) => w.groupValues && w.groupValues.length > 0);
+      if (weights.some((w: any) => w.groupValues && w.groupValues.length > 0)) return true;
     }
+
+    // New structure: Only if more than one group exists, it implies variance
+    if ((product as any)?.weight_groups && Object.keys((product as any)?.weight_groups).length > 1) return true;
     
     return false;
   };
@@ -274,8 +414,9 @@ export default function EditProductPage() {
   const isMediaVariantBased = () => {
     // Check if any attribute controls media (from product attributes)
     const productAttributes = product?.attributes;
-    if (productAttributes && productAttributes.length > 0) {
-      if (productAttributes.some((attr: any) => attr.controls_media === true)) {
+    if (productAttributes) {
+      const attrs = Array.isArray(productAttributes) ? productAttributes : Object.values(productAttributes);
+      if (attrs.some((attr: any) => attr.controls_media === true)) {
         return true;
       }
     }
@@ -283,14 +424,36 @@ export default function EditProductPage() {
     // Check if any media has media_group with non-empty groupValues (variant-based)
     const media = product?.media;
     if (media && media.length > 0) {
-      return media.some((m: any) => m.media_group?.groupValues && m.media_group.groupValues.length > 0);
+      if (media.some((m: any) => m.media_group?.groupValues && m.media_group.groupValues.length > 0)) return true;
     }
+
+    // New structure: Only if more than one group exists, it implies variance
+    if ((product as any)?.media_groups && Object.keys((product as any)?.media_groups).length > 1) return true;
     
     return false;
   };
 
   // Transform single media (non-variant) - for products without variant-based media
   const transformSingleMedia = () => {
+    // New API Structure: If only one media group, use it
+    if ((product as any)?.media_groups) {
+         const groups: any[] = Object.values((product as any).media_groups);
+         if (groups.length > 0) {
+             const mGroup = groups[0];
+             if (mGroup.media && Array.isArray(mGroup.media)) {
+               return mGroup.media.map((m: any) => ({
+                    id: m.id.toString(),
+                    file: null,
+                    preview: m.url,
+                    type: m.type as 'image' | 'video',
+                    order: m.sort_order || 0,
+                    isPrimary: m.is_primary,
+                    isGroupPrimary: m.is_group_primary
+                 })).sort((a: any, b: any) => a.order - b.order);
+             }
+         }
+    }
+
     if (!product?.media || product.media.length === 0) return [];
     
     // Return all media sorted by sort_order
@@ -309,6 +472,44 @@ export default function EditProductPage() {
 
   // Transform variant media from media array with media_group
   const transformVariantMedia = () => {
+    // NEW: Handle media via variants linking to media_groups
+    if (product?.media_groups && product?.variants) {
+         const mediaGroupItems = new Map();
+         
+         Object.entries(product.media_groups).forEach(([groupId, group]: [string, any]) => {
+             if (group.media && Array.isArray(group.media)) {
+                 mediaGroupItems.set(groupId, group.media.map((m: any) => ({
+                    id: m.id.toString(),
+                    file: null,
+                    preview: m.url,
+                    type: m.type as 'image' | 'video',
+                    order: m.sort_order || 0,
+                    isPrimary: m.is_primary,
+                    isGroupPrimary: m.is_group_primary
+                 })));
+             }
+         });
+         
+         return product.variants.map((variant: any) => {
+             const mgId = variant.media_group_id?.toString();
+             if (!mgId || !mediaGroupItems.has(mgId)) return null;
+             
+             const attributeValues: { [key: string]: string } = {};
+             if (variant.attribute_values) {
+                Object.entries(variant.attribute_values).forEach(([k, v]) => {
+                    if (v !== null && v !== undefined) attributeValues[k] = v.toString();
+                });
+             }
+             const key = generateVariantKey(attributeValues);
+             
+             return {
+                 key,
+                 attributeValues,
+                 media: mediaGroupItems.get(mgId),
+             };
+         }).filter(Boolean);
+    }
+
     if (!product?.media || product.media.length === 0) return undefined;
 
     // Group media by media_group.id
@@ -362,6 +563,20 @@ export default function EditProductPage() {
         height: singleWeight.height ? parseFloat(singleWeight.height) : undefined,
       };
     }
+
+    // New API structure: If only one weight group, use it as single weight
+    if ((product as any)?.weight_groups) {
+       const groups = Object.values((product as any).weight_groups);
+       if (groups.length > 0) {
+          const wg: any = groups[0];
+          return {
+            weight: wg.weight ? parseFloat(wg.weight) : undefined,
+            length: wg.dimensions?.length ? parseFloat(wg.dimensions.length) : undefined,
+            width: wg.dimensions?.width ? parseFloat(wg.dimensions.width) : undefined,
+            height: wg.dimensions?.height ? parseFloat(wg.dimensions.height) : undefined,
+          };
+       }
+    }
     
     return undefined;
   };
@@ -388,13 +603,18 @@ export default function EditProductPage() {
   const initialData: Partial<ProductFormData> | undefined = React.useMemo(() => {
     if (!product) return undefined;
     
+    // Determine if attributes exist
+    const hasAttributes = Array.isArray(product.attributes) ? product.attributes.length > 0 : (product.attributes && Object.keys(product.attributes).length > 0);
+
     return {
       // Basic Information
       nameEn: product.name_en,
       nameAr: product.name_ar,
-      categoryIds: product.category_ids?.map(id => id.toString()) || 
-                   (product.category?.id ? [product.category.id.toString()] : 
-                   (product.category_id ? [product.category_id.toString()] : [])),
+      categoryIds: (product.categories && product.categories.length > 0)
+        ? product.categories.map((c: any) => c.id.toString())
+        : (product.category_ids?.map(id => id.toString()) || 
+           (product.category?.id ? [product.category.id.toString()] : 
+           (product.category_id ? [product.category_id.toString()] : []))),
       vendorId: product.vendor?.id?.toString() || product.vendor_id?.toString(),
       brandId: product.brand?.id?.toString() || product.brand_id?.toString(),
       shortDescriptionEn: product.short_description_en || "",
@@ -404,11 +624,11 @@ export default function EditProductPage() {
     visible: product.visible ?? product.is_active,
     
     // Attributes (for variant products)
-    attributes: (product.attributes && product.attributes.length > 0) ? transformProductAttributes() : undefined,
+    attributes: hasAttributes ? transformProductAttributes() : undefined,
     
     // Pricing
-    singlePricing: (!product.attributes || product.attributes.length === 0) ? transformSinglePricing() : undefined,
-    variantPricing: (product.attributes && product.attributes.length > 0) ? transformVariantPricing() : undefined,
+    singlePricing: !hasAttributes ? transformSinglePricing() : undefined,
+    variantPricing: hasAttributes ? transformVariantPricing() : undefined,
     
     // Weight & Dimensions
     isWeightVariantBased: isWeightVariantBased(),
@@ -468,9 +688,21 @@ export default function EditProductPage() {
         });
       }
       // ========== DETECT ATTRIBUTE CHANGES ==========
+      // Helper to normalize product attributes to array
+      let originalAttrList: any[] = [];
+      if (Array.isArray(product?.attributes)) {
+          originalAttrList = product.attributes;
+      } else if (product?.attributes && typeof product.attributes === 'object') {
+          // It's a dictionary Record<string, Attribute>
+          originalAttrList = Object.entries(product.attributes).map(([id, attr]: [string, any]) => ({
+              attribute_id: id,
+              ...attr
+          }));
+      }
+
       // Get original attribute IDs and their controlling flags
       const originalAttrIds = new Set(
-        product?.attributes?.map((a: any) => a.attribute_id?.toString() || a.attribute?.id?.toString()) || []
+        originalAttrList.map((a: any) => a.attribute_id?.toString() || a.attribute?.id?.toString() || a.id?.toString()) || []
       );
       const newAttrIds = new Set(data.attributes?.map(a => a.id) || []);
       
@@ -478,9 +710,13 @@ export default function EditProductPage() {
       const attributeRemoved = [...originalAttrIds].some(id => !newAttrIds.has(id));
       
       // Get original controlling flags
-      const originalPricingControlled = product?.attributes?.some((a: any) => a.controls_pricing) || false;
-      const originalWeightControlled = product?.attributes?.some((a: any) => a.controls_weight) || false;
-      const originalMediaControlled = product?.attributes?.some((a: any) => a.controls_media) || false;
+      // Note: In new structure we might need to deduce this if not explicit
+      const hasVariantWeights = (product as any)?.weight_groups && Object.keys((product as any)?.weight_groups).length > 1;
+      const hasVariantMedia = (product as any)?.media_groups && Object.keys((product as any)?.media_groups).length > 1;
+
+      const originalPricingControlled = originalAttrList.some((a: any) => a.controls_pricing) || true; // Default true for legacy/safety? Or check if price_groups > 1
+      const originalWeightControlled = originalAttrList.some((a: any) => a.controls_weight) || hasVariantWeights;
+      const originalMediaControlled = originalAttrList.some((a: any) => a.controls_media) || hasVariantMedia;
       
       // Get new controlling flags
       const newPricingControlled = data.attributes?.some(a => a.controlsPricing) || false;
@@ -829,6 +1065,16 @@ export default function EditProductPage() {
       console.error("Error saving draft:", error);
     }
   };
+
+  const isLoading = productLoading || attributesLoading || categoriesLoading || vendorsLoading || brandsLoading;
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen bg-bw2">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   if (productError) {
     return (

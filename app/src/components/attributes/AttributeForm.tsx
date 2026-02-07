@@ -9,13 +9,15 @@ import React, { useState, useMemo } from "react";
 import { useRouter } from "@/hooks/use-loading-router";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Tag, Palette, GripVertical } from "lucide-react";
+import { Tag, Palette, GripVertical, Layers, ListFilter } from "lucide-react";
 import { Card } from "../ui/card";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
+import { Select } from "../ui/select";
 import { Toggle } from "../ui/toggle";
 import { IconButton } from "../ui/icon-button";
 import { PageHeader } from "../common/PageHeader";
+import { cn } from "../../lib/utils";
 import {
   Table,
   TableBody,
@@ -24,10 +26,11 @@ import {
   TableHeader,
   TableRow,
 } from "../ui/table";
-import { AttributeValue } from "../../services/attributes/types/attribute.types";
+import { Attribute, AttributeValue } from "../../services/attributes/types/attribute.types";
 import {
   createAttributeValueSchema,
   type AttributeValueFormData,
+  type AttributeValueFormOutput,
 } from "../../lib/validations/attribute.schema";
 
 // DnD Kit imports
@@ -102,11 +105,12 @@ const ColorInput: React.FC<ColorInputProps> = ({ id, value, onChange, error }) =
 const useValueForm = (isColor: boolean) => {
   const schema = useMemo(() => createAttributeValueSchema(isColor), [isColor]);
 
-  return useForm<AttributeValueFormData>({
+  return useForm<AttributeValueFormData, any, AttributeValueFormOutput>({
     resolver: zodResolver(schema),
     defaultValues: {
       value_en: "",
       value_ar: "",
+      parent_value_id: null,
       color_code: "",
     },
     mode: "onChange",
@@ -119,7 +123,7 @@ const useValueForm = (isColor: boolean) => {
 interface NewValueRowProps {
   isColor: boolean;
   isAdding: boolean;
-  onSave: (data: AttributeValueFormData) => void;
+  onSave: (data: AttributeValueFormOutput) => void;
   onCancel: () => void;
 }
 
@@ -189,6 +193,7 @@ const NewValueRow: React.FC<NewValueRowProps> = ({
     </TableRow>
   );
 };
+
 
 // ============================================
 // Sortable Value Row Component (Display Mode)
@@ -296,7 +301,7 @@ const SortableValueRow: React.FC<SortableValueRowProps> = ({
 interface EditableValueRowProps {
   value: ValueItem;
   isColor: boolean;
-  onSave: (data: AttributeValueFormData) => void;
+  onSave: (data: AttributeValueFormOutput) => void;
   onCancel: () => void;
   isCreateMode?: boolean;
 }
@@ -415,12 +420,21 @@ interface AttributeFormProps {
   // Attribute data
   nameEn: string;
   nameAr: string;
+  unitEn: string;
+  unitAr: string;
+  parentId?: string;
+  parentValueId?: string;
   isColor: boolean;
   isActive: boolean;
   onNameEnChange: (value: string) => void;
   onNameArChange: (value: string) => void;
+  onUnitEnChange: (value: string) => void;
+  onUnitArChange: (value: string) => void;
+  onParentIdChange: (value: string) => void;
+  onParentValueIdChange: (value: string) => void;
   onIsColorChange: (value: boolean) => void;
   onIsActiveChange: (value: boolean) => void;
+  attributes?: Attribute[]; // List of available attributes for parent selection
   // Validation - now using React Hook Form
   formErrors?: { name_en?: string; name_ar?: string };
   // Values (for both create and edit modes - managed locally)
@@ -438,12 +452,21 @@ export const AttributeForm: React.FC<AttributeFormProps> = ({
   mode,
   nameEn,
   nameAr,
+  unitEn,
+  unitAr,
+  parentId,
+  parentValueId,
   isColor,
   isActive,
   onNameEnChange,
   onNameArChange,
+  onUnitEnChange,
+  onUnitArChange,
+  onParentIdChange,
+  onParentValueIdChange,
   onIsColorChange,
   onIsActiveChange,
+  attributes = [], // Default to empty array
   formErrors,
   values,
   onValuesChange,
@@ -459,6 +482,9 @@ export const AttributeForm: React.FC<AttributeFormProps> = ({
   const [editingValueId, setEditingValueId] = useState<number | string | null>(null);
   // Counter for generating temporary IDs for new values
   const [tempIdCounter, setTempIdCounter] = useState(1);
+  
+  // State for active parent value tab
+  const [activeParentValueId, setActiveParentValueId] = useState<string | null>(null);
 
   // DnD sensors
   const sensors = useSensors(
@@ -468,10 +494,37 @@ export const AttributeForm: React.FC<AttributeFormProps> = ({
     })
   );
 
-  // Sort values for display
+  // Derived state: parent attribute and its values
+  const parentAttribute = useMemo(() => {
+    return attributes.find(attr => attr.id.toString() === parentId);
+  }, [attributes, parentId]);
+
+  const parentValues = useMemo(() => {
+    return parentAttribute?.values || [];
+  }, [parentAttribute]);
+
+  // Set default active parent value if available and not set
+  React.useEffect(() => {
+    if (parentAttribute && parentValues.length > 0 && !activeParentValueId) {
+      setActiveParentValueId(parentValues[0].id.toString());
+    } else if (!parentAttribute) {
+      setActiveParentValueId(null);
+    }
+  }, [parentAttribute, parentValues, activeParentValueId]);
+
+  // Sort values for display and filter by active parent value
   const displayValues = useMemo(() => {
-    return [...values].sort((a, b) => a.sort_order - b.sort_order);
-  }, [values]);
+    let filtered = [...values];
+    
+    // If we have a parent attribute, filter by the active parent value tab
+    if (parentAttribute && activeParentValueId) {
+      filtered = filtered.filter(v => 
+        v.parent_value_id?.toString() === activeParentValueId
+      );
+    }
+    
+    return filtered.sort((a, b) => a.sort_order - b.sort_order);
+  }, [values, parentAttribute, activeParentValueId]);
 
   // Handle add value button click
   const handleAddValueClick = () => {
@@ -480,7 +533,7 @@ export const AttributeForm: React.FC<AttributeFormProps> = ({
   };
 
   // Handle save new value (local state update only)
-  const handleSaveNewValue = (data: AttributeValueFormData) => {
+  const handleSaveNewValue = (data: AttributeValueFormOutput) => {
     // Generate a temporary negative ID for new values (to distinguish from existing ones)
     const tempId = -tempIdCounter;
     setTempIdCounter(prev => prev + 1);
@@ -490,6 +543,8 @@ export const AttributeForm: React.FC<AttributeFormProps> = ({
       attribute_id: 0, // Will be set by backend
       value_en: data.value_en,
       value_ar: data.value_ar,
+      // Use activeParentValueId if set
+      parent_value_id: activeParentValueId ? Number(activeParentValueId) : null,
       color_code: isColor ? data.color_code || null : null,
       image_url: null,
       sort_order: values.length,
@@ -512,13 +567,15 @@ export const AttributeForm: React.FC<AttributeFormProps> = ({
   };
 
   // Handle save edit (local state update only)
-  const handleSaveEdit = (valueId: number | string, data: AttributeValueFormData) => {
+  const handleSaveEdit = (valueId: number | string, data: AttributeValueFormOutput) => {
     const updatedValues = values.map((v) =>
       v.id === valueId
         ? { 
             ...v, 
             value_en: data.value_en, 
             value_ar: data.value_ar, 
+            // Keep existing parent_value_id or use active one if we want to enforce current tab
+            parent_value_id: v.parent_value_id, 
             color_code: isColor ? data.color_code || null : null 
           }
         : v
@@ -600,7 +657,44 @@ export const AttributeForm: React.FC<AttributeFormProps> = ({
             required
           />
         </div>
-        <div className="flex items-center gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-4">
+          <Input
+            label="Unit (English) - Optional"
+            value={unitEn}
+            onChange={(e) => onUnitEnChange(e.target.value)}
+            placeholder="e.g. kg, m, L"
+          />
+          <Input
+            label="Unit (Arabic) - Optional"
+            value={unitAr}
+            onChange={(e) => onUnitArChange(e.target.value)}
+            placeholder="e.g. كغ، م، ل"
+            isRtl
+          />
+        </div>
+        
+        <div className="mt-4">
+          <Select
+            label="Parent Attribute (Optional)"
+            value={parentId || ""}
+            onChange={(val) => {
+              onParentIdChange(val as string);
+              // Clear parent value when parent attribute changes
+              onParentValueIdChange("");
+            }}
+            options={attributes.map(attr => ({
+              value: attr.id.toString(),
+              label: attr.name_en
+            }))}
+            placeholder="Select a parent attribute"
+            onClear={() => {
+              onParentIdChange("");
+              onParentValueIdChange("");
+            }}
+          />
+        </div>
+
+        <div className="flex items-center gap-8 mt-4">
           <div className="flex items-center gap-3">
             <Toggle checked={isColor} onChange={onIsColorChange} />
             <span className="text-sm font-medium">Is Color Attribute</span>
@@ -613,46 +707,113 @@ export const AttributeForm: React.FC<AttributeFormProps> = ({
       </Card>
 
       {/* Attribute Values */}
-      <Card className="w-full">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">
-            {mode === "create" ? "Initial Values (Optional)" : "Attribute Values"}
-          </h2>
+      <Card className="w-full overflow-hidden">
+        <div className="p-1 space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-bold text-gray-900 tracking-tight">
+                {mode === "create" ? "Attribute Values" : "Manage Values"}
+              </h2>
+              <p className="text-sm text-gray-500 mt-1">
+                {mode === "create" 
+                  ? "Define the initial values for this attribute." 
+                  : "Add, edit, or reorder the values available for this attribute."}
+              </p>
+            </div>
 
-          <Button
-            type="button"
-            onClick={handleAddValueClick}
-            disabled={showNewValueRow}
-            color="var(--color-primary)"
-          >
-            Add Value
-          </Button>
+            <Button
+              type="button"
+              onClick={handleAddValueClick}
+              disabled={showNewValueRow || (!!parentAttribute && !activeParentValueId)}
+              color="var(--color-primary)"
+              className="shadow-sm"
+            >
+              Add New Value
+            </Button>
+          </div>
+
+          {/* Parent Values Tabs */}
+          {parentAttribute && parentValues.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 text-xs font-semibold text-gray-500 uppercase tracking-widest pl-1">
+                 <ListFilter className="w-3 h-3" />
+                 <span>{parentAttribute.name_en} Categories</span>
+              </div>
+              <div className="flex flex-wrap gap-2.5">
+                {parentValues.map((pv) => {
+                  const isActive = activeParentValueId === pv.id.toString();
+                  return (
+                    <button
+                      key={pv.id}
+                      type="button"
+                      onClick={() => setActiveParentValueId(pv.id.toString())}
+                      className={cn(
+                        "px-5 py-2.5 text-sm font-medium rounded-full transition-all duration-300 ease-out border md:flex-1 md:max-w-fit text-center",
+                        isActive 
+                          ? "bg-primary text-white border-primary shadow-md shadow-primary/25 scale-105" 
+                          : "bg-white text-gray-600 border-gray-200 hover:border-primary/30 hover:bg-primary/5 hover:text-primary"
+                      )}
+                    >
+                      {pv.value_en}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Empty State for Tabs */}
+          {parentAttribute && parentValues.length === 0 && (
+            <div className="flex flex-col items-center justify-center p-8 bg-amber-50 border border-amber-100 rounded-2xl text-center">
+              <div className="w-12 h-12 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mb-3">
+                <Layers className="w-6 h-6" />
+              </div>
+              <p className="font-semibold text-amber-900">Missing Parent Values</p>
+              <p className="text-sm text-amber-700 mt-1">
+                Please add values to the <strong>{parentAttribute.name_en}</strong> attribute first.
+              </p>
+            </div>
+          )}
         </div>
 
-        {displayValues.length === 0 && !showNewValueRow ? (
-          <div className="flex flex-col items-center justify-center py-12">
-            <div className="font-medium text-lg">No values yet</div>
-            <div className="text-sm text-gray-500">
-              {mode === "create"
-                ? "You can add values now or later after creating the attribute"
-                : "Add values using the button above"}
+        <div className="mt-2 -mx-6 sm:mx-0">
+          {displayValues.length === 0 && !showNewValueRow ? (
+            <div className="flex flex-col items-center justify-center py-20 bg-gray-50/50 rounded-b-xl border-t border-gray-100">
+              <div className="w-20 h-20 bg-white rounded-full shadow-sm border border-gray-100 flex items-center justify-center mb-5">
+                <Tag className="w-10 h-10 text-gray-300" />
+              </div>
+              <h3 className="font-bold text-gray-900 text-lg mb-2">No Values Yet</h3>
+              <p className="text-gray-500 text-sm max-w-sm text-center mb-8 px-4">
+                {!!parentAttribute && !activeParentValueId 
+                  ? "Select a category above to start adding values."
+                  : "Start building your attribute by adding its first value."}
+              </p>
+              <Button
+                type="button"
+                onClick={handleAddValueClick}
+                disabled={!!parentAttribute && !activeParentValueId}
+                variant="outline"
+                className="bg-white hover:bg-gray-50"
+              >
+                Add First Value
+              </Button>
             </div>
-          </div>
-        ) : (
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragEnd={handleDragEnd}
-          >
-            <Table>
-              <TableHeader>
-                <TableRow isHeader>
-                  <TableHead width="5%">{"Sort"}</TableHead>
-                  <TableHead width={isColor ? "5%" : "5%"}>ID</TableHead>
-                  <TableHead width={isColor ? "34%" : "39%"}>Name (EN)</TableHead>
-                  <TableHead width={isColor ? "34%" : "39ش%"}>Name (AR)</TableHead>
+          ) : (
+            <div className="rounded-xl overflow-hidden shadow-sm bg-white">
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
+              >
+                <Table>
+                  <TableHeader className="bg-gray-50/80">
+                    <TableRow isHeader className="hover:bg-transparent border-gray-100">
+                      <TableHead width="60px"><span className="sr-only">Sort</span></TableHead>
+                      <TableHead width={isColor ? "5%" : "5%"} className="text-gray-500 font-medium">#</TableHead>
+                  <TableHead width={isColor ? "40%" : "42%"}>Name (EN)</TableHead>
+                  <TableHead width={isColor ? "40%" : "42%"}>Name (AR)</TableHead>
                   {isColor && <TableHead width="11%">Color</TableHead>}
-                  <TableHead width={isColor ? "11%" : "12%"}>Actions</TableHead>
+                  <TableHead width={isColor ? "10%" : "11%"}>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -700,7 +861,9 @@ export const AttributeForm: React.FC<AttributeFormProps> = ({
               </TableBody>
             </Table>
           </DndContext>
+          </div>
         )}
+        </div>
       </Card>
     </div>
   );

@@ -13,6 +13,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useLoading } from "../../src/providers/loading-provider";
 import {
   useAttribute,
+  useAttributes,
   useUpdateAttribute,
   useDeleteAttributeValue,
 } from "../../src/services/attributes/hooks/use-attributes";
@@ -20,9 +21,9 @@ import { RefreshCw, AlertCircle } from "lucide-react";
 import { Card } from "../../src/components/ui/card";
 import { Button } from "../../src/components/ui/button";
 import { DeleteConfirmationModal } from "../../src/components/common/DeleteConfirmationModal";
-import { AttributeValue } from "../../src/services/attributes/types/attribute.types";
+import { AttributeValue, Attribute } from "../../src/services/attributes/types/attribute.types";
 import { AttributeForm } from "../../src/components/attributes/AttributeForm";
-import { attributeSchema, type AttributeFormData } from "../../src/lib/validations/attribute.schema";
+import { attributeSchema, type AttributeFormData, type AttributeFormOutput } from "../../src/lib/validations/attribute.schema";
 
 export default function AttributeEditPage() {
   const params = useParams();
@@ -30,11 +31,15 @@ export default function AttributeEditPage() {
   const { setShowOverlay } = useLoading();
 
   // React Hook Form with Zod
-  const form = useForm<AttributeFormData>({
+  const form = useForm<AttributeFormData, any, AttributeFormOutput>({
     resolver: zodResolver(attributeSchema),
     defaultValues: {
       name_en: "",
       name_ar: "",
+      unit_en: "",
+      unit_ar: "",
+      parent_id: null,
+      parent_value_id: null,
       is_color: false,
       is_active: true,
     },
@@ -46,6 +51,10 @@ export default function AttributeEditPage() {
   // Watch form values
   const nameEn = watch("name_en");
   const nameAr = watch("name_ar");
+  const unitEn = watch("unit_en");
+  const unitAr = watch("unit_ar");
+  const parentId = watch("parent_id");
+  const parentValueId = watch("parent_value_id");
   const isColor = watch("is_color");
   const isActive = watch("is_active");
 
@@ -63,6 +72,7 @@ export default function AttributeEditPage() {
     attributeId,
     { enabled: !!attributeId }
   );
+  const { data: allAttributes = [] } = useAttributes();
   const updateAttribute = useUpdateAttribute();
   const deleteValue = useDeleteAttributeValue();
 
@@ -72,6 +82,10 @@ export default function AttributeEditPage() {
       reset({
         name_en: attribute.name_en,
         name_ar: attribute.name_ar,
+        unit_en: attribute.unit_en || "",
+        unit_ar: attribute.unit_ar || "",
+        parent_id: attribute.parent_id,
+        parent_value_id: attribute.parent_value_id,
         is_color: attribute.is_color ?? false,
         is_active: attribute.is_active,
       });
@@ -100,12 +114,8 @@ export default function AttributeEditPage() {
     setLocalValues(values);
   };
 
-  const handleSaveAttribute = async () => {
-    const isValid = await trigger();
-    if (!isValid) {
-      return;
-    }
-
+  // Handle form submission
+  const onSubmit = async (data: AttributeFormOutput) => {
     try {
       // Build the values payload - include all values with their current state
       // New values have negative IDs, existing values have positive IDs
@@ -113,6 +123,7 @@ export default function AttributeEditPage() {
         id: v.id > 0 ? v.id : undefined, // Only include ID for existing values
         value_en: v.value_en,
         value_ar: v.value_ar,
+        parent_value_id: v.parent_value_id,
         color_code: v.color_code,
         sort_order: index,
         is_active: v.is_active,
@@ -121,16 +132,24 @@ export default function AttributeEditPage() {
       await updateAttribute.mutateAsync({
         id: attributeId,
         data: {
-          name_en: nameEn,
-          name_ar: nameAr,
-          is_color: isColor,
-          is_active: isActive,
+          name_en: data.name_en,
+          name_ar: data.name_ar,
+          unit_en: data.unit_en || undefined,
+          unit_ar: data.unit_ar || undefined,
+          parent_id: data.parent_id,
+          parent_value_id: data.parent_value_id,
+          is_color: data.is_color,
+          is_active: data.is_active,
           values: valuesPayload,
         },
       });
     } catch (error) {
       console.error("Failed to update attribute:", error);
     }
+  };
+
+  const handleSaveAttribute = () => {
+    form.handleSubmit(onSubmit)();
   };
 
   const handleDeleteClick = (value: AttributeValue) => {
@@ -199,10 +218,18 @@ export default function AttributeEditPage() {
         mode="edit"
         nameEn={nameEn}
         nameAr={nameAr}
+        unitEn={unitEn || ""}
+        unitAr={unitAr || ""}
+        parentId={parentId?.toString() || ""}
+        parentValueId={parentValueId?.toString() || ""}
         isColor={isColor}
         isActive={isActive}
         onNameEnChange={handleNameEnChange}
         onNameArChange={handleNameArChange}
+        onUnitEnChange={(val) => setValue("unit_en", val)}
+        onUnitArChange={(val) => setValue("unit_ar", val)}
+        onParentIdChange={(val) => setValue("parent_id", val ? Number(val) : null)}
+        onParentValueIdChange={(val) => setValue("parent_value_id", val ? Number(val) : null)}
         onIsColorChange={(value) => setValue("is_color", value)}
         onIsActiveChange={(value) => setValue("is_active", value)}
         formErrors={{
@@ -215,6 +242,7 @@ export default function AttributeEditPage() {
         onSubmit={handleSaveAttribute}
         isSubmitting={updateAttribute.isPending}
         submitButtonText="Save Changes"
+        attributes={allAttributes.filter((attr: Attribute) => attr.id !== attributeId)}
       />
 
       {/* Delete Confirmation Modal */}

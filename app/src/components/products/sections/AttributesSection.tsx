@@ -11,7 +11,19 @@ import { Card } from "@/components/ui";
 interface AttributesSectionProps {
     attributes: Attribute[];
     onChange: (attributes: Attribute[], resetType?: 'pricing' | 'weight' | 'media' | 'stock' | 'all') => void;
-    availableAttributes?: Array<{ id: string; name: string; displayName: string; values: Array<{ id: string; value: string; displayValue: string }> }>;
+    availableAttributes?: Array<{ 
+        id: string; 
+        parentId?: string;
+        parentValueId?: string; // Added
+        name: string; 
+        displayName: string; 
+        values: Array<{ 
+            id: string; 
+            parentId?: string; // Added
+            value: string; 
+            displayValue: string 
+        }> 
+    }>;
     errors?: Record<string, string | boolean>;
 }
 
@@ -184,7 +196,7 @@ export const AttributesSection: React.FC<AttributesSectionProps> = ({
                         }}
                         options={[
                             ...availableAttributes
-                                .filter(attr => !attributes.some(a => a.id === attr.id)) // Filter out already added attributes
+                                .filter(attr => !attr.parentId && !attributes.some(a => a.id === attr.id))
                                 .map((attr) => ({
                                     value: attr.id,
                                     label: `${attr.name} (${attr.displayName})`,
@@ -221,6 +233,7 @@ export const AttributesSection: React.FC<AttributesSectionProps> = ({
                                 onRemove={handleRemoveAttribute}
                                 onToggleControl={handleToggleControl}
                                 availableAttr={availableAttr}
+                                allAttributes={availableAttributes} // Pass all attributes for deep linking
                             />
                         );
                     })}
@@ -243,7 +256,20 @@ interface AttributeCardProps {
         attributeId: string,
         controlType: "pricing" | "weightDimensions" | "media"
     ) => void;
-    availableAttr?: { id: string; name: string; displayName: string; values: Array<{ id: string; value: string; displayValue: string }> };
+    availableAttr?: { 
+        id: string; 
+        parentId?: string;
+        parentValueId?: string;
+        name: string; 
+        displayName: string; 
+        values: Array<{ 
+            id: string; 
+            parentId?: string;
+            value: string; 
+            displayValue: string 
+        }> 
+    };
+    allAttributes?: Array<any>; // Added
 }
 
 const AttributeCard: React.FC<AttributeCardProps> = ({
@@ -256,9 +282,83 @@ const AttributeCard: React.FC<AttributeCardProps> = ({
     onRemove,
     onToggleControl,
     availableAttr,
+    allAttributes = [],
 }) => {
     const selectedValues = attribute.values.map(v => v.value);
-    const availableValues = availableAttr?.values.map(v => v.value) || [];
+
+    // Sort and format options to show hierarchy
+    const options = React.useMemo(() => {
+        if (!availableAttr?.values) return [];
+
+        const result: { value: string; label: string; originalId: string }[] = [];
+
+        // Helper to find descendants recursively
+        // Current Attr -> Value -> Child Link Attr -> Values -> Recurse
+        const findDescendants = (currentAttrId: string, currentValueId: string, currentLabelPath: string): { value: string, id: string }[] => {
+            // Helper to handle inconsistent API naming (camelCase vs snake_case)
+            const getParentId = (item: any) => item.parentId ?? item.parent_id;
+            // Fix: Log showed values use 'parentId' to refer to parent value id
+            const getParentValueId = (item: any) => item.parentValueId ?? item.parent_value_id ?? item.parentId;
+
+            // Find attributes that are children of currentAttrId 
+            const childAttrs = (allAttributes || []).filter(attr => 
+                String(getParentId(attr)) === String(currentAttrId)
+            );
+
+            // If no dependent attributes, this is a leaf
+            if (childAttrs.length === 0) {
+                return [{ value: currentLabelPath, id: currentValueId }];
+            }
+
+            let hasChildrenValues = false;
+            let descendants: { value: string; id: string }[] = [];
+
+            childAttrs.forEach(childAttr => {
+                const childValues = childAttr.values || [];
+                // Find values in this child attribute that link to our current value
+                const relevantValues = childValues.filter((v: any) => 
+                    String(getParentValueId(v)) === String(currentValueId)
+                );
+                
+                if (relevantValues.length > 0) {
+                    hasChildrenValues = true;
+                    relevantValues.forEach((childVal: any) => {
+                        // Use value_en as fallback if value is missing
+                        const valStr = childVal.value || childVal.value_en || childVal.val;
+                        const newPath = `${currentLabelPath} > ${valStr}`;
+                        const subDescendants = findDescendants(childAttr.id, childVal.id, newPath);
+                        descendants = [...descendants, ...subDescendants];
+                    });
+                }
+            });
+
+            // If we found dependent attributes but NO matching values for this specific value, 
+            // then this specific value is a leaf.
+            if (!hasChildrenValues) {
+                return [{ value: currentLabelPath, id: currentValueId }];
+            }
+
+            return descendants;
+        };
+
+        // Start processing from root values of the current attribute
+        availableAttr.values.forEach(rootVal => {
+             // If we're at availableAttr, allow recursion
+             // Ensure we grab the display value correctly
+             const rootValStr = rootVal.value || (rootVal as any).value_en;
+             const leaves = findDescendants(availableAttr.id, rootVal.id, rootValStr);
+             
+             leaves.forEach(leaf => {
+                 result.push({ 
+                     value: leaf.value, // This is the label we show and select
+                     label: leaf.value,
+                     originalId: leaf.id // Store the actual leaf ID
+                 });
+             });
+        });
+
+        return result;
+    }, [availableAttr, allAttributes]);
 
     const handleValuesChange = (values: string | string[]) => {
         const newValues = Array.isArray(values) ? values : [values];
@@ -271,10 +371,14 @@ const AttributeCard: React.FC<AttributeCardProps> = ({
                 return { ...existingValue, order: index };
             }
             
-            // Get the ID from availableAttr for new values
+            // Find the option to get the correct ID
+            const option = options.find(o => o.value === value);
+            
+            // Fallback to searching locally if option strict match failed
             const valueObj = availableAttr?.values.find(v => v.value === value);
+            
             return {
-                id: valueObj?.id || value,
+                id: option?.originalId || valueObj?.id || value,
                 value: value,
                 order: index,
             };
@@ -321,16 +425,13 @@ const AttributeCard: React.FC<AttributeCardProps> = ({
 
 
             <div className="flex gap-5">
-                {availableValues.length > 0 && (
+                {options.length > 0 && (
                     <div className="flex-1">
                         <Select
                             label="Select Values"
                             value={selectedValues}
                             onChange={handleValuesChange}
-                            options={availableValues.map((val) => ({
-                                value: val,
-                                label: val,
-                            }))}
+                            options={options}
                             search={true}
                             multiple={true}
                         />

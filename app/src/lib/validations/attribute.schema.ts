@@ -20,8 +20,13 @@ export const attributeValueSchema = z.object({
     .regex(ENGLISH_PATTERN, "Must be in English"),
   value_ar: z
     .string()
-    .min(1, "Required")
-    .regex(ARABIC_PATTERN, "Must be in Arabic"),
+    .min(1, "Required"),
+  parent_value_id: z.union([z.string(), z.number(), z.null()])
+    .optional()
+    .transform((val) => {
+      if (val === "" || val === null || val === undefined) return null;
+      return Number(val);
+    }),
   color_code: z
     .string()
     .nullable()
@@ -48,7 +53,8 @@ export const createAttributeValueSchema = (isColor: boolean) =>
   });
 
 // Type inference
-export type AttributeValueFormData = z.infer<typeof attributeValueSchema>;
+export type AttributeValueFormData = z.input<typeof attributeValueSchema>;
+export type AttributeValueFormOutput = z.output<typeof attributeValueSchema>;
 
 // ============================================
 // Attribute Schema
@@ -60,14 +66,28 @@ export const attributeSchema = z.object({
     .regex(ENGLISH_PATTERN, "Must be in English"),
   name_ar: z
     .string()
-    .min(1, "Required")
-    .regex(ARABIC_PATTERN, "Must be in Arabic"),
+    .min(1, "Required"),
+  unit_en: z.string().optional().nullable(),
+  unit_ar: z.string().optional().nullable(),
+  parent_id: z.union([z.string(), z.number(), z.null()])
+    .optional()
+    .transform((val) => {
+      if (val === "" || val === null || val === undefined) return null;
+      return Number(val);
+    }),
+  parent_value_id: z.union([z.string(), z.number(), z.null()])
+    .optional()
+    .transform((val) => {
+      if (val === "" || val === null || val === undefined) return null;
+      return Number(val);
+    }),
   is_color: z.boolean(),
   is_active: z.boolean(),
 });
 
 // Type inference
-export type AttributeFormData = z.infer<typeof attributeSchema>;
+export type AttributeFormData = z.input<typeof attributeSchema>;
+export type AttributeFormOutput = z.output<typeof attributeSchema>;
 
 // ============================================
 // Create Attribute DTO Schema (with values)

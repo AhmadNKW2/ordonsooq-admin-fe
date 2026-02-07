@@ -243,9 +243,33 @@ export default function ProductsPage() {
           <TableBody>
             {products.map((product) => {
                // Helper to find image
-               const imageUrl = product.variants?.length && product.variants[0].media?.url 
-                 ? product.variants[0].media.url 
-                 : (product.media?.length ? product.media[0].image?.url : null);
+               let imageUrl = null;
+               
+               // Try variants first
+                if (product.variants?.length && product.media_groups) {
+                  const firstVariant = product.variants[0];
+                  // Ensure media_groups exists and has the key
+                  if (product.media_groups[firstVariant.media_group_id]?.media?.length) {
+                     imageUrl = product.media_groups[firstVariant.media_group_id].media[0].url;
+                  }
+                }
+                
+                // Fallback to simple product media groups
+                if (!imageUrl && product.media_groups) {
+                  const groupKeys = Object.keys(product.media_groups);
+                  if (groupKeys.length > 0) {
+                    const firstGroup = product.media_groups[groupKeys[0]];
+                    if (firstGroup?.media?.length) {
+                       // Try to find primary
+                       const primary = firstGroup.media.find((m: any) => m.is_primary) || firstGroup.media[0];
+                       imageUrl = primary.url;
+                    }
+                  }
+                }
+
+                // Fallback to legacy fields if any
+                if (!imageUrl && product.image) imageUrl = product.image;
+                if (!imageUrl && product.media && product.media.length > 0) imageUrl = product.media[0].url || product.media[0].image;
 
                return (
               <TableRow key={product.id}>
@@ -309,24 +333,45 @@ export default function ProductsPage() {
                 </TableCell>
                 <TableCell>
                    {(() => {
-                      const price = product.variants?.length 
-                        ? product.variants[0].price 
-                        : (Array.isArray(product.price) ? product.price[0] : product.price);
-                      
-                      if (!price) return <span className="text-gray-400">—</span>;
+                      let price = null;
+                      let salePrice = null;
 
-                      const regularPrice = typeof price === 'object' ? price.price : price;
-                      const salePrice = typeof price === 'object' ? price.sale_price : product.sale_price;
+                      // Try variants first
+                      if (product.variants?.length && product.price_groups) {
+                        const firstVariant = product.variants[0];
+                        const priceGroup = product.price_groups[firstVariant.price_group_id];
+                        if (priceGroup) {
+                          price = priceGroup.price;
+                          salePrice = priceGroup.sale_price;
+                        }
+                      }
+                      // Fallback to simple product price groups
+                      else if (product.price_groups) {
+                        const groupKeys = Object.keys(product.price_groups);
+                        if (groupKeys.length > 0) {
+                           const priceGroup = product.price_groups[groupKeys[0]];
+                           price = priceGroup.price;
+                           salePrice = priceGroup.sale_price;
+                        }
+                      }
+                      // Legacy
+                      else if (product.price) {
+                         const p = product.price as any;
+                         price = typeof p === 'object' ? p.price : p;
+                         salePrice = typeof p === 'object' ? p.sale_price : product.sale_price;
+                      }
+
+                      if (!price) return <span className="text-gray-400">—</span>;
 
                       return (
                         <div className="flex flex-col">
                           {salePrice ? (
                             <>
                               <span className="font-semibold">{salePrice}</span>
-                              <span className="text-xs text-gray-500 line-through">{regularPrice}</span>
+                              <span className="text-xs text-gray-500 line-through">{price}</span>
                             </>
                           ) : (
-                             <span className="font-semibold">{regularPrice}</span>
+                             <span className="font-semibold">{price}</span>
                           )}
                         </div>
                       )
@@ -335,8 +380,8 @@ export default function ProductsPage() {
                 <TableCell>
                   {(() => {
                     const stock = product.variants?.length 
-                      ? product.variants.reduce((acc: number, v: any) => acc + (v.quantity || 0), 0)
-                      : (product.quantity ?? 0);
+                      ? product.variants.reduce((acc: number, v: any) => acc + (Number(v.quantity) || 0), 0)
+                      : (Number(product.quantity) || 0);
                     
                     return (
                         <Badge variant={stock > 0 ? "success" : "danger"}>

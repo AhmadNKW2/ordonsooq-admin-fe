@@ -1,6 +1,6 @@
 import React from "react";
 import { Input } from "../../ui/input";
-import { Textarea } from "../../ui/textarea";
+import { RichTextEditor } from "../../ui/rich-text-editor";
 import { Select } from "../../ui/select";
 import { Checkbox } from "../../ui/checkbox";
 import { Card } from "@/components/ui";
@@ -66,50 +66,42 @@ export const BasicInformationSection: React.FC<BasicInformationSectionProps> = (
                 />
 
                 {/* Short Descriptions */}
-                <Textarea
-                    id="shortDescriptionEn"
+                <RichTextEditor
                     label="Short Description (English)"
                     value={formData.shortDescriptionEn || ""}
-                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-                        onChange("shortDescriptionEn", e.target.value)
+                    onChange={(value) =>
+                        onChange("shortDescriptionEn", value)
                     }
-                    rows={3}
                     error={errors.shortDescriptionEn}
                 />
 
-                <Textarea
-                    id="shortDescriptionAr"
+                <RichTextEditor
                     label="Short Description (Arabic)"
                     value={formData.shortDescriptionAr || ""}
-                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-                        onChange("shortDescriptionAr", e.target.value)
+                    onChange={(value) =>
+                        onChange("shortDescriptionAr", value)
                     }
                     isRtl
-                    rows={3}
                     error={errors.shortDescriptionAr}
                 />
 
                 {/* Long Descriptions */}
-                <Textarea
-                    id="longDescriptionEn"
+                <RichTextEditor
                     label="Long Description (English)"
                     value={formData.longDescriptionEn || ""}
-                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-                        onChange("longDescriptionEn", e.target.value)
+                    onChange={(value) =>
+                        onChange("longDescriptionEn", value)
                     }
-                    rows={6}
                     error={errors.longDescriptionEn}
                 />
 
-                <Textarea
-                    id="longDescriptionAr"
+                <RichTextEditor
                     label="Long Description (Arabic)"
                     value={formData.longDescriptionAr || ""}
-                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-                        onChange("longDescriptionAr", e.target.value)
+                    onChange={(value) =>
+                        onChange("longDescriptionAr", value)
                     }
                     isRtl
-                    rows={6}
                     error={errors.longDescriptionAr}
                 />
 

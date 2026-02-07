@@ -215,12 +215,17 @@ class HttpClient {
     this.isRefreshing = true;
     this.refreshPromise = (async () => {
       try {
+        // Include default headers (like Authorization) in the refresh request
+        // Some backends require the expired access token to be present
+        const headers = { ...this.defaultHeaders } as Record<string, string>;
+        if (!headers['Content-Type']) {
+          headers['Content-Type'] = 'application/json';
+        }
+
         const response = await fetch(`${this.baseURL}${HttpClient.AUTH_REFRESH_ENDPOINT}`, {
           method: 'POST',
           credentials: 'include',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers,
         });
 
         if (!response.ok) {
