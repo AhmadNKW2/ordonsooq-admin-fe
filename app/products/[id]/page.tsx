@@ -271,7 +271,7 @@ export default function EditProductPage() {
              isSale: !!pg.sale_price,
              salePrice: pg.sale_price ? parseFloat(pg.sale_price) : undefined
           };
-       }).filter(Boolean);
+       }).filter((item: any) => item !== null) as any;
     }
 
     // Use prices array with groupValues or combination for variant pricing
@@ -324,7 +324,7 @@ export default function EditProductPage() {
             width: wg.dimensions?.width ? parseFloat(wg.dimensions.width) : undefined,
             height: wg.dimensions?.height ? parseFloat(wg.dimensions.height) : undefined,
           };
-       }).filter(Boolean);
+       }).filter((item: any) => item !== null) as any;
     }
 
     // Use weights array with groupValues or combination for variant weights
@@ -507,7 +507,7 @@ export default function EditProductPage() {
                  attributeValues,
                  media: mediaGroupItems.get(mgId),
              };
-         }).filter(Boolean);
+         }).filter((item: any) => item !== null) as any;
     }
 
     if (!product?.media || product.media.length === 0) return undefined;
@@ -1093,7 +1093,6 @@ export default function EditProductPage() {
               <p className=" mb-6">{(productErrorData as any)?.message || "Failed to load product"}</p>
               <div className="flex gap-3 justify-center">
                 <Button onClick={() => refetchProduct()}>
-                  <RefreshCw className="mr-2 h-4 w-4" />
                   Try Again
                 </Button>
                 <Button variant="outline" onClick={() => router.push("/products")}>

@@ -169,7 +169,6 @@ export default function ProductsPage() {
               </h3>
               <p className=" max-w-md mx-auto">{error.message}</p>
               <Button onClick={() => refetch()}>
-                <RefreshCw className="mr-2 h-4 w-4" />
                 Try Again
               </Button>
             </div>

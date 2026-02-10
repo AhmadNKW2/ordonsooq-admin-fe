@@ -175,7 +175,6 @@ export default function EditCategoryPage() {
                 {error instanceof Error ? error.message : "An error occurred"}
               </p>
               <Button onClick={() => refetch()} className="mt-4">
-                <RefreshCw className="mr-2 h-4 w-4" />
                 Try Again
               </Button>
             </div>

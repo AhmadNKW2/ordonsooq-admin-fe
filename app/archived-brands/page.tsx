@@ -14,7 +14,7 @@ import {
   usePermanentDeleteBrand,
   useBrands,
 } from "../src/services/brands/hooks/use-brands";
-import { Archive, Tags, RefreshCw, AlertCircle, X, Package } from "lucide-react";
+import { Archive, Tags, AlertCircle, X, Package } from "lucide-react";
 import { Card } from "../src/components/ui/card";
 import { Button } from "../src/components/ui/button";
 import { IconButton } from "../src/components/ui/icon-button";
@@ -134,7 +134,6 @@ export default function ArchivedBrandsPage() {
                 {error instanceof Error ? error.message : "An error occurred"}
               </p>
               <Button onClick={() => refetch()} className="mt-4">
-                <RefreshCw className="mr-2 h-4 w-4" />
                 Try Again
               </Button>
             </div>

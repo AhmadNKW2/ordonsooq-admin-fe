@@ -82,7 +82,6 @@ export default function ViewProductPage() {
               <p className=" mb-6">{(productErrorData as any)?.message || "Failed to load product"}</p>
               <div className="flex gap-3 justify-center">
                 <Button onClick={() => refetchProduct()}>
-                  <RefreshCw className="mr-2 h-4 w-4" />
                   Try Again
                 </Button>
                 <Button variant="outline" onClick={() => router.push("/products")}>
