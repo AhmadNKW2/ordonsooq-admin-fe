@@ -8,6 +8,7 @@ import { LoadingProvider } from "./src/providers/loading-provider";
 import { AuthProvider } from "./src/contexts/auth.context";
 import { AppShell } from "./src/components/layout/AppShell";
 import { ToastContainer, Slide } from "react-toastify";
+import { Analytics } from "@vercel/analytics/next";
 
 const lato = Lato({
   variable: '--font-lato',
@@ -58,6 +59,7 @@ export default function RootLayout({
             transition={Slide}
           />
         </QueryProvider>
+        <Analytics />
       </body>
     </html>
   );
