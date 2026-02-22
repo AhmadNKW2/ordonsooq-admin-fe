@@ -25,13 +25,13 @@ export interface Attribute {
 export interface VariantCombination {
   id: string;
   attributeValues: { [attrId: string]: string };
-  stock: number;
+  is_out_of_stock: boolean;
   active?: boolean;
 }
 
 // Pricing Configuration
 export interface SinglePricing {
-  cost: number;
+  cost?: number;
   price: number;
   isSale?: boolean;
   salePrice?: number;
@@ -40,7 +40,7 @@ export interface SinglePricing {
 export interface VariantPricing {
   key: string;
   attributeValues: { [attrId: string]: string };
-  cost: number;
+  cost?: number;
   price: number;
   isSale?: boolean;
   salePrice?: number;
@@ -118,7 +118,7 @@ export const productFormSchema = z.object({
   // Pricing
   singlePricing: z
     .object({
-      cost: z.number().min(0),
+      cost: z.number().min(0).optional(),
       price: z.number().min(0),
       isSale: z.boolean().optional(),
       salePrice: z.number().min(0).optional(),
@@ -129,7 +129,7 @@ export const productFormSchema = z.object({
       z.object({
         key: z.string(),
         attributeValues: z.record(z.string(), z.string()),
-        cost: z.number().min(0),
+        cost: z.number().min(0).optional(),
         price: z.number().min(0),
         isSale: z.boolean().optional(),
         salePrice: z.number().min(0).optional(),
@@ -202,7 +202,7 @@ export const productFormSchema = z.object({
     z.object({
       id: z.string(),
       attributeValues: z.record(z.string(), z.string()),
-      stock: z.number().min(0, "Stock is required"),
+      is_out_of_stock: z.boolean().default(false),
       active: z.boolean().optional(),
     })
   ).optional(),

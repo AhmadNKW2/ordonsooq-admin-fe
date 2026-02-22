@@ -2,13 +2,14 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "../../../lib/query-keys";
 import { showSuccessToast } from "../../../lib/toast";
 import { orderService } from "../api/order.service";
-import type { CreateOrderDto } from "../types/order.types";
+import type { CreateOrderDto, OrderFilters, OrderStatus, UpdateItemCostDto } from "../types/order.types";
 
-export const useOrders = () => {
+export const useOrders = (filters?: OrderFilters) => {
   return useQuery({
-    queryKey: [queryKeys.orders.all],
-    queryFn: () => orderService.listOrders(),
-    select: (response) => response.data,
+    queryKey: [queryKeys.orders.all, JSON.stringify(filters)],
+    queryFn: () => orderService.listOrders(filters),
+    // The service now returns { data, meta } directly based on my implementation
+    // No select needed if the types match what we want
   });
 };
 
@@ -21,6 +22,20 @@ export const useOrder = (id: number, options?: { enabled?: boolean }) => {
   });
 };
 
+export const useUpdateOrderStatus = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, status }: { id: number; status: OrderStatus }) => 
+      orderService.updateOrderStatus(id, status),
+    onSuccess: (_, { id }) => {
+      queryClient.invalidateQueries({ queryKey: [queryKeys.orders.all] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.orders.detail(id) });
+      showSuccessToast("Order status updated successfully");
+    },
+  });
+};
+
 export const useCreateOrder = () => {
   const queryClient = useQueryClient();
 
@@ -29,6 +44,19 @@ export const useCreateOrder = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [queryKeys.orders.all] });
       showSuccessToast("Order created successfully");
+    },
+  });
+};
+
+export const useUpdateOrderItemCosts = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, payload }: { id: number; payload: UpdateItemCostDto }) =>
+      orderService.updateItemCosts(id, payload),
+    onSuccess: (_, { id }) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.orders.detail(id) });
+      showSuccessToast("Item costs updated successfully");
     },
   });
 };

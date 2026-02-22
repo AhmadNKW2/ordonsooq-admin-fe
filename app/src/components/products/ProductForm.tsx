@@ -28,10 +28,14 @@ import { WeightDimensionsSection } from "./sections/WeightDimensionsSection";
 import { MediaSection } from "./sections/MediaSection";
 import { StockSection } from "./sections/StockSection";
 import { Card } from "../ui";
-import { useZodValidation } from "../../hooks/use-zod-validation";
+import { useZodValidation, flattenZodErrors } from "../../hooks/use-zod-validation";
 import { createProductSchema, type ProductFormConfig } from "../../lib/validations/product.schema";
 import { Package } from "lucide-react";
 import { Category } from "../../services/categories/types/category.types";
+import {
+    generateCombinations,
+    getControllingAttributes,
+} from "../../services/products/utils/variant-combinations";
 
 interface ProductFormProps {
   initialData?: Partial<ProductFormData>;
@@ -116,10 +120,24 @@ export const ProductForm: React.FC<ProductFormProps> = ({
 
   // Build dynamic Zod schema based on form state
   const validationConfig = useMemo<ProductFormConfig>(() => {
-    const pricingAttributes = formData.attributes?.filter(a => a.controlsPricing) || [];
+    const attributes = formData.attributes || [];
+
+    // Pricing
+    const pricingAttributes = getControllingAttributes(attributes, 'controlsPricing');
     const hasPricingAttributes = pricingAttributes.length > 0;
+    const pricingCombinations = hasPricingAttributes ? generateCombinations(pricingAttributes) : [];
+
+    // Weight
+    const weightAttributes = getControllingAttributes(attributes, 'controlsWeightDimensions');
+    const weightCombinations = formData.isWeightVariantBased ? generateCombinations(weightAttributes) : [];
+
+    // Media
+    const mediaAttributes = getControllingAttributes(attributes, 'controlsMedia');
+    const mediaCombinations = formData.isMediaVariantBased ? generateCombinations(mediaAttributes) : [];
     
     // Check which variant pricing items have sale enabled
+    // We must ensure the array passed here matches the length expected, 
+    // or at least mapped from existing data to check `isSale` status
     const variantPricingItems: { isSale: boolean }[] = formData.variantPricing?.map(vp => ({ isSale: vp.isSale !== false })) || [];
 
     return {
@@ -128,6 +146,9 @@ export const ProductForm: React.FC<ProductFormProps> = ({
       variantPricingItems,
       isWeightVariantBased: formData.isWeightVariantBased || false,
       isMediaVariantBased: formData.isMediaVariantBased || false,
+      expectedPricingCount: pricingCombinations.length,
+      expectedWeightCount: weightCombinations.length,
+      expectedMediaCount: mediaCombinations.length,
     };
   }, [
     formData.attributes,
@@ -218,7 +239,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
     };
 
     // Cast to ProductFormData for validation (with defaults)
-    const dataToValidate: ProductFormData = {
+    let dataToValidate: ProductFormData = {
       nameEn: formData.nameEn || '',
       nameAr: formData.nameAr || '',
       categoryIds: formData.categoryIds || [],
@@ -241,6 +262,193 @@ export const ProductForm: React.FC<ProductFormProps> = ({
       variants: (formData.variants || []).filter(v => v.active !== false),
     };
 
+    // -----------------------------------------------------
+    // HIERARCHICAL ATTRIBUTE SPLITTING LOGIC (Expanded)
+    // -----------------------------------------------------
+    // If we have "Level 0" attributes that imply child attributes
+    // (e.g. CPU -> Intel > Celeron > N4500), we must split them into
+    // separate attribute entries before validation and submission.
+    // ALSO: We must expand the variant definitions to include these new attribute/value pairs.
+    // -----------------------------------------------------
+    if (dataToValidate.attributes && dataToValidate.attributes.length > 0) {
+       const splitAttributes: Attribute[] = [];
+       // Track attribute IDs we have already added to avoid duplicates
+       const addedAttributeIds = new Set<string>();
+       
+       // Map of Leaf Value ID -> Map of implied { AttrID -> ValueID }
+       // This is used to patch the variant combinations later
+       const expansionMap = new Map<string, Record<string, string>>();
+
+       dataToValidate.attributes.forEach(attr => {
+           // We only process this attribute if it has values.
+           if (attr.values.length === 0) {
+               if (!addedAttributeIds.has(attr.id)) {
+                  splitAttributes.push(attr);
+                  addedAttributeIds.add(attr.id);
+               }
+               return;
+           }
+
+           // Check each selected value to see if it belongs to a hierarchy
+           // We need to look up the system definition for the selected values.
+           const systemAttr = attributes.find(a => a.id === attr.id);
+           
+           if (!systemAttr) {
+              // Just keep as is if not found in system
+              if (!addedAttributeIds.has(attr.id)) {
+                 splitAttributes.push(attr);
+                 addedAttributeIds.add(attr.id);
+              }
+              return;
+           }
+
+           // We need to collect "implied" attributes from the selected values.
+           // Map<AttributeId, Set<ValueId>>
+           const impliedSelections = new Map<string, Set<string>>();
+           
+           // Initialize with current attribute (Level 0)
+           if (!impliedSelections.has(attr.id)) impliedSelections.set(attr.id, new Set());
+
+           attr.values.forEach(val => {
+               // The ID in `val.id` is the LEAF ID (e.g. N4500 id=40).
+               // We need to traverse UP from this ID to finding all parents.
+               
+               let currentId = val.id;
+               let depth = 0;
+               const chain: {attrId: string, valId: string}[] = [];
+
+               // Helper to find a value definition and its attribute in the system list
+               // This is O(Attributes * Values), might be slow if list is huge.
+               while(currentId && depth < 10) {
+                   let found = false;
+                   for(const sysA of attributes) {
+                       const sysV = sysA.values.find(v => v.id === currentId);
+                       if (sysV) {
+                           chain.unshift({ attrId: sysA.id, valId: sysV.id });
+                           // Find parent value ID
+                           // Note: AttributeSection handles `parentValueId` or `parentId` property mapping 
+                           // But here `attributes` prop is raw from parent component.
+                           const pvId = (sysV as any).parentValueId ?? (sysV as any).parentId ?? (sysV as any).parent_value_id;
+                           currentId = pvId;
+                           found = true;
+                           break;
+                       }
+                   }
+                   if (!found) break;
+                   depth++;
+               }
+
+               // Register this chain in the expansion map for this leaf value
+               const chainRecord: Record<string, string> = {};
+               chain.forEach(item => {
+                   chainRecord[item.attrId] = item.valId;
+               });
+               expansionMap.set(val.id, chainRecord);
+
+               // Add the chain to implied selections for attribute splitting
+               chain.forEach(item => {
+                   if (!impliedSelections.has(item.attrId)) {
+                       impliedSelections.set(item.attrId, new Set());
+                   }
+                   impliedSelections.get(item.attrId)?.add(item.valId);
+               });
+           });
+
+           // Now convert the map back to Attribute objects
+           impliedSelections.forEach((valIds, attrId) => {
+               const sysA = attributes.find(a => a.id === attrId);
+               // Inherit control flags from the root attribute
+               // This ensures that child attributes (ie CPU Model) also control pricing if CPU controls pricing
+               const controlFlags = {
+                   controlsPricing: attr.controlsPricing,
+                   controlsWeightDimensions: attr.controlsWeightDimensions,
+                   controlsMedia: attr.controlsMedia
+               };
+
+               if (addedAttributeIds.has(attrId)) {
+                   // If already added (e.g. by another root?), merge values?
+                   const existing = splitAttributes.find(a => a.id === attrId);
+                   if (existing) {
+                       // Add new values that aren't there
+                       valIds.forEach(vid => {
+                           if (!existing.values.some(v => v.id === vid)) {
+                               // Find value def to get correct value string
+                               const sysV = sysA?.values.find(v => v.id === vid);
+                               existing.values.push({
+                                   id: vid,
+                                   value: sysV?.value || '',
+                                   order: existing.values.length
+                               }); 
+                           }
+                       });
+                   }
+               } else {
+                   // Create new attribute entry
+                   if (sysA) {
+                       const values = Array.from(valIds).map((vid, idx) => {
+                           const sysV = sysA.values.find(v => v.id === vid);
+                           return {
+                               id: vid,
+                               value: sysV?.value || '',
+                               order: idx
+                           };
+                       });
+                       
+                       splitAttributes.push({
+                           ...attr, // Base properties
+                           ...controlFlags, // Explicit control flags
+                           id: attrId,
+                           name: sysA.name, // Use actual name of the level (e.g. "CPU Model")
+                           values
+                       });
+                       addedAttributeIds.add(attrId);
+                   }
+               }
+           });
+       });
+
+       dataToValidate = {
+           ...dataToValidate,
+           attributes: splitAttributes
+       };
+
+       // Now EXPAND the variant combinations using expansionMap
+       // We iterate over all arrays that use `attributeValues`
+       
+       const expandAttributeValues = <T extends { attributeValues: Record<string, string>, key?: string }>(items: T[] | undefined): T[] => {
+            if (!items) return [];
+            return items.map(item => {
+                const newAttrValues = { ...item.attributeValues };
+                let modified = false;
+
+                // For each value in the variant, check if it's a leaf that implies other values
+                Object.entries(item.attributeValues).forEach(([attrId, valId]) => {
+                    const expanded = expansionMap.get(valId);
+                    if (expanded) {
+                        // Merge expanded values (e.g. {10:29, 11:30, 12:40})
+                        Object.assign(newAttrValues, expanded);
+                        modified = true;
+                    }
+                });
+
+                if (!modified) return item;
+
+                // If key exists, we might need to regenerate it, but usually key is internal.
+                // However, updated attributeValues is what matters to backend.
+                return {
+                    ...item,
+                    attributeValues: newAttrValues
+                };
+            });
+       };
+       
+       dataToValidate.variantPricing = expandAttributeValues(dataToValidate.variantPricing);
+       dataToValidate.variantWeightDimensions = expandAttributeValues(dataToValidate.variantWeightDimensions);
+       dataToValidate.variantMedia = expandAttributeValues(dataToValidate.variantMedia);
+       // Stocks
+       dataToValidate.variants = expandAttributeValues(dataToValidate.variants);
+    }
+
     const normalizedData = ensureSinglePrimaryForProduct(dataToValidate);
 
     const isValid = validateForm(normalizedData);
@@ -249,6 +457,37 @@ export const ProductForm: React.FC<ProductFormProps> = ({
 
     if (!isValid) {
       console.log('=== Validation failed, not submitting ===');
+      
+      const result = zodSchema.safeParse(normalizedData);
+      if (!result.success) {
+        const newErrors = flattenZodErrors(result.error);
+        const firstErrorField = Object.keys(newErrors)[0];
+        
+        if (firstErrorField) {
+            console.log(`Scrolling to error field: ${firstErrorField}`);
+            setTimeout(() => {
+                const element = document.getElementById(firstErrorField);
+                if (element) {
+                    element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    // Try to focus if it's an input
+                    if (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA' || element.tagName === 'SELECT' || element.getAttribute('tabindex')) {
+                        element.focus({ preventScroll: true });
+                    }
+                } else {
+                    console.warn(`Could not find element for error: ${firstErrorField}`);
+                     // Fallback for some known fields that might be wrapped or have different ID logic
+                     // e.g. singleMedia container has id="singleMedia" but error is singleMedia
+                     const fallbackElement = document.getElementById(firstErrorField.split('.')[0]);
+                     if (fallbackElement) {
+                         fallbackElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                     } else {
+                         // Scroll to top as last resort
+                         window.scrollTo({ top: 0, behavior: 'smooth' });
+                     }
+                }
+            }, 100);
+        }
+      }
       return;
     }
 

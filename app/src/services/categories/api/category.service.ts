@@ -137,7 +137,7 @@ class CategoryService {
     }
     
     if (data.parent_id !== undefined) {
-      formData.append("parent_id", data.parent_id ? String(data.parent_id) : "");
+      formData.append("parent_id", data.parent_id === null ? "null" : String(data.parent_id));
     }
     
     if (data.image) {

@@ -38,13 +38,6 @@ const StatCard: React.FC<StatCardProps> = ({ label, value, valueClassName = "" }
     </Card>
 );
 
-// Stock Status Helper
-const getStockStatus = (stock: number): { label: string; className: string } => {
-    if (stock === 0) return { label: "Out of Stock", className: "text-danger" };
-    if (stock < 10) return { label: "Low Stock", className: "" };
-    return { label: "In Stock", className: "text-primary" };
-};
-
 export const StockSection: React.FC<StockSectionProps> = ({
     attributes,
     variants,
@@ -90,7 +83,7 @@ export const StockSection: React.FC<StockSectionProps> = ({
             return [
                 {
                     id: "single",
-                    stock: existing?.stock ?? 0,
+                    is_out_of_stock: existing?.is_out_of_stock ?? false,
                     attributeValues: {},
                     active: existing?.active ?? true,
                 },
@@ -107,7 +100,7 @@ export const StockSection: React.FC<StockSectionProps> = ({
 
             return {
                 id: existing?.id || `variant-${Date.now()}-${Math.random()}`,
-                stock: existing?.stock ?? 0,
+                is_out_of_stock: existing?.is_out_of_stock ?? false,
                 attributeValues: combo,
                 active: existing?.active ?? true,
             };
@@ -126,9 +119,8 @@ export const StockSection: React.FC<StockSectionProps> = ({
 
         // 1. Handle Empty Start or Reset
         if (variants.length === 0) {
-             if (nextAttributes.length > 0) {
-                 onChange(generateAllCombinations());
-             }
+             // Always generate combinations - when no attributes this creates a single 'single' variant
+             onChange(generateAllCombinations());
              prevAttributesRef.current = attributes;
              return;
         }
@@ -221,7 +213,7 @@ export const StockSection: React.FC<StockSectionProps> = ({
                             );
                             newVariantsForValues.push({
                                 id: `variant-${Date.now()}-${Math.random()}`,
-                                stock: 0,
+                                is_out_of_stock: false,
                                 attributeValues: { ...combo, [newAttr.id]: val.id },
                                 active: existingVariant?.active ?? true,
                             });
@@ -236,13 +228,13 @@ export const StockSection: React.FC<StockSectionProps> = ({
             
             const expanded: VariantCombination[] = [];
             // If we have no variants (e.g. all deleted), we treat it as a single empty base to expand from
-            const baseVariants = nextVariants.length > 0 ? nextVariants : [{ id: 'temp', stock: 0, attributeValues: {} }];
+            const baseVariants = nextVariants.length > 0 ? nextVariants : [{ id: 'temp', is_out_of_stock: false, attributeValues: {} }];
             
             baseVariants.forEach(v => {
                 newAttr.values.forEach(val => {
                     expanded.push({
                         id: `variant-${Date.now()}-${Math.random()}`,
-                        stock: v.stock || 0,
+                        is_out_of_stock: v.is_out_of_stock ?? false,
                         attributeValues: { ...v.attributeValues, [newAttr.id]: val.id },
                         active: v.active ?? true,
                     });
@@ -278,7 +270,7 @@ export const StockSection: React.FC<StockSectionProps> = ({
 
                         newVariantsForValues.push({
                             id: `variant-${Date.now()}-${Math.random()}`,
-                            stock: 0,
+                            is_out_of_stock: false,
                             attributeValues: { ...combo, [attr.id]: val.id },
                             active: existingVariant?.active ?? true,
                         });
@@ -303,7 +295,7 @@ export const StockSection: React.FC<StockSectionProps> = ({
                  if (!exists) {
                      missingCombos.push({
                          id: `variant-${Date.now()}-${Math.random()}`,
-                         stock: 0,
+                         is_out_of_stock: false,
                          attributeValues: combo,
                          active: false, // Default to inactive for missing combinations
                      });
@@ -339,17 +331,13 @@ export const StockSection: React.FC<StockSectionProps> = ({
             .join(" / ");
     };
 
-    const handleStockChange = (variantId: string, field: keyof VariantCombination, value: string | number) => {
+    const handleIsOutOfStockChange = (variantId: string, checked: boolean) => {
         const updated = variants.map((v) => {
             if (v.id === variantId) {
-                return {
-                    ...v,
-                    [field]: field === "stock" ? (value === '' ? 0 : (typeof value === "string" ? parseInt(value) || 0 : value)) : value,
-                };
+                return { ...v, is_out_of_stock: checked };
             }
             return v;
         });
-
         onChange(updated);
     };
 
@@ -368,10 +356,7 @@ export const StockSection: React.FC<StockSectionProps> = ({
         return label.includes(searchQuery.toLowerCase());
     });
 
-    const totalStock = variants.reduce((sum, v) => sum + v.stock, 0);
-    const lowStockCount = variants.filter((v) => v.stock > 0 && v.stock < 10).length;
-    const outOfStockCount = variants.filter((v) => v.stock === 0).length;
-
+    const outOfStockCount = variants.filter((v) => v.is_out_of_stock === true).length;
     const showDeleteAction = variants.length > 1;
 
     return (
@@ -386,10 +371,8 @@ export const StockSection: React.FC<StockSectionProps> = ({
             </div>
 
             {/* Summary Stats */}
-            <div className="grid grid-cols-4 gap-5">
+            <div className="grid grid-cols-2 gap-5">
                 <StatCard label="Total Variants" value={variants.length} />
-                <StatCard label="Total Stock" value={totalStock} />
-                <StatCard label="Low Stock" value={lowStockCount} valueClassName="" />
                 <StatCard label="Out of Stock" value={outOfStockCount} valueClassName="text-danger" />
             </div>
 
@@ -407,17 +390,14 @@ export const StockSection: React.FC<StockSectionProps> = ({
             <Table key={filteredCombinations.length > 0 ? 'has-data' : 'no-data'}>
                 <TableHeader>
                     <TableRow isHeader>
-                        <TableHead width={showDeleteAction ? "25%" : "33%"}>
+                        <TableHead width={showDeleteAction ? "33%" : "50%"}>
                             Variant
                         </TableHead>
-                        <TableHead width={showDeleteAction ? "25%" : "33%"}>
-                            Current Stock
-                        </TableHead>
-                        <TableHead width={showDeleteAction ? "25%" : "33%"}>
-                            Status
+                        <TableHead width={showDeleteAction ? "33%" : "50%"}>
+                            Out of Stock
                         </TableHead>
                         {showDeleteAction && (
-                            <TableHead width="25%">
+                            <TableHead width="33%">
                                 Active
                             </TableHead>
                         )}
@@ -426,8 +406,6 @@ export const StockSection: React.FC<StockSectionProps> = ({
                 <TableBody>
                     {filteredCombinations.map((variant) => {
                         const label = getVariantLabel(variant);
-                        const variantIndex = variants.findIndex(v => v.id === variant.id);
-                        const stockStatus = getStockStatus(variant.stock);
 
                         return (
                             <TableRow key={variant.id} className={variant.active === false ? "opacity-50 bg-gray-50" : ""}>
@@ -435,26 +413,11 @@ export const StockSection: React.FC<StockSectionProps> = ({
                                     {label}
                                 </TableCell>
                                 <TableCell>
-                                    <Input
-                                        id={`variants.${variantIndex}.stock`}
-                                        type="number"
-                                        min="0"
-                                        value={variant.stock}
-                                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                                            handleStockChange(
-                                                variant.id,
-                                                "stock",
-                                                e.target.value
-                                            )
-                                        }
-                                        placeholder="0"
-                                        size="sm"
+                                    <Checkbox
+                                        checked={variant.is_out_of_stock ?? false}
+                                        onChange={(checked) => handleIsOutOfStockChange(variant.id, checked)}
                                         disabled={variant.active === false}
-                                        error={variantIndex >= 0 ? errors[`variants.${variantIndex}.stock`] : undefined}
                                     />
-                                </TableCell>
-                                <TableCell className={`font-medium ${stockStatus.className}`}>
-                                    {stockStatus.label}
                                 </TableCell>
                                 {showDeleteAction && (
                                     <TableCell>

@@ -144,11 +144,8 @@ export default function EditProductPage() {
          });
       }
 
-      return Object.entries(product.attributes).map(([attrId, attrData]: [string, any], index) => {
-        // Find the full attribute details from available attributes (to get all values if needed)
-        // or construct from the product data
-        
-        // Map values from the dictionary to array
+      // 1. Convert current backend attributes to a list
+      const backendAttributes = Object.entries(product.attributes).map(([attrId, attrData]: [string, any], index) => {
         const values = attrData.values ? Object.entries(attrData.values).map(([valId, valData]: [string, any], vIdx) => ({
           id: valId,
           value: valData.name_en || valData.value_en,
@@ -163,16 +160,152 @@ export default function EditProductPage() {
           name: attrData.name_en,
           values,
           order: index,
-          // Defaults for control flags as they might not be in the simple dict
-          // Only attributes used in variants should control pricing/weights to avoiding empty combinations blocks
-          controlsPricing: isUsedInVariants, 
+          controlsPricing: isUsedInVariants && Object.keys((product as any)?.price_groups || {}).length > 1,
           controlsWeightDimensions: isUsedInVariants && Object.keys((product as any)?.weight_groups || {}).length > 1,
           controlsMedia: isUsedInVariants && Object.keys((product as any)?.media_groups || {}).length > 1,
         };
       });
+
+      // 2. Filter to only show Root Attributes in the form
+      // We look at 'attributesData' (system definitions) to know the hierarchy
+      const rootAttributes = backendAttributes.filter(attr => {
+         const systemAttr = attributesData?.find((a: Attribute) => String(a.id) === String(attr.id));
+         // It's a root if it has no parent_id
+         return !systemAttr?.parent_id;
+      });
+
+      // 3. For each Root attribute, we need to collect values from itself + its descendants
+      return rootAttributes.map(rootAttr => {
+          // Find all values selected for this root (and its children) basically "flattening" the selection
+          // The UI expects the root attribute to have values that are "Leaf" values (or path values)
+          
+          // But wait, the AttributesSection component does hierarchical lookup based on availableAttributes.
+          // It basically says: "If you select N4500 (Level 2), we know it belongs to Celeron -> Intel".
+          // So if we just populate the ROOT attribute with the *Leaf* value IDs,
+          // attributes section *should* be able to display it if it knows the path.
+          
+          // However, the input to ProductForm `attributes` prop is `Attribute[]` with `values: AttributeValue[]`.
+          // If we only include the Root Attribute, its `values` array must contain the SELECTED values.
+          // IF the selected value is from Level 2 (e.g. N4500), we must put N4500 in the `values` array of the Root Attribute (CPU).
+          
+          // Let's find all descendant attributes of this root
+          const getAllDescendantIds = (parentId: string): string[] => {
+              const children = attributesData?.filter((a: Attribute) => String(a.parent_id) === String(parentId)) || [];
+              const childIds = children.map((c: Attribute) => String(c.id));
+              return [...childIds, ...childIds.flatMap((cid: string) => getAllDescendantIds(cid))];
+          };
+          
+          const descendantIds = getAllDescendantIds(rootAttr.id);
+          const relatedAttrIds = [rootAttr.id, ...descendantIds];
+
+          // Find backend attributes that are part of this family
+          const familyAttributes = backendAttributes.filter(ba => relatedAttrIds.includes(ba.id));
+          
+          // Collect all selected values from this family
+          const allSelectedValues: any[] = [];
+          familyAttributes.forEach(fa => {
+              allSelectedValues.push(...fa.values);
+          });
+
+          // Now determine which values to actually put in the form state for this Root Attribute.
+          // The standard behavior for a hierarchical select is that the "Leaf" selection implies the parents.
+          // So we should look for values that are "Leaves" in the context of the current selection.
+          
+          // Or simpler: Just identifying which values are at the "deepest" level for each chain.
+          // If we have Intel, Celeron, N4500 selected. N4500 is the deepest.
+          // We put N4500 in the values list. The UI component `AttributesSection` uses `findDescendants` on `availableAttributes`.
+          // `findDescendants` generates options. If we pass N4500 ID as a selected value, 
+          // `AttributesSection` needs to match it against an option.
+          
+          // In `AttributesSection.tsx`:
+          // `options` are generated from `availableAttr.values` (roots) -> recursively finding children.
+          // The `originalId` of the generated option is the LEAF ID.
+          // So if we put the LEAF ID (N4500, ID 40) into the `values` array of the Root Attribute (CPU), it should match.
+
+          // Optimization: Filter `allSelectedValues` to keep only those that are NOT parents of another selected value.
+          // But actually, just dumping all selected values *might* confuse the UI if it tries to render "Intel" AND "Intel > Celeron > N4500".
+          // We only want the leaf.
+          
+          // To find leaves among selected values:
+          // A value is a leaf if no other selected value has it as a parent.
+          // But `valData` here doesn't have parent info easily accessible without looking up `attributesData`.
+          
+          // Let's build a set of all selected parent_value_ids
+          const selectedValueIds = new Set(allSelectedValues.map(v => String(v.id)));
+          const parentValueIds = new Set<string>();
+
+          allSelectedValues.forEach(val => {
+             // Find this value in system attributes to check its children? 
+             // Or check if any *other* selected value points to this as parent.
+             // We need to look up system definition of the values.
+             
+             // This can be expensive O(N^2).
+             // Better: Iterate all system values. If a system value has `parent_value_id` X, and that system value is in `selectedValueIds`, then X is a parent.
+             // We need to find X in `selectedValueIds`.
+          });
+
+          // Let's use `attributesData` (system definitions)
+          attributesData?.forEach((sysAttr: Attribute) => {
+             sysAttr.values?.forEach((sysVal: AttributeValue) => {
+                 if (sysVal.parent_value_id && selectedValueIds.has(String(sysVal.id))) {
+                     // The current value is selected, so its parent is a "Parent" -> mark parent as such
+                     parentValueIds.add(String(sysVal.parent_value_id));
+                 }
+             });
+          });
+
+          // Filter out parents
+          const leafValues = allSelectedValues.filter(v => !parentValueIds.has(String(v.id)));
+
+          // The UI expects `values` in the form object.
+          // We map these leaf values to the structure required.
+          // Note: displayValue might need to be the full path? 
+          // `AttributesSection` uses `v.value` to match with `option.value`.
+          // `option.value` is the full path string.
+          // `AttributesSection` uses `selectedValues = attribute.values.map(v => v.value)`.
+          // So we need to reconstruct the full path string for `value`.
+          
+          const enrichedValues = leafValues.map(lv => {
+               // Reconstruct path
+               // We have the leaf ID. We can traverse up `attributesData` to build the string.
+               let currentId = String(lv.id);
+               let pathParts: string[] = [];
+               
+               // Infinite loop protection
+               let depth = 0;
+               while(currentId && depth < 10) {
+                   // Find value in system
+                   let found = false;
+                   for(const a of (attributesData || [])) {
+                       const v = a.values?.find((val: AttributeValue) => String(val.id) === currentId);
+                       if (v) {
+                           pathParts.unshift(v.value_en);
+                           currentId = v.parent_value_id ? String(v.parent_value_id) : "";
+                           found = true;
+                           break;
+                       }
+                   }
+                   if (!found) break;
+                   depth++;
+               }
+               
+               return {
+                   ...lv,
+                   value: pathParts.join(" > ") // Matches the " > " separator in AttributesSection
+               };
+          });
+
+          return {
+             ...rootAttr,
+             values: enrichedValues // This attribute now contains only leaf values with full path names
+          };
+      });
     }
 
     if (!product?.attributes || (Array.isArray(product.attributes) && product.attributes.length === 0)) return undefined;
+    
+    // ... Legacy array handling omitted (assuming newer format is primary) ... 
+    // Just keeping the fallback logic as is but note user specifically shared dictionary structure
     
     // Get unique attribute values used across all variants
     const attributeValuesUsed: { [attrId: string]: Set<string> } = {};
@@ -350,6 +483,28 @@ export default function EditProductPage() {
   const transformVariants = () => {
     // For variant products with variants array
     if (product?.variants && product.variants.length > 0) {
+      // We need to identify Root Attributes again to map child values back to roots
+      // Copy logic from transformProductAttributes ideally, but for now we do a simple lookup
+      // Iterate over system attributes to find hierarchies.
+      const childToRootMap = new Map<string, string>(); // ChildAttrId -> RootAttrId
+      
+      const getRootId = (attrId: string): string => {
+         if (childToRootMap.has(attrId)) return childToRootMap.get(attrId)!;
+         
+         const sysAttr = attributesData?.find((a: any) => String(a.id) === String(attrId));
+         if (!sysAttr) return attrId; // Not found, return self
+         
+         if (!sysAttr.parent_id) {
+             childToRootMap.set(attrId, attrId);
+             return attrId;
+         }
+         
+         // Recurse up
+         const root = getRootId(String(sysAttr.parent_id));
+         childToRootMap.set(attrId, root);
+         return root;
+      };
+
       return product.variants.map((variant: any) => {
         const stock = product.stock?.find((s: any) => s.variant_id === variant.id);
         
@@ -359,14 +514,76 @@ export default function EditProductPage() {
              attributeValues = buildAttributeValuesMap(variant.combinations);
         } else if (variant.attribute_values) {
            Object.entries(variant.attribute_values).forEach(([k, v]) => {
-                if (v !== null && v !== undefined) attributeValues[k] = v.toString();
+                if (v !== null && v !== undefined) {
+                    attributeValues[k] = v.toString();
+                }
            });
         }
         
+        // COLLAPSE HIERARCHIES
+        // If we have keys for child attributes, we must map their values to the Root Attribute Key.
+        // And we must ensure we pick the "deepest" value (Leaf) for that Root Key.
+        
+        const collapsedAttributeValues: {[key:string]: string} = {};
+        
+        // 1. Group values by Root Attribute ID
+        const valuesByRoot: {[rootId: string]: string[]} = {};
+        
+        Object.entries(attributeValues).forEach(([attrId, valId]) => {
+            const rootId = getRootId(attrId);
+            if (!valuesByRoot[rootId]) valuesByRoot[rootId] = [];
+            valuesByRoot[rootId].push(valId);
+        });
+        
+        // 2. For each Root, find the Leaf Value among the values associated with it
+        // A value is a leaf if it is not a parent of any other value in the group.
+        
+        Object.entries(valuesByRoot).forEach(([rootId, valIds]) => {
+             // Find leaf
+             let leafValId = valIds[0];
+             
+             // If multiple values, we need to check hierarchy between them.
+             if (valIds.length > 1) {
+                 // Check if valA is parent of valB
+                 const isParent = (parentId: string, childId: string): boolean => {
+                     // Check if childId definition has parent_value_id == parentId
+                     // Need to find definition of childId
+                     // We need to iterate over attributesData... might be slow.
+                     // Optimization: Build global value map? 
+                     // For now, iterate.
+                     for (const a of (attributesData || [])) {
+                         const v = a.values.find((val: any) => String(val.id) === String(childId));
+                         if (v) {
+                             if (String(v.parent_value_id) === String(parentId)) return true;
+                             // Recurse? No, strict parent. 
+                             // Wait, is it direct parent? Yes usually.
+                         }
+                     }
+                     return false; 
+                 };
+                 
+                 // Simple approach: Iterate all, eliminate any that IS a parent of another
+                 const parents = new Set<string>();
+                 valIds.forEach(possibleParent => {
+                     // Check if this is a parent of any OTHER value in the list
+                     valIds.forEach(possibleChild => {
+                         if (possibleParent !== possibleChild && isParent(possibleParent, possibleChild)) {
+                             parents.add(possibleParent);
+                         }
+                     });
+                 });
+                 
+                 const leaves = valIds.filter(v => !parents.has(v));
+                 if (leaves.length > 0) leafValId = leaves[0];
+             }
+             
+             collapsedAttributeValues[rootId] = leafValId;
+        });
+
         return {
           id: variant.id.toString(),
-          attributeValues,
-          stock: variant.quantity ?? stock?.quantity ?? 0,
+          attributeValues: collapsedAttributeValues,
+          is_out_of_stock: variant.is_out_of_stock ?? (variant.quantity === 0),
         };
       });
     }
@@ -378,11 +595,48 @@ export default function EditProductPage() {
         return [{
           id: 'single',
           attributeValues: {},
-          stock: singleStock.quantity || 0,
+          is_out_of_stock: singleStock.quantity === 0,
         }];
       }
     }
-    
+
+    // New API structure: `quantity` is the total stock for a simple product
+    if ((product as any)?.quantity !== undefined) {
+      return [{
+        id: 'single',
+        attributeValues: {},
+        is_out_of_stock: (product as any).quantity === 0,
+      }];
+    }
+
+    // Fallback: variants array is empty but attributes dict exists with values.
+    // Generate one combination per Cartesian product of attribute values.
+    const attrDict = (product as any)?.attributes;
+    if (attrDict && !Array.isArray(attrDict) && Object.keys(attrDict).length > 0) {
+      // Build list of [attrId, valueId[]] entries
+      const attrEntries: [string, string[]][] = (Object.entries(attrDict) as [string, any][]).map(([attrId, attrData]) => {
+        const valueIds: string[] = attrData.values ? Object.keys(attrData.values) : [];
+        return [attrId, valueIds] as [string, string[]];
+      }).filter(([, vals]) => vals.length > 0);
+
+      if (attrEntries.length > 0) {
+        // Cartesian product
+        const combos: Record<string, string>[] = attrEntries.reduce<Record<string, string>[]>(
+          (acc, [attrId, valueIds]) => {
+            if (acc.length === 0) return valueIds.map(v => ({ [attrId]: v }));
+            return acc.flatMap(combo => valueIds.map(v => ({ ...combo, [attrId]: v })));
+          },
+          []
+        );
+        return combos.map((combo, i) => ({
+          id: `variant-init-${i}`,
+          attributeValues: combo,
+          is_out_of_stock: false,
+          active: true,
+        }));
+      }
+    }
+
     return undefined;
   };
 
@@ -582,15 +836,26 @@ export default function EditProductPage() {
   };
 
   const transformSinglePricing = () => {
-    // Only for single products (products without attributes)
-    if (product?.attributes && product.attributes.length > 0) return undefined;
+    // New API structure: price_groups dict  { "88": { price, sale_price, cost } }
+    if ((product as any)?.price_groups) {
+      const groups = Object.values((product as any).price_groups);
+      if (groups.length > 0) {
+        const pg: any = groups[0];
+        return {
+          cost: pg.cost !== undefined && pg.cost !== null ? parseFloat(pg.cost) : undefined,
+          price: parseFloat(pg.price),
+          isSale: !!pg.sale_price,
+          salePrice: pg.sale_price ? parseFloat(pg.sale_price) : undefined,
+        };
+      }
+    }
     
     // Check for prices array (single product would have one price with empty groupValues)
     const prices = (product as any)?.prices;
     if (prices && prices.length > 0) {
       const pricing = prices[0];
       return {
-        cost: parseFloat(pricing.cost),
+        cost: pricing.cost !== undefined && pricing.cost !== null ? parseFloat(pricing.cost) : undefined,
         price: parseFloat(pricing.price),
         isSale: !!pricing.sale_price,
         salePrice: pricing.sale_price ? parseFloat(pricing.sale_price) : undefined,
@@ -605,6 +870,8 @@ export default function EditProductPage() {
     
     // Determine if attributes exist
     const hasAttributes = Array.isArray(product.attributes) ? product.attributes.length > 0 : (product.attributes && Object.keys(product.attributes).length > 0);
+    const attrs = hasAttributes ? transformProductAttributes() : undefined;
+    const hasPricingAttributes = !!(attrs && attrs.some((a: any) => a.controlsPricing));
 
     return {
       // Basic Information
@@ -624,11 +891,11 @@ export default function EditProductPage() {
     visible: product.visible ?? product.is_active,
     
     // Attributes (for variant products)
-    attributes: hasAttributes ? transformProductAttributes() : undefined,
+    attributes: attrs,
     
     // Pricing
-    singlePricing: !hasAttributes ? transformSinglePricing() : undefined,
-    variantPricing: hasAttributes ? transformVariantPricing() : undefined,
+    singlePricing: !hasPricingAttributes ? transformSinglePricing() : undefined,
+    variantPricing: hasPricingAttributes ? transformVariantPricing() : undefined,
     
     // Weight & Dimensions
     isWeightVariantBased: isWeightVariantBased(),
@@ -893,7 +1160,7 @@ export default function EditProductPage() {
         const singleVariant = data.variants?.[0];
         if (singleVariant) {
           productPayload.stocks = [{
-            quantity: singleVariant.stock ?? 0,
+            is_out_of_stock: singleVariant.is_out_of_stock ?? false,
           }];
         }
       } else if (data.variants && data.variants.length > 0) {
@@ -908,7 +1175,7 @@ export default function EditProductPage() {
           
           return {
             combination,
-            quantity: v.stock ?? 0,
+            is_out_of_stock: v.is_out_of_stock ?? false,
           };
         });
       }

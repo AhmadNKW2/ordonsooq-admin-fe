@@ -6,6 +6,7 @@ import { Bold, List, ListOrdered } from 'lucide-react';
 import { FieldWrapper } from './field-wrapper';
 
 interface RichTextEditorProps {
+    id?: string;
     value?: string;
     onChange?: (value: string) => void;
     label?: string;
@@ -38,6 +39,7 @@ const ToolbarButton = ({
 );
 
 export const RichTextEditor: React.FC<RichTextEditorProps> = ({
+    id,
     value,
     onChange,
     label,
@@ -114,7 +116,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
             isClearButton={false} // Complex to clear rich text via simple button
             className={className}
         >
-            <div className={`w-full rounded-lg border bg-white overflow-hidden transition-colors ${borderColor}`}>
+            <div id={id} className={`w-full rounded-lg border bg-white overflow-hidden transition-colors ${borderColor}`}>
                 {/* Toolbar */}
                 <div className="flex items-center gap-1 border-b border-gray-100 px-2 py-1 bg-gray-50/50">
                     <ToolbarButton

@@ -19,30 +19,78 @@ export interface CreateOrderDto {
   shippingAddress: ShippingAddress;
 }
 
+export type OrderStatus = 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled' | 'refunded';
+
+export interface OrderFilters {
+  page?: number;
+  limit?: number;
+  status?: OrderStatus | '';
+  search?: string;
+}
+
+export interface OrderMeta {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export interface OrderListResponse {
+  data: Order[];
+  meta: OrderMeta;
+}
+
+export interface ItemProduct {
+    id: number;
+    name_en: string;
+    name_ar: string;
+    slug: string;
+    image?: string; // Assuming maybe provided, else we handle it
+    media_groups?: Record<string, { media: any[] }>; // Fallback
+}
+
+export interface ItemVariant {
+    id: number;
+    attribute_values?: Record<string, any>; 
+}
+
 export interface OrderItem {
-  id?: number;
+  id: number;
   productId?: number;
   variantId?: number;
-  quantity?: number;
-  price?: number;
-  product?: any;
-  variant?: any;
+  quantity: number;
+  price: string | number;
+  cost?: string | number;
+  product?: ItemProduct;
+  variant?: ItemVariant;
+  
+  // Backward compat (if needed)
   [key: string]: any;
+}
+
+export interface UpdateItemCostEntry {
+  itemId: number;
+  cost: number;
+}
+
+export interface UpdateItemCostDto {
+  items: UpdateItemCostEntry[];
 }
 
 export interface Order {
   id: number;
-  status?: string;
+  totalAmount: string;
+  status: OrderStatus;
+  user?: { email: string; [key: string]: any };
+  items: OrderItem[];
+  
+  // Optional / Compatibility fields
   paymentMethod?: string;
-  total?: number;
-  subtotal?: number;
+  shippingAddress?: ShippingAddress;
   createdAt?: string;
   created_at?: string;
   updatedAt?: string;
   updated_at?: string;
-  items?: OrderItem[];
-  shippingAddress?: ShippingAddress;
-  shipping_address?: ShippingAddress;
-  user?: any;
+  
   [key: string]: any;
 }

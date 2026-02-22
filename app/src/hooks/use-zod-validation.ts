@@ -28,7 +28,7 @@ interface UseZodValidationReturn<T> {
 /**
  * Flattens Zod errors into a flat object with dot-notation keys
  */
-const flattenZodErrors = (error: ZodError): ValidationErrors => {
+export const flattenZodErrors = (error: ZodError): ValidationErrors => {
   const errors: ValidationErrors = {};
   
   for (const issue of error.issues) {

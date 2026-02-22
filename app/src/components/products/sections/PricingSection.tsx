@@ -203,12 +203,16 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
         );
 
         return (
-            <Card>
+            <Card id="singlePricing" className={errors['singlePricing'] ? "border-danger" : ""}>
                 <div className="flex flex-col gap-2">
                     <div className="flex gap-5 items-center">
                         <h2 className="text-xl font-semibold ">
                             Pricing Configuration
                         </h2>
+                        {/* Show generic Section error if present */}
+                        {typeof errors['singlePricing'] === 'string' && (
+                            <span className="text-sm text-danger">{errors['singlePricing']}</span>
+                        )}
                         <Checkbox
                             checked={singlePricing?.isSale ?? true}
                             onChange={(checked) => {
@@ -268,10 +272,16 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
     }
 
     return (
-        <Card>
-            <h2 className="text-xl font-semibold ">
-                Pricing Configuration - Variant Based
-            </h2>
+        <Card id="variantPricing" className={errors['variantPricing'] ? "border-danger" : ""}>
+            <div className="flex flex-col gap-2 mb-4">
+                <h2 className="text-xl font-semibold ">
+                    Pricing Configuration - Variant Based
+                </h2>
+                {/* Show generic Section error if present */}
+                {typeof errors['variantPricing'] === 'string' && (
+                    <span className="text-sm text-danger">{errors['variantPricing']}</span>
+                )}
+            </div>
 
             <p className="text-sm ">
                 Configure pricing for each variant combination based on{" "}

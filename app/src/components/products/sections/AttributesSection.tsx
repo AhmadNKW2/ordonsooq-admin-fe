@@ -224,6 +224,7 @@ export const AttributesSection: React.FC<AttributesSectionProps> = ({
                         return (
                             <AttributeCard
                                 key={attribute.id}
+                                id={`attributes.${index}.values`}
                                 attribute={attribute}
                                 index={index}
                                 totalAttributes={attributes.length}
@@ -270,6 +271,7 @@ interface AttributeCardProps {
         }> 
     };
     allAttributes?: Array<any>; // Added
+    id?: string;
 }
 
 const AttributeCard: React.FC<AttributeCardProps> = ({
@@ -283,6 +285,7 @@ const AttributeCard: React.FC<AttributeCardProps> = ({
     onToggleControl,
     availableAttr,
     allAttributes = [],
+    id,
 }) => {
     const selectedValues = attribute.values.map(v => v.value);
 
@@ -333,9 +336,10 @@ const AttributeCard: React.FC<AttributeCardProps> = ({
             });
 
             // If we found dependent attributes but NO matching values for this specific value, 
-            // then this specific value is a leaf.
+            // then this branch is incomplete according to strict hierarchy rules.
+            // We return an empty array to prune this path (e.g. Intel > Core i3 [dead end] -> Hide).
             if (!hasChildrenValues) {
-                return [{ value: currentLabelPath, id: currentValueId }];
+                return [];
             }
 
             return descendants;
@@ -389,7 +393,7 @@ const AttributeCard: React.FC<AttributeCardProps> = ({
     };
 
     return (
-        <Card variant="nested">
+        <Card id={id} variant="nested">
             <div className="flex items-start justify-between">
                 <div className="flex items-center gap-1">
                     <div className="flex justify-center items-center gap-5">

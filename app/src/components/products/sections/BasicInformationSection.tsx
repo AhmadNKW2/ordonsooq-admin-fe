@@ -67,6 +67,7 @@ export const BasicInformationSection: React.FC<BasicInformationSectionProps> = (
 
                 {/* Short Descriptions */}
                 <RichTextEditor
+                    id="shortDescriptionEn"
                     label="Short Description (English)"
                     value={formData.shortDescriptionEn || ""}
                     onChange={(value) =>
@@ -76,6 +77,7 @@ export const BasicInformationSection: React.FC<BasicInformationSectionProps> = (
                 />
 
                 <RichTextEditor
+                    id="shortDescriptionAr"
                     label="Short Description (Arabic)"
                     value={formData.shortDescriptionAr || ""}
                     onChange={(value) =>
@@ -87,6 +89,7 @@ export const BasicInformationSection: React.FC<BasicInformationSectionProps> = (
 
                 {/* Long Descriptions */}
                 <RichTextEditor
+                    id="longDescriptionEn"
                     label="Long Description (English)"
                     value={formData.longDescriptionEn || ""}
                     onChange={(value) =>
@@ -96,6 +99,7 @@ export const BasicInformationSection: React.FC<BasicInformationSectionProps> = (
                 />
 
                 <RichTextEditor
+                    id="longDescriptionAr"
                     label="Long Description (Arabic)"
                     value={formData.longDescriptionAr || ""}
                     onChange={(value) =>
@@ -107,6 +111,7 @@ export const BasicInformationSection: React.FC<BasicInformationSectionProps> = (
 
                 {/* Category, Vendor */}
                 <CategoryTreeSelect
+                    id="categoryIds"
                     label="Categories"
                     categories={categories}
                     selectedIds={formData.categoryIds || []}

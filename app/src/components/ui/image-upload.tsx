@@ -148,6 +148,8 @@ const SortableImageItem = ({ item, onRemove, onSetPrimary, onSetGroupPrimary, on
 };
 
 export interface ImageUploadProps {
+    /** ID for the component */
+    id?: string;
     /** Current media items (for multi mode) */
     value?: ImageUploadItem[] | null;
     /** Callback when media changes (for multi mode) */
@@ -177,6 +179,7 @@ export interface ImageUploadProps {
 }
 
 export const ImageUpload: React.FC<ImageUploadProps> = ({
+    id,
     value = [],
     onChange,
     isMulti = true,
@@ -339,7 +342,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
     };
 
     return (
-        <div className={`flex flex-col gap-2 ${className}`}>
+        <div id={id} className={`flex flex-col gap-2 ${className}`}>
             {label && <label className="text-sm font-medium">{label}</label>}
             {error && <p className="text-sm text-danger">{error}</p>}
 

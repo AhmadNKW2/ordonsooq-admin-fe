@@ -69,12 +69,14 @@ export function transformFormDataToDto(
   if (!data.attributes || data.attributes.length === 0) {
     // Single pricing - no combination
     if (data.singlePricing) {
-      dto.prices = [{
+      const priceEntry: PriceItem = {
         cost: data.singlePricing.cost,
         price: data.singlePricing.price,
         // UI/validation treat `isSale` as true by default, so include sale price unless explicitly disabled
         sale_price: data.singlePricing.isSale !== false ? data.singlePricing.salePrice : undefined,
-      }];
+      };
+      if (priceEntry.cost === undefined) delete priceEntry.cost;
+      dto.prices = [priceEntry];
     }
   } else {
     // Variant pricing - with combinations
@@ -103,7 +105,7 @@ export function transformFormDataToDto(
       const singleVariant = data.variants.find(v => v.id === 'single');
       if (singleVariant) {
         dto.stocks = [{
-          quantity: singleVariant.stock ?? 0,
+          is_out_of_stock: singleVariant.is_out_of_stock ?? false,
         }];
       }
     }
@@ -144,7 +146,7 @@ export function buildMediaArray(
 
 interface PriceItem {
   combination?: Record<string, number>;
-  cost: number;
+  cost?: number;
   price: number;
   sale_price?: number;
 }
@@ -159,7 +161,7 @@ interface WeightItem {
 
 interface StockItem {
   combination?: Record<string, number>;
-  quantity: number;
+  is_out_of_stock: boolean;
 }
 
 /**
@@ -176,21 +178,25 @@ function buildPrices(data: ProductFormData): PriceItem[] {
   // that should apply to all variants (no combination).
   if (pricingControllingAttrIds.length === 0) {
     if (data.singlePricing) {
-      return [{
+      const entry: PriceItem = {
         cost: data.singlePricing.cost,
         price: data.singlePricing.price,
         sale_price: data.singlePricing.isSale !== false ? data.singlePricing.salePrice : undefined,
-      }];
+      };
+      if (entry.cost === undefined) delete entry.cost;
+      return [entry];
     }
 
     // Fallback: if variant pricing exists, use the first entry as the single price.
     if (data.variantPricing && data.variantPricing.length > 0) {
       const first = data.variantPricing[0];
-      return [{
+      const entry: PriceItem = {
         cost: first.cost,
         price: first.price,
         sale_price: first.isSale !== false ? first.salePrice : undefined,
-      }];
+      };
+      if (entry.cost === undefined) delete entry.cost;
+      return [entry];
     }
 
     return [];
@@ -223,13 +229,15 @@ function buildPrices(data: ProductFormData): PriceItem[] {
 
     // Only add if not already exists
     if (!priceMap.has(key) && Object.keys(combination).length > 0) {
-      priceMap.set(key, {
+      const entry: PriceItem = {
         combination,
         cost: pricing.cost,
         price: pricing.price,
         // `isSale` defaults to true in the form, so only omit when explicitly false
         sale_price: pricing.isSale !== false ? pricing.salePrice : undefined,
-      });
+      };
+      if (entry.cost === undefined) delete entry.cost;
+      priceMap.set(key, entry);
     }
   }
 
@@ -302,7 +310,7 @@ function buildStocks(data: ProductFormData): StockItem[] {
     if (Object.keys(combination).length > 0) {
       stocks.push({
         combination,
-        quantity: variant.stock || 0,
+        is_out_of_stock: variant.is_out_of_stock ?? false,
       });
     }
   }

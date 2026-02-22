@@ -145,6 +145,13 @@ export default function ProductsPage() {
     return "Hidden";
   };
 
+  const formatCategoryName = (name: string | undefined) => {
+    if (!name) return "";
+    const words = name.trim().split(/\s+/);
+    if (words.length <= 1) return name;
+    return `${words[0]} ${words[1].slice(0, 3)}...`;
+  };
+
   const formatRating = (rating?: number | string | null) => {
     if (!rating) return "0.0";
     const numRating = typeof rating === 'number' ? rating : parseFloat(rating);
@@ -229,13 +236,13 @@ export default function ProductsPage() {
               <TableHead width="5%">#</TableHead>
               <TableHead width="7%">Image</TableHead>
               <TableHead width="12%">Product Name</TableHead>
-              <TableHead width="9%">Category</TableHead>
-              <TableHead width="11%">Brand</TableHead>
-              <TableHead width="11%">Vendor</TableHead>
-              <TableHead width="9%">Price</TableHead>
+              <TableHead width="7%">Category</TableHead>
+              <TableHead width="15%">Brand</TableHead>
+              <TableHead width="15%">Vendor</TableHead>
+              <TableHead width="5%">Price</TableHead>
               <TableHead width="9%">Stock</TableHead>
-              <TableHead width="9%">Rating</TableHead>
-              <TableHead width="9%">Visibility</TableHead>
+              <TableHead width="6%">Rating</TableHead>
+              <TableHead width="6%">Visibility</TableHead>
               <TableHead width="9%">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -276,7 +283,7 @@ export default function ProductsPage() {
                   {product.id}
                 </TableCell>
                 <TableCell>
-                  <div className="w-15 h-15 relative rounded-lg overflow-hidden bg-primary/10 border border-primary/20">
+                  <div className="w-20 h-20 relative rounded-lg overflow-hidden bg-primary/10 border border-primary/20">
                     {imageUrl ? (
                       <Image
                         src={imageUrl}
@@ -299,9 +306,11 @@ export default function ProductsPage() {
                 </TableCell>
                 <TableCell>
                     {product.categories && product.categories.length > 0 ? (
-                       <Badge variant="default2" className="w-fit">
-                         {product.categories[0].name_en}
-                       </Badge>
+                       <span title={product.categories[0].name_en} className="block max-w-[90px]">
+                         <Badge variant="default2" className="w-full whitespace-nowrap overflow-hidden text-ellipsis block">
+                           {formatCategoryName(product.categories[0].name_en)}
+                         </Badge>
+                       </span>
                     ) : (
                       <span className="text-gray-400">—</span>
                     )}
@@ -384,7 +393,7 @@ export default function ProductsPage() {
                     
                     return (
                         <Badge variant={stock > 0 ? "success" : "danger"}>
-                            {stock > 0 ? `${stock} in stock` : "Out of stock"}
+                            {stock > 0 ? "In Stock" : "Out of Stock"}
                         </Badge>
                     )
                   })()}

@@ -20,7 +20,7 @@ import NProgress from "nprogress";
 
 // Configure NProgress
 NProgress.configure({
-  showSpinner: false, // We'll use our own overlay
+  showSpinner: false,
   minimum: 0.1,
   speed: 400,
   trickleSpeed: 200,
@@ -37,114 +37,15 @@ interface LoadingContextType {
 const LoadingContext = createContext<LoadingContextType | undefined>(undefined);
 
 /**
- * Full-screen loading overlay with spinner and progress bar
+ * Simple transparent overlay to block interactions while loading
  */
-const LoadingOverlay: React.FC<{ show: boolean }> = ({ show }) => {
-  const [shouldRender, setShouldRender] = useState(false);
-  const [isVisible, setIsVisible] = useState(false);
-  const [progress, setProgress] = useState(0);
-
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    
-    if (show) {
-      setShouldRender(true);
-      setProgress(0);
-
-      // Ensure at least one paint happens with the "hidden" classes applied
-      setIsVisible(false);
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => setIsVisible(true));
-      });
-
-      // Simulate progress
-      interval = setInterval(() => {
-        setProgress((prev) => {
-          if (prev >= 90) return prev;
-          // Slow down as we get closer to 90
-          const remaining = 90 - prev;
-          const add = Math.random() * (remaining / 5); 
-          return prev + Math.max(0.5, add);
-        });
-      }, 200);
-    } else {
-      setIsVisible(false);
-      setProgress(100);
-      const timeout = window.setTimeout(() => setShouldRender(false), 300);
-      return () => window.clearTimeout(timeout);
-    }
-
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [show]);
-
-  if (!shouldRender) return null;
-
+const SimpleOverlay: React.FC<{ show: boolean }> = ({ show }) => {
   return (
-    <div
-      className={
-        "fixed inset-0 z-[9999] flex items-center justify-center transition-all duration-300 ease-out " +
-        (isVisible ? "opacity-100 backdrop-blur-md bg-white/30 dark:bg-black/30" : "opacity-0 backdrop-blur-none bg-transparent")
-      }
-      aria-busy="true"
-      aria-live="polite"
-    >
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className={
-          "absolute top-1/4 left-1/4 w-96 h-96 bg-primary/20 rounded-full blur-3xl mix-blend-multiply animate-blob transition-opacity duration-500 " +
-          (isVisible ? "opacity-100" : "opacity-0")
-        }></div>
-        <div className={
-          "absolute top-1/3 right-1/4 w-96 h-96 bg-secondary/20 rounded-full blur-3xl mix-blend-multiply animate-blob animation-delay-2000 transition-opacity duration-500 " +
-          (isVisible ? "opacity-100" : "opacity-0")
-        }></div>
-        <div className={
-          "absolute bottom-1/4 left-1/3 w-96 h-96 bg-pink-300/20 rounded-full blur-3xl mix-blend-multiply animate-blob animation-delay-4000 transition-opacity duration-500 " +
-          (isVisible ? "opacity-100" : "opacity-0")
-        }></div>
-      </div>
-
-      <div
-        className={
-          "relative flex flex-col items-center justify-center p-8 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 dark:border-gray-700/30 min-w-[280px] transform transition-all duration-300 " +
-          (isVisible ? "scale-100 translate-y-0" : "scale-95 translate-y-4")
-        }
-      >
-        {/* Logo or Icon Area */}
-        <div className="mb-6 relative">
-          <div className="absolute inset-0 bg-gradient-to-tr from-primary to-secondary rounded-full blur-lg opacity-40 animate-pulse"></div>
-          <div className="relative bg-white dark:bg-gray-800 rounded-full p-4 shadow-lg">
-             {/* Custom Spinner */}
-            <svg className="w-12 h-12 text-primary animate-spin" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-          </div>
-        </div>
-
-        {/* Text */}
-        <div className="text-center mb-6">
-          <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-1">Loading</h3>
-          <p className="text-sm text-gray-500 dark:text-gray-400">Please wait while we prepare everything...</p>
-        </div>
-
-        {/* Progress Bar */}
-        <div className="w-full h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden relative">
-          <div 
-            className="absolute top-0 left-0 h-full bg-gradient-to-r from-primary via-purple-500 to-secondary transition-all duration-300 ease-out rounded-full"
-            style={{ width: `${progress}%` }}
-          >
-            <div className="absolute inset-0 bg-white/30 w-full h-full animate-[shimmer_2s_infinite] skew-x-12"></div>
-          </div>
-        </div>
-        
-        {/* Percentage (Optional) */}
-        <div className="mt-2 text-xs font-medium text-gray-400 dark:text-gray-500 w-full text-right">
-          {Math.round(progress)}%
-        </div>
-      </div>
-    </div>
+    <div 
+      className={`fixed inset-0 z-[9999] bg-white/30 transition-opacity duration-300 ${
+        show ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+      }`} 
+    />
   );
 };
 
@@ -382,7 +283,7 @@ const LoadingProviderInner: React.FC<{ children: ReactNode }> = ({
         <NavigationTracker onNavigationComplete={handleNavigationComplete} />
       </Suspense>
       {children}
-      <LoadingOverlay show={showOverlay} />
+      <SimpleOverlay show={showOverlay} />
     </LoadingContext.Provider>
   );
 };

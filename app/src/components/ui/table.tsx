@@ -135,7 +135,7 @@ export const TableHead: React.FC<TableHeadProps> = ({
 
   return (
     <th
-      className={`px-6 py-2 text-left text-sm font-semibold tracking-wider ${sortable ? 'cursor-pointer select-none hover:bg-primary/90' : ''} ${className}`}
+      className={`px-4 py-2 text-left text-sm font-semibold tracking-wider ${sortable ? 'cursor-pointer select-none hover:bg-primary/90' : ''} ${className}`}
       style={{ width }}
       onClick={handleClick}
     >
@@ -161,7 +161,7 @@ interface TableCellProps {
 
 export const TableCell: React.FC<TableCellProps> = ({ children, className = '', width }) => {
   return (
-    <td className={`px-6 py-2 text-sm  text-start overflow-visible ${className}`} style={{ width }}>
+    <td className={`px-4 py-2 text-sm  text-start overflow-visible ${className}`} style={{ width }}>
       {children}
     </td>
   );

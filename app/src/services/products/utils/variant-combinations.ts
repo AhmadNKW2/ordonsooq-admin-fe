@@ -56,16 +56,22 @@ export function generateCombinations(attributes: Attribute[]): VariantCombinatio
 }
 
 /**
- * Filter attributes that control a specific feature and have values
+ * Filter attributes that control a specific feature.
+ * WE ARE NO LONGER FILTERING OUT EMPTY VALUES here.
+ * If an attribute controls pricing/weight/media, it is included in the list.
+ * If it has no values, generateCombinations will naturally return 0 combinations,
+ * which is the desired behavior (wait until all are filled).
+ * 
  * @param attributes - Array of all attributes
  * @param controlKey - The control key to filter by ('controlsPricing' | 'controlsWeightDimensions' | 'controlsMedia')
- * @returns Filtered attributes that control the feature and have values
+ * @returns Filtered attributes that control the feature (regardless of whether they have values)
  */
 export function getControllingAttributes(
     attributes: Attribute[],
     controlKey: 'controlsPricing' | 'controlsWeightDimensions' | 'controlsMedia'
 ): Attribute[] {
-    return attributes.filter((attr) => attr[controlKey] && attr.values && attr.values.length > 0);
+    // Only check the control flag.
+    return attributes.filter((attr) => attr[controlKey]);
 }
 
 /**

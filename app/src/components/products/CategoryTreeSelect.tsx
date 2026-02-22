@@ -9,6 +9,7 @@ import { FieldWrapper, getFieldClasses } from "../ui/field-wrapper";
 import { ChevronDown, Search, X } from "lucide-react";
 
 interface CategoryTreeSelectProps {
+  id?: string;
   categories: Category[];
   selectedIds: string[];
   onChange: (ids: string[]) => void;
@@ -189,6 +190,7 @@ const findCategoryInTree = (
 };
 
 export const CategoryTreeSelect: React.FC<CategoryTreeSelectProps> = ({
+  id,
   categories,
   selectedIds,
   onChange,
@@ -249,7 +251,7 @@ export const CategoryTreeSelect: React.FC<CategoryTreeSelectProps> = ({
   };
 
   return (
-    <div ref={containerRef} className="relative group">
+    <div id={id} ref={containerRef} className="relative group">
       <FieldWrapper
         label={label}
         error={error}

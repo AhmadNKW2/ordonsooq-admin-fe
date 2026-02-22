@@ -63,7 +63,7 @@ export const productAttributeSchema = z.object({
 // Pricing Schemas
 // ============================================
 export const singlePricingSchema = z.object({
-  cost: z.number({ message: "Required" }).min(0, "Must be 0 or greater"),
+  cost: z.number().min(0, "Must be 0 or greater").optional(),
   price: z.number({ message: "Required" }).min(0, "Must be 0 or greater"),
   isSale: z.boolean().optional().default(true),
   salePrice: z.number().min(0, "Must be 0 or greater").optional(),
@@ -72,7 +72,7 @@ export const singlePricingSchema = z.object({
 export const variantPricingSchema = z.object({
   key: z.string(),
   attributeValues: z.record(z.string(), z.string()),
-  cost: z.number({ message: "Required" }).min(0, "Must be 0 or greater"),
+  cost: z.number().min(0, "Must be 0 or greater").optional(),
   price: z.number({ message: "Required" }).min(0, "Must be 0 or greater"),
   isSale: z.boolean().optional().default(true),
   salePrice: z.number().min(0, "Must be 0 or greater").optional(),
@@ -82,10 +82,10 @@ export const variantPricingSchema = z.object({
 // Weight & Dimensions Schemas
 // ============================================
 export const weightDimensionsSchema = z.object({
-  weight: z.number({ message: "Required" }).min(0, "Must be 0 or greater"),
-  length: z.number({ message: "Required" }).min(0, "Must be 0 or greater"),
-  width: z.number({ message: "Required" }).min(0, "Must be 0 or greater"),
-  height: z.number({ message: "Required" }).min(0, "Must be 0 or greater"),
+  weight: z.number().min(0, "Must be 0 or greater").optional(),
+  length: z.number().min(0, "Must be 0 or greater").optional(),
+  width: z.number().min(0, "Must be 0 or greater").optional(),
+  height: z.number().min(0, "Must be 0 or greater").optional(),
   unit: z.string().optional(),
 });
 
@@ -119,7 +119,8 @@ export const variantMediaSchema = z.object({
 export const variantCombinationSchema = z.object({
   id: z.string(),
   attributeValues: z.record(z.string(), z.string()),
-  stock: z.number({ message: "Required" }).min(0, "Must be 0 or greater"),
+  is_out_of_stock: z.boolean().default(false),
+  active: z.boolean().optional(),
 });
 
 // ============================================
@@ -132,6 +133,9 @@ export interface ProductFormConfig {
   isMediaVariantBased: boolean;
   singlePricingIsSale: boolean;
   variantPricingItems: { isSale: boolean }[];
+  expectedPricingCount: number;
+  expectedWeightCount: number;
+  expectedMediaCount: number;
 }
 
 /**
@@ -168,7 +172,19 @@ export const createProductSchema = (config: ProductFormConfig) => {
     // Variant pricing required
     schema = schema.extend({
       singlePricing: singlePricingSchema.optional(),
-      variantPricing: z.array(variantPricingSchema).min(1, "Required"),
+      variantPricing: z.array(variantPricingSchema)
+        .min(config.expectedPricingCount, `Expected ${config.expectedPricingCount} pricing variants`)
+        .superRefine((items, ctx) => {
+          items.forEach((item, index) => {
+             if (item.isSale && (item.salePrice === undefined || item.salePrice === null)) {
+                ctx.addIssue({
+                    code: z.ZodIssueCode.custom,
+                    message: "Required when on sale",
+                    path: [index, "salePrice"]
+                });
+             }
+          });
+        }),
     });
   } else {
     // Single pricing required
@@ -188,11 +204,12 @@ export const createProductSchema = (config: ProductFormConfig) => {
   if (config.isWeightVariantBased) {
     schema = schema.extend({
       singleWeightDimensions: weightDimensionsSchema.partial().optional(),
-      variantWeightDimensions: z.array(variantWeightDimensionsSchema).min(1, "Required"),
+      variantWeightDimensions: z.array(variantWeightDimensionsSchema)
+        .min(config.expectedWeightCount, `Expected ${config.expectedWeightCount} weight variants`),
     });
   } else {
     schema = schema.extend({
-      singleWeightDimensions: weightDimensionsSchema,
+      singleWeightDimensions: weightDimensionsSchema.optional(),
       variantWeightDimensions: z.array(variantWeightDimensionsSchema).optional(),
     });
   }
@@ -201,7 +218,8 @@ export const createProductSchema = (config: ProductFormConfig) => {
   if (config.isMediaVariantBased) {
     schema = schema.extend({
       singleMedia: z.array(mediaItemSchema).optional(),
-      variantMedia: z.array(variantMediaSchema).min(1, "Required"),
+      variantMedia: z.array(variantMediaSchema)
+        .min(config.expectedMediaCount, `Expected ${config.expectedMediaCount} media variants`),
     });
   } else {
     schema = schema.extend({

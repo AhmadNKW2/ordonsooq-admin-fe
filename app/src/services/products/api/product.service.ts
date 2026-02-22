@@ -54,14 +54,14 @@ export interface AddProductAttributesDto {
 
 // Pricing
 export interface SinglePricingDto {
-  cost: number;
+  cost?: number;
   price: number;
   sale_price?: number;
 }
 
 export interface VariantPricingDto {
   attribute_value_id: number;
-  cost: number;
+  cost?: number;
   price: number;
   sale_price?: number;
 }

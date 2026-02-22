@@ -209,6 +209,8 @@ export const MediaSection: React.FC<MediaSectionProps> = ({
 
             {combinations.map((combo) => {
                 const media = getMedia(combo.key, combo.attributeValues);
+                const variantIndex = variantMedia.findIndex(vm => vm.key === combo.key);
+                const errorKey = variantIndex >= 0 ? `variantMedia.${variantIndex}.media` : undefined;
 
                 return (
                     <Card
@@ -218,12 +220,14 @@ export const MediaSection: React.FC<MediaSectionProps> = ({
                         <h4 className="font-medium">{combo.label}</h4>
 
                         <ImageUpload
+                            id={errorKey}
                             value={toImageUploadItems(media)}
                             onChange={(items) => handleVariantMediaChange(combo.key, items)}
                             isMulti={true}
                             hasPrimary={true}
                             hasGroupPrimary={true}
                             autoSetPrimaryOnFirstAdd={false}
+                            error={errorKey ? (errors[errorKey] as string) : undefined}
                         />
                     </Card>
                 );

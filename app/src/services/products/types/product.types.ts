@@ -117,6 +117,7 @@ export const productSchema = z.object({
   sale_price: z.string().optional().nullable(),
   stock: stockSummarySchema.optional().nullable(),
   quantity: z.number().optional().nullable(),
+  is_out_of_stock: z.boolean().optional().nullable(),
   variants: z.array(z.any()).optional().nullable(),
   media: z.array(z.any()).optional().nullable(),
   status: z.enum(["active", "archived"]).optional(),
@@ -303,14 +304,14 @@ export interface ProductAttributeInput {
 }
 
 export interface SinglePricingInput {
-  cost: number;
+  cost?: number;
   price: number;
   sale_price?: number;
 }
 
 export interface VariantPricingInput {
   combination: Record<string, number>; // { "Color": 1, "Size": 3 }
-  cost: number;
+  cost?: number;
   price: number;
   sale_price?: number;
 }
@@ -353,7 +354,7 @@ export interface StockInput {
 // Price Group Input (for variant products)
 export interface PriceGroupInput {
   combination: Record<string, number>; // { "attr_id": value_id }
-  cost: number;
+  cost?: number;
   price: number;
   sale_price?: number | null;
 }
@@ -379,7 +380,7 @@ export interface VariantInput {
 // Price item with optional combination
 export interface PriceInput {
   combination?: Record<string, number>; // { "attr_id": value_id } - optional for simple products
-  cost: number;
+  cost?: number;
   price: number;
   sale_price?: number;
 }
@@ -396,7 +397,7 @@ export interface WeightInputWithCombination {
 // Stock item with optional combination
 export interface StockInputWithCombination {
   combination?: Record<string, number>; // { "attr_id": value_id } - optional for simple products
-  quantity: number;
+  is_out_of_stock: boolean;
 }
 
 // New Media Input format (references uploaded media by ID)

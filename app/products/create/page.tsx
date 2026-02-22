@@ -49,10 +49,13 @@ export default function CreateProductPage() {
 
   const attributes = attributesData?.map((attr: Attribute) => ({
     id: attr.id.toString(),
+    parentId: attr.parent_id?.toString(),
+    parentValueId: attr.parent_value_id?.toString(),
     name: attr.name_en,
     displayName: attr.name_ar,
     values: attr.values?.map((val: AttributeValue) => ({
       id: val.id.toString(),
+      parentId: val.parent_value_id?.toString(),
       value: val.value_en,
       displayValue: val.value_ar,
     })) || [],
