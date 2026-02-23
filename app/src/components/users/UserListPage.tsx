@@ -7,6 +7,7 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "@/hooks/use-loading-router";
+import { useSessionStoragePage } from "@/hooks/use-session-storage-page";
 import { useLoading } from "../../providers/loading-provider";
 import { useCustomers, useDeleteCustomer } from "../../services/customers/hooks/use-customers";
 import { Users, Shield, RefreshCw, AlertCircle, X, Mail, User } from "lucide-react";
@@ -37,7 +38,7 @@ export interface UserListPageProps {
 export const UserListPage: React.FC<UserListPageProps> = ({ userType }) => {
   const router = useRouter();
   const [searchTerm, setSearchTerm] = useState("");
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useSessionStoragePage(userType === "admin" ? "admins" : "customers");
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<Customer | null>(null);

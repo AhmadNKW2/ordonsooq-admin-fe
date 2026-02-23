@@ -7,10 +7,11 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "@/hooks/use-loading-router";
+import { useSessionStoragePage } from "@/hooks/use-session-storage-page";
 import { useLoading } from "../src/providers/loading-provider";
 import Image from "next/image";
 import { useProducts, useDeleteProduct, useProduct } from "../src/services/products/hooks/use-products";
-import { Plus, RefreshCw, Package, AlertCircle, Star, X } from "lucide-react";
+import { Plus, RefreshCw, Package, AlertCircle, Star } from "lucide-react";
 import { Pagination } from "../src/components/ui/pagination";
 import { Card } from "../src/components/ui/card";
 import { Button } from "../src/components/ui/button";
@@ -31,16 +32,25 @@ import { PAGINATION } from "../src/lib/constants";
 import { ProductFilters, Product } from "../src/services/products/types/product.types";
 import { ProductViewModal } from "../src/components/products/ProductViewModal";
 import { DeleteConfirmationModal } from "../src/components/common/DeleteConfirmationModal";
+import { DatePicker } from "../src/components/ui/date-picker";
 
 export default function ProductsPage() {
   const router = useRouter();
   const { setShowOverlay } = useLoading();
+  const [storedPage, setStoredPage] = useSessionStoragePage("products");
   const [queryParams, setQueryParams] = useState<ProductFilters>({
-    page: PAGINATION.defaultPage,
+    page: storedPage,
     limit: PAGINATION.defaultPageSize,
   });
 
+  // Persist current page to sessionStorage whenever it changes
+  useEffect(() => {
+    setStoredPage(queryParams.page ?? 1);
+  }, [queryParams.page]);
+
   const [searchTerm, setSearchTerm] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
   const [viewProductId, setViewProductId] = useState<number | null>(null);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
@@ -121,12 +131,10 @@ export default function ProductsPage() {
     return () => clearTimeout(debounce);
   };
 
-  const handleClearFilters = () => {
-    setSearchTerm("");
-    setQueryParams({
-      page: PAGINATION.defaultPage,
-      limit: PAGINATION.defaultPageSize,
-    });
+  const handleDateChange = (field: 'start_date' | 'end_date', value: string) => {
+    if (field === 'start_date') setStartDate(value);
+    else setEndDate(value);
+    handleFilterChange({ [field]: value || undefined });
   };
 
   const hasActiveFilters = Object.keys(queryParams).some(
@@ -198,8 +206,8 @@ export default function ProductsPage() {
       {(products.length > 0 || hasActiveFilters) && (
         <Card>
           <h2 className="text-lg font-semibold ">Filters</h2>
-          <div className="flex items-center gap-5">
-            <div className="relative flex-1 max-w-sm">
+          <div className="flex items-center gap-4 flex-wrap">
+            <div className="relative flex-1 min-w-48 max-w-sm">
               <Input
                 value={searchTerm}
                 onChange={(e) => handleSearchChange(e.target.value)}
@@ -208,16 +216,24 @@ export default function ProductsPage() {
               />
             </div>
 
-            {hasActiveFilters && (
-              <Button
-                variant="outline"
-                onClick={handleClearFilters}
-                className="h-9"
-              >
-                <X className="mr-2 h-4 w-4" />
-                Clear filters
-              </Button>
-            )}
+            <div className="relative min-w-44">
+              <DatePicker
+                label="Start Date"
+                value={startDate}
+                onChange={(v) => handleDateChange('start_date', v)}
+                max={endDate || undefined}
+              />
+            </div>
+
+            <div className="relative min-w-44">
+              <DatePicker
+                label="End Date"
+                value={endDate}
+                onChange={(v) => handleDateChange('end_date', v)}
+                min={startDate || undefined}
+              />
+            </div>
+
           </div>
         </Card>
       )}
@@ -387,13 +403,13 @@ export default function ProductsPage() {
                 </TableCell>
                 <TableCell>
                   {(() => {
-                    const stock = product.variants?.length 
-                      ? product.variants.reduce((acc: number, v: any) => acc + (Number(v.quantity) || 0), 0)
-                      : (Number(product.quantity) || 0);
-                    
+                    const isOutOfStock = product.variants?.length
+                      ? product.variants.every((v: any) => v.is_out_of_stock === true)
+                      : (product.is_out_of_stock === true);
+
                     return (
-                        <Badge variant={stock > 0 ? "success" : "danger"}>
-                            {stock > 0 ? "In Stock" : "Out of Stock"}
+                        <Badge variant={isOutOfStock ? "danger" : "success"}>
+                            {isOutOfStock ? "Out of Stock" : "In Stock"}
                         </Badge>
                     )
                   })()}

@@ -2,6 +2,7 @@
 
 import type { ReactNode } from 'react';
 import { useAuth } from '../../contexts/auth.context';
+import type { SidebarRole } from './sidebar.config';
 
 import {
   Sidebar,
@@ -18,6 +19,7 @@ interface SidebarLinkItem {
   label: string;
   icon: ReactNode;
   badge?: string | number;
+  roles?: SidebarRole[];
 }
 
 interface SidebarGroupItem {
@@ -42,7 +44,15 @@ interface AppSidebarProps {
 }
 
 export function AppSidebar({ groups, header, footer }: AppSidebarProps) {
-  const { logout, user } = useAuth();
+  const { logout, user, isAdmin, isCatalogManager } = useAuth();
+  const userRole = user?.role;
+
+  // Returns true if the current user can see this link
+  const canSeeLink = (link: SidebarLinkItem): boolean => {
+    if (!link.roles) return true; // No restriction — visible to all authenticated users
+    if (!userRole) return false;
+    return link.roles.includes(userRole as SidebarRole);
+  };
 
   const userDisplayName = user
     ? [user.firstName, user.lastName].filter(Boolean).join(" ")
@@ -72,6 +82,9 @@ export function AppSidebar({ groups, header, footer }: AppSidebarProps) {
 
       <SidebarContent>
         {groups.map((group, groupIndex) => {
+          const visibleLinks = group.links.filter(canSeeLink);
+          if (visibleLinks.length === 0) return null;
+
           const showDivider = groupIndex === groups.length - 2;
 
           return (
@@ -81,7 +94,7 @@ export function AppSidebar({ groups, header, footer }: AppSidebarProps) {
                 icon={group.icon}
                 defaultOpen={group.defaultOpen ?? true}
               >
-                {group.links.map((link, linkIndex) => (
+                {visibleLinks.map((link, linkIndex) => (
                   <SidebarLink
                     key={`link-${groupIndex}-${linkIndex}`}
                     href={link.href}

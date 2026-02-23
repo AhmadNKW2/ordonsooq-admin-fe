@@ -391,7 +391,9 @@ class HttpClient {
     // Show error toast notification (except for auth errors which redirect)
     // If a request-level progress toast is active, it will be updated to error instead.
     const suppressErrorToast = this.hasRequestToastHeader(originalRequest?.options);
-    if (response.status !== 401 && !suppressErrorToast) {
+    if (response.status === 403) {
+      showErrorToast("You don't have permission to perform this action");
+    } else if (response.status !== 401 && !suppressErrorToast) {
       showErrorToast(errorMessage);
     }
 

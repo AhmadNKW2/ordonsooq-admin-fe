@@ -6,6 +6,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "@/hooks/use-loading-router";
+import { useSessionStoragePage } from "@/hooks/use-session-storage-page";
 import { useLoading } from "../src/providers/loading-provider";
 import {
     useBanners,
@@ -162,16 +163,22 @@ export default function BannerListPage() {
     const [items, setItems] = useState<Banner[]>([]);
     const [searchTerm, setSearchTerm] = useState("");
     const [languageFilter, setLanguageFilter] = useState<"" | "en" | "ar">("");
+    const [storedPage, setStoredPage] = useSessionStoragePage("banners");
     const [queryParams, setQueryParams] = useState<{
         page: number;
         limit: number;
         search: string;
         language?: "en" | "ar";
     }>({
-        page: PAGINATION.defaultPage,
+        page: storedPage,
         limit: PAGINATION.defaultPageSize,
         search: "",
     });
+
+    // Persist current page to sessionStorage whenever it changes
+    useEffect(() => {
+        setStoredPage(queryParams.page ?? 1);
+    }, [queryParams.page]);
 
     const { data, isLoading } = useBanners(queryParams);
     const deleteBanner = useDeleteBanner();

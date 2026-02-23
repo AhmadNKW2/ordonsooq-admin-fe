@@ -105,6 +105,7 @@ export function transformFormDataToDto(
       const singleVariant = data.variants.find(v => v.id === 'single');
       if (singleVariant) {
         dto.stocks = [{
+          quantity: 0,
           is_out_of_stock: singleVariant.is_out_of_stock ?? false,
         }];
       }
@@ -161,6 +162,7 @@ interface WeightItem {
 
 interface StockItem {
   combination?: Record<string, number>;
+  quantity?: number;
   is_out_of_stock: boolean;
 }
 
@@ -310,6 +312,7 @@ function buildStocks(data: ProductFormData): StockItem[] {
     if (Object.keys(combination).length > 0) {
       stocks.push({
         combination,
+        quantity: 0,
         is_out_of_stock: variant.is_out_of_stock ?? false,
       });
     }

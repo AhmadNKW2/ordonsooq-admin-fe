@@ -341,15 +341,15 @@ export const StockSection: React.FC<StockSectionProps> = ({
         onChange(updated);
     };
 
-    const handleToggleActive = (variantId: string, checked: boolean) => {
-        const updated = variants.map((v) => {
-            if (v.id === variantId) {
-                return { ...v, active: checked };
-            }
-            return v;
-        });
-        onChange(updated);
-    };
+    // const handleToggleActive = (variantId: string, checked: boolean) => {
+    //     const updated = variants.map((v) => {
+    //         if (v.id === variantId) {
+    //             return { ...v, active: checked };
+    //         }
+    //         return v;
+    //     });
+    //     onChange(updated);
+    // };
 
     const filteredCombinations = variants.filter((combo) => {
         const label = getVariantLabel(combo).toLowerCase();
@@ -357,7 +357,7 @@ export const StockSection: React.FC<StockSectionProps> = ({
     });
 
     const outOfStockCount = variants.filter((v) => v.is_out_of_stock === true).length;
-    const showDeleteAction = variants.length > 1;
+    // const showDeleteAction = variants.length > 1;
 
     return (
         <Card>
@@ -390,17 +390,17 @@ export const StockSection: React.FC<StockSectionProps> = ({
             <Table key={filteredCombinations.length > 0 ? 'has-data' : 'no-data'}>
                 <TableHeader>
                     <TableRow isHeader>
-                        <TableHead width={showDeleteAction ? "33%" : "50%"}>
+                        <TableHead width="50%">
                             Variant
                         </TableHead>
-                        <TableHead width={showDeleteAction ? "33%" : "50%"}>
+                        <TableHead width="50%">
                             Out of Stock
                         </TableHead>
-                        {showDeleteAction && (
+                        {/* {showDeleteAction && (
                             <TableHead width="33%">
                                 Active
                             </TableHead>
-                        )}
+                        )} */}
                     </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -408,7 +408,7 @@ export const StockSection: React.FC<StockSectionProps> = ({
                         const label = getVariantLabel(variant);
 
                         return (
-                            <TableRow key={variant.id} className={variant.active === false ? "opacity-50 bg-gray-50" : ""}>
+                            <TableRow key={variant.id}>
                                 <TableCell className="font-medium">
                                     {label}
                                 </TableCell>
@@ -416,17 +416,16 @@ export const StockSection: React.FC<StockSectionProps> = ({
                                     <Checkbox
                                         checked={variant.is_out_of_stock ?? false}
                                         onChange={(checked) => handleIsOutOfStockChange(variant.id, checked)}
-                                        disabled={variant.active === false}
                                     />
                                 </TableCell>
-                                {showDeleteAction && (
+                                {/* {showDeleteAction && (
                                     <TableCell>
                                         <Checkbox
                                             checked={variant.active ?? true}
                                             onChange={(checked) => handleToggleActive(variant.id, checked)}
                                         />
                                     </TableCell>
-                                )}
+                                )} */}
                             </TableRow>
                         );
                     })}

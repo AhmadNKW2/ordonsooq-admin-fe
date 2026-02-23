@@ -11,10 +11,11 @@ interface InputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, '
   size?: 'default' | 'sm';
   isRtl?: boolean;
   isSearch?: boolean;
+  rightElement?: React.ReactNode;
 }
 
 export const Input = React.forwardRef<HTMLInputElement, InputProps>(
-  ({ label, error, className = '', value, onChange, onFocus, onBlur, variant = 'default', onClear, isNum = false, size = 'default', isRtl = false, isSearch = false, ...props }, ref) => {
+  ({ label, error, className = '', value, onChange, onFocus, onBlur, variant = 'default', onClear, isNum = false, size = 'default', isRtl = false, isSearch = false, rightElement, ...props }, ref) => {
     const [isFocused, setIsFocused] = useState(false);
     const hasValue = Boolean(value && String(value).length > 0);
 
@@ -91,6 +92,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
         onClear={handleClear}
         leftIcon={isSearchVariant ? <Search className={FIELD_ICON_CLASSES} /> : undefined}
         rightIcon={isNum ? <span className={`h-4 w-4 ${FIELD_RIGHT_ICON_COLOR} inline-flex items-center justify-center`}>#</span> : undefined}
+        rightElement={rightElement}
         labelLeftOffset={isSearchVariant ? 'left-9' : 'left-4'}
         isClearButton={true}
         isRtl={isRtl}

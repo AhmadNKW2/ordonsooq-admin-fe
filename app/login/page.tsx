@@ -11,7 +11,7 @@ import { useLoading } from "../src/providers/loading-provider";
 import { Input } from "../src/components/ui/input";
 import { Button } from "../src/components/ui/button";
 import { Card } from "../src/components/ui/card";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, Eye, EyeOff } from "lucide-react";
 
 export default function LoginPage() {
   const { login, isLoading } = useAuth();
@@ -20,6 +20,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   // Show loading overlay while checking auth
   useEffect(() => {
@@ -81,11 +82,22 @@ export default function LoginPage() {
           <div>
             <Input
               label="Password"
-              type="password"
+              type={showPassword ? "text" : "password"}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               disabled={isSubmitting}
               autoComplete="current-password"
+              rightElement={
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  className="text-primary/50 hover:text-primary transition-colors"
+                  tabIndex={-1}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              }
             />
           </div>
 

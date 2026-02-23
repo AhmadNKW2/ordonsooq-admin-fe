@@ -232,6 +232,7 @@ export interface ProductStock {
   variant_id?: number;
   stock_quantity?: number;
   quantity?: number;
+  is_out_of_stock?: boolean;
   created_at?: string | Date;
   updated_at?: string | Date;
 }
@@ -291,6 +292,8 @@ export interface ProductFilters {
   search?: string;
   is_active?: boolean;
   is_featured?: boolean;
+  start_date?: string;
+  end_date?: string;
 }
 
 // ==================== DTOs ====================
@@ -397,6 +400,7 @@ export interface WeightInputWithCombination {
 // Stock item with optional combination
 export interface StockInputWithCombination {
   combination?: Record<string, number>; // { "attr_id": value_id } - optional for simple products
+  quantity?: number;
   is_out_of_stock: boolean;
 }
 

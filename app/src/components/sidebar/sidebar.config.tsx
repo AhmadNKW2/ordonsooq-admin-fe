@@ -1,5 +1,8 @@
 import React from 'react';
 
+// roles: undefined = everyone, ['admin'] = admin only, ['admin','catalog_manager'] = both
+export type SidebarRole = 'admin' | 'catalog_manager';
+
 export const sidebarConfig = {
   header: {
     title: 'ordonsooq Admin',
@@ -74,6 +77,7 @@ export const sidebarConfig = {
         {
           href: '/products',
           label: 'Products',
+          roles: ['admin', 'catalog_manager'] as SidebarRole[],
           icon: (
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
@@ -88,6 +92,7 @@ export const sidebarConfig = {
         {
           href: '/banners',
           label: 'Banners',
+          roles: ['admin'] as SidebarRole[],
           icon: (
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <rect x="3" y="7" width="18" height="10" rx="2" stroke="currentColor" strokeWidth="2" fill="none" />
@@ -98,6 +103,7 @@ export const sidebarConfig = {
         {
           href: '/attributes',
           label: 'Attributes',
+          roles: ['admin', 'catalog_manager'] as SidebarRole[],
           icon: (
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
@@ -112,6 +118,7 @@ export const sidebarConfig = {
         {
           href: '/categories',
           label: 'Categories',
+          roles: ['admin', 'catalog_manager'] as SidebarRole[],
           icon: (
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
@@ -126,6 +133,7 @@ export const sidebarConfig = {
         {
           href: '/vendors',
           label: 'Vendors',
+          roles: ['admin', 'catalog_manager'] as SidebarRole[],
           icon: (
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
@@ -140,6 +148,7 @@ export const sidebarConfig = {
         {
           href: '/brands',
           label: 'Brands',
+          roles: ['admin', 'catalog_manager'] as SidebarRole[],
           icon: (
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
@@ -154,6 +163,7 @@ export const sidebarConfig = {
         {
           href: '/customers',
           label: 'Customers',
+          roles: ['admin'] as SidebarRole[],
           icon: (
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
@@ -168,6 +178,7 @@ export const sidebarConfig = {
         {
           href: '/admins',
           label: 'Admins',
+          roles: ['admin'] as SidebarRole[],
           icon: (
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
@@ -182,6 +193,7 @@ export const sidebarConfig = {
         {
           href: '/orders',
           label: 'Orders',
+          roles: ['admin'] as SidebarRole[],
           icon: (
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
@@ -196,6 +208,7 @@ export const sidebarConfig = {
         {
           href: '/cashback-rules',
           label: 'Cashback Rules',
+          roles: ['admin'] as SidebarRole[],
           icon: (
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
@@ -232,6 +245,7 @@ export const sidebarConfig = {
         {
           href: '/archived-categories',
           label: 'Archived Categories',
+          roles: ['admin'] as SidebarRole[],
           icon: (
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
@@ -246,6 +260,7 @@ export const sidebarConfig = {
         {
           href: '/archived-vendors',
           label: 'Archived Vendors',
+          roles: ['admin'] as SidebarRole[],
           icon: (
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
@@ -260,6 +275,7 @@ export const sidebarConfig = {
         {
           href: '/archived-brands',
           label: 'Archived Brands',
+          roles: ['admin'] as SidebarRole[],
           icon: (
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
@@ -280,6 +296,7 @@ export const sidebarConfig = {
         {
           href: '/archived-products',
           label: 'Archived Products',
+          roles: ['admin'] as SidebarRole[],
           icon: (
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path

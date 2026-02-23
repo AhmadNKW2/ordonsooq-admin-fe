@@ -595,7 +595,7 @@ export default function EditProductPage() {
         return [{
           id: 'single',
           attributeValues: {},
-          is_out_of_stock: singleStock.quantity === 0,
+          is_out_of_stock: singleStock.is_out_of_stock ?? false,
         }];
       }
     }
@@ -605,7 +605,7 @@ export default function EditProductPage() {
       return [{
         id: 'single',
         attributeValues: {},
-        is_out_of_stock: (product as any).quantity === 0,
+        is_out_of_stock: (product as any).is_out_of_stock ?? false,
       }];
     }
 
@@ -1160,6 +1160,7 @@ export default function EditProductPage() {
         const singleVariant = data.variants?.[0];
         if (singleVariant) {
           productPayload.stocks = [{
+            quantity: 0,
             is_out_of_stock: singleVariant.is_out_of_stock ?? false,
           }];
         }
@@ -1175,6 +1176,7 @@ export default function EditProductPage() {
           
           return {
             combination,
+            quantity: 0,
             is_out_of_stock: v.is_out_of_stock ?? false,
           };
         });
@@ -1313,6 +1315,7 @@ export default function EditProductPage() {
       console.log('updateResult:', updateResult);
 
       finishToastSuccess(toastId, "Product updated successfully");
+      router.push("/products");
       
     } catch (error: any) {
       console.error("=== DEBUG: Error updating product ===");

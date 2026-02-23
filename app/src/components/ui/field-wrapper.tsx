@@ -9,6 +9,7 @@ interface FieldWrapperProps {
     onClear?: () => void;
     leftIcon?: ReactNode;
     rightIcon?: ReactNode;
+    rightElement?: ReactNode;
     isClearButton?: boolean;
     children: ReactNode;
     className?: string;
@@ -25,6 +26,7 @@ export const FieldWrapper: React.FC<FieldWrapperProps> = ({
     onClear,
     leftIcon,
     rightIcon,
+    rightElement,
     isClearButton = true,
     children,
     className = '',
@@ -53,12 +55,19 @@ export const FieldWrapper: React.FC<FieldWrapperProps> = ({
                     </div>
                 )}
 
+                {/* Right element (clickable) - positioned on right for LTR, left for RTL */}
+                {rightElement && (
+                    <div className={`absolute ${isRtl ? 'left-4' : 'right-4'} top-1/2 -translate-y-1/2 z-10`}>
+                        {rightElement}
+                    </div>
+                )}
+
                 {/* Clear button positioned on left for RTL, right for LTR */}
                 {showClear && (
                     <button
                         type="button"
                         onClick={onClear}
-                        className={`absolute ${isRtl ? (rightIcon ? 'left-9' : leftIcon ? 'left-9' : 'left-3') : (rightIcon ? 'right-9' : 'right-3')} top-1/2 -translate-y-1/2  hover: transition-colors z-10`}
+                        className={`absolute ${isRtl ? (rightIcon ? 'left-9' : leftIcon ? 'left-9' : 'left-3') : (rightElement ? 'right-10' : rightIcon ? 'right-9' : 'right-3')} top-1/2 -translate-y-1/2  hover: transition-colors z-10`}
                     >
                         <X className="h-4 w-4" />
                     </button>

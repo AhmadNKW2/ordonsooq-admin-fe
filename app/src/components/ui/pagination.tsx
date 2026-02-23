@@ -76,6 +76,9 @@ export const Pagination: React.FC<PaginationProps> = ({
   const { currentPage, totalPages, totalItems, pageSize, hasNextPage, hasPreviousPage } = pagination;
   const [goToPage, setGoToPage] = useState('');
 
+  const fromItem = totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+  const toItem = Math.min(currentPage * pageSize, totalItems);
+
   // Generate page numbers to display
   const getPageNumbers = () => {
     const pages: number[] = [];
@@ -117,7 +120,7 @@ export const Pagination: React.FC<PaginationProps> = ({
                 options={pageSizeOptions.map(option => ({
                   value: String(option),
                   label: String(option),
-                  disabled: 
+                  disabled:
                     (option === 10 && totalItems < 10) ||
                     (option === 20 && totalItems < 10) ||
                     (option === 50 && totalItems <= 20) ||
@@ -128,8 +131,19 @@ export const Pagination: React.FC<PaginationProps> = ({
                 size='sm'
               />
             </div>
+
+            {/* Showing X – Y of Z */}
+            <span className="text-sm whitespace-nowrap text-primary/60 ml-5">
+              Showing <span className="font-semibold text-primary">{fromItem}</span>
+              {' – '}
+              <span className="font-semibold text-primary">{toItem}</span>
+              {' of '}
+              <span className="font-semibold text-primary">{totalItems}</span> items
+            </span>
+          
           </div>
         )}
+
 
         {/* Middle: Page controls */}
         <div className="flex items-center gap-2">

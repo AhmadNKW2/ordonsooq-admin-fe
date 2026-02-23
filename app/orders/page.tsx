@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "@/hooks/use-loading-router";
+import { useSessionStoragePage } from "@/hooks/use-session-storage-page";
 import { useLoading } from "../src/providers/loading-provider";
 import { useOrders } from "../src/services/orders/hooks/use-orders";
 import type { OrderStatus, OrderFilters } from "../src/services/orders/types/order.types";
@@ -52,12 +53,18 @@ export default function OrdersPage() {
   const router = useRouter();
   const { setShowOverlay } = useLoading();
   
+  const [storedPage, setStoredPage] = useSessionStoragePage("orders");
   const [queryParams, setQueryParams] = useState<OrderFilters>({
-    page: PAGINATION.defaultPage,
+    page: storedPage,
     limit: PAGINATION.defaultPageSize,
     search: "",
     status: "",
   });
+
+  // Persist current page to sessionStorage whenever it changes
+  useEffect(() => {
+    setStoredPage(queryParams.page ?? 1);
+  }, [queryParams.page]);
 
   // Debounced search
   const [searchTerm, setSearchTerm] = useState("");
