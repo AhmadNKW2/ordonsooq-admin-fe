@@ -166,19 +166,26 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       }
     }
     
-    // Session expired
+    // Session expired — try to silently refresh before giving up.
+    // The refresh token may still be valid even though the localStorage expiry
+    // has passed (e.g. after a browser tab restore or a silent token renewal
+    // that didn't update localStorage).
     if (timeUntilExpiry <= 0) {
-      showInfoToast('Your session has expired');
-      await handleLogout(false);
+      const refreshed = await refreshSession();
+      if (!refreshed) {
+        showInfoToast('Your session has expired');
+        await handleLogout(false);
+      }
       return;
     }
     
-    // Proactively refresh if within threshold and has activity
+    // Proactively refresh whenever we are within the refresh threshold.
+    // We intentionally skip the "has recent activity" guard: the refresh
+    // token is valid regardless of whether the user moved their mouse, and
+    // letting the access token expire due to inactivity causes unnecessary
+    // logouts on the next page interaction or page refresh.
     if (timeUntilExpiry <= SESSION_CONFIG.refreshThreshold) {
-      const sessionInfo = sessionManager.getSessionInfo();
-      if (sessionInfo?.rememberMe || (now - lastActivityRef.current < SESSION_CONFIG.activityCheckInterval)) {
-        await refreshSession();
-      }
+      await refreshSession();
     }
   }, [authState.isAuthenticated, refreshSession]);
 
@@ -310,7 +317,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         }
 
         if (finalCheck.valid && finalCheck.user) {
-          const sessionInfo = sessionManager.getSessionInfo();
+          let sessionInfo = sessionManager.getSessionInfo();
+
+          // The httpClient may have silently refreshed the access token internally
+          // (as part of handling the 401 on /auth/profile) without calling the
+          // auth-context's refreshSession(), which means localStorage still holds
+          // the OLD expiresAt from the original login.  If that timestamp is already
+          // in the past (or within 60 s), call refreshSession() explicitly so that
+          // localStorage gets an up-to-date expiry and the checkSession interval
+          // does not immediately fire a logout.
+          if (!sessionInfo || sessionInfo.expiresAt - Date.now() < 60 * 1000) {
+            await refreshSession();
+            sessionInfo = sessionManager.getSessionInfo();
+          }
+
           const expiresAt = sessionInfo?.expiresAt || Date.now() + 30 * 60 * 1000;
 
           setAuthState({

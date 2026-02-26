@@ -6,8 +6,9 @@
 
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useRouter } from "@/hooks/use-loading-router";
+import { useProductFormDraft } from "../../hooks/use-product-form-draft";
 import { Button } from "../ui/button";
 import { PageHeader } from "../common/PageHeader";
 import {
@@ -59,6 +60,12 @@ export const ProductForm: React.FC<ProductFormProps> = ({
   attributes = [],
 }) => {
   const router = useRouter();
+
+  // Draft persistence – only active in create mode.
+  const { restoredDraft, saveDraft, clearDraft } = useProductFormDraft({
+    enabled: !isEditMode,
+  });
+
   const [formData, setFormData] = useState<Partial<ProductFormData>>({
     nameEn: "",
     nameAr: "",
@@ -81,7 +88,17 @@ export const ProductForm: React.FC<ProductFormProps> = ({
     variantMedia: [],
     variants: [],
     ...initialData,
+    // Overlay any previously saved draft (create mode only; ignored when
+    // restoredDraft is null or when initialData already provides values).
+    ...(!isEditMode && restoredDraft ? restoredDraft : {}),
   });
+
+  // Auto-save draft to localStorage on every formData change (create mode only).
+  useEffect(() => {
+    if (!isEditMode) {
+      saveDraft(formData);
+    }
+  }, [formData, isEditMode, saveDraft]);
 
   // Update formData when initialData changes (for edit mode)
   // Use JSON.stringify to create a stable dependency
@@ -496,6 +513,8 @@ export const ProductForm: React.FC<ProductFormProps> = ({
     setIsSubmitting(true);
     try {
       await onSubmit(normalizedData);
+      // Product created successfully – clear the persisted draft.
+      clearDraft();
     } catch (error) {
       console.error("Failed to submit form:", error);
     } finally {
@@ -591,7 +610,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
         description={isEditMode ? "Update product information and variants" : "Fill in the details to create a new product"}
         cancelAction={{
           label: "Cancel",
-          onClick: () => router.push('/products'),
+          onClick: () => { clearDraft(); router.push('/products'); },
           disabled: isSubmitting,
         }}
         action={{
