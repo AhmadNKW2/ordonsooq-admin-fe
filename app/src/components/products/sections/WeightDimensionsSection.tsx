@@ -62,10 +62,11 @@ const WeightInputs: React.FC<WeightInputsProps> = ({
     <div className="grid grid-cols-4 gap-5">
         <Input
             id={`${idPrefix}.weight`}
-            label="Weight (kg)"
+            label="Weight (g)"
             type="number"
             min="0"
-            step="0.1"
+            step="any"
+            className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
             value={weight || ""}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => onWeightChange(e.target.value)}
             error={weightError}
@@ -75,7 +76,8 @@ const WeightInputs: React.FC<WeightInputsProps> = ({
             label="Length (cm)"
             type="number"
             min="0"
-            step="0.1"
+            step="any"
+            className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
             value={length || ""}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => onLengthChange(e.target.value)}
             error={lengthError}
@@ -85,7 +87,8 @@ const WeightInputs: React.FC<WeightInputsProps> = ({
             label="Width (cm)"
             type="number"
             min="0"
-            step="0.1"
+            step="any"
+            className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
             value={width || ""}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => onWidthChange(e.target.value)}
             error={widthError}
@@ -95,7 +98,8 @@ const WeightInputs: React.FC<WeightInputsProps> = ({
             label="Height (cm)"
             type="number"
             min="0"
-            step="0.1"
+            step="any"
+            className="[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
             value={height || ""}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => onHeightChange(e.target.value)}
             error={heightError}

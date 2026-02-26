@@ -69,6 +69,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   const sessionCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const warningIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const lastActivityRef = useRef<number>(Date.now());
+  const isLoggingOutRef = useRef<boolean>(false);
 
   // Clear all intervals
   const clearIntervals = useCallback(() => {
@@ -92,15 +93,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         }
         const expiresAt = Date.now() + (response.data.expires_in * 1000);
         
-        // Update session info
+        // Always update session info with the new expiry so the warning
+        // countdown is based on the real (post-refresh) token lifetime.
         const sessionInfo = sessionManager.getSessionInfo();
-        if (sessionInfo) {
-          sessionManager.setSessionInfo({
-            ...sessionInfo,
-            expiresAt,
-            lastActivity: Date.now(),
-          });
-        }
+        sessionManager.setSessionInfo({
+          ...(sessionInfo ?? { rememberMe: false }),
+          expiresAt,
+          lastActivity: Date.now(),
+        });
         
         setAuthState(prev => ({
           ...prev,
@@ -114,6 +114,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       }
       return false;
     } catch (error) {
+      // refreshToken call itself can throw when the httpClient triggers its own
+      // logout/redirect flow on a 401 from /auth/refresh. Swallow the error here
+      // so we simply return false and let the caller decide what to do.
       console.error('Session refresh failed:', error);
       return false;
     }
@@ -216,14 +219,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     
     const success = await refreshSession();
     if (success) {
-      showSuccessToast('Session extended');
+      showSuccessToast('Session extended successfully');
       // Restart session checking
       sessionCheckIntervalRef.current = setInterval(checkSession, SESSION_CONFIG.activityCheckInterval);
     } else {
+      // Refresh failed — the httpClient already handles the redirect to /login
+      // when the /auth/refresh endpoint returns a non-OK status (it calls
+      // notifyAuthStateChange(false) and does window.location.href = "/login").
+      // We must NOT call handleLogout here to avoid a double-redirect race.
       showInfoToast('Could not extend session. Please log in again.');
-      await handleLogout(false);
     }
-  }, [refreshSession, checkSession, clearIntervals, handleLogout]);
+  }, [refreshSession, checkSession, clearIntervals]);
 
   // Dismiss session warning without extending
   const dismissSessionWarning = useCallback(() => {
@@ -379,10 +385,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     // Subscribe to HTTP client auth state changes
     const unsubscribeHttp = httpClient.onAuthStateChange((isAuthenticated) => {
       if (!isAuthenticated) {
-        // HTTP client detected auth failure
+        // HTTP client detected auth failure.
+        // Guard against re-entrant calls: if a logout is already in progress
+        // (e.g. extendSession already handled the failure), do nothing.
+        if (isLoggingOutRef.current) return;
+
         // Don't logout if already on login page
         if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
-          handleLogout(false);
+          isLoggingOutRef.current = true;
+          handleLogout(false).finally(() => {
+            isLoggingOutRef.current = false;
+          });
         } else {
           // Just update state without redirect
           setAuthState({

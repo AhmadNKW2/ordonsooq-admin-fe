@@ -56,7 +56,7 @@ export default function CreateCashbackRulePage() {
         cancelAction={{ label: "Back", onClick: () => router.push("/cashback-rules"), disabled: createRule.isPending }}
       />
 
-      <Card className="p-6 space-y-4 max-w-3xl">
+      <Card>
         <Input label="Name" value={name} onChange={(e) => setName(e.target.value)} />
 
         <Select
