@@ -51,6 +51,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { useEnterToSubmit } from "../../hooks/use-enter-to-submit";
 
 // Value type for display (using AttributeValue for both modes)
 type ValueItem = AttributeValue;
@@ -482,6 +483,7 @@ export const AttributeForm: React.FC<AttributeFormProps> = ({
   submitButtonText,
 }) => {
   const router = useRouter();
+  useEnterToSubmit(onSubmit, isSubmitting);
 
   // State for add/edit mode
   const [showNewValueRow, setShowNewValueRow] = useState(false);

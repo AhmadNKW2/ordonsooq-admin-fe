@@ -26,6 +26,7 @@ import { Users, Heart, Package, Pencil, Shield } from "lucide-react";
 import { UserRole, WishlistItem } from "../../services/customers/types/customer.types";
 import { ProductSelectionModal } from "../common/ProductSelectionModal";
 import { ProductsTableSection, ProductItem } from "../common/ProductsTableSection";
+import { useEnterToSubmit } from "../../hooks/use-enter-to-submit";
 
 interface UserFormProps {
   mode: "create" | "edit";
@@ -94,6 +95,7 @@ export const UserForm: React.FC<UserFormProps> = ({
   submitButtonText,
 }) => {
   const router = useRouter();
+  useEnterToSubmit(onSubmit, isSubmitting);
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
 
   // Get wishlist product IDs for the modal

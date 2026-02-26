@@ -15,6 +15,7 @@ import { Input } from "../ui/input";
 import { Textarea } from "../ui/textarea";
 import { RadioCard } from "../ui/radio-card";
 import { BannerLanguage } from "../../types/banners/banner.types";
+import { useEnterToSubmit } from "../../hooks/use-enter-to-submit";
 
 export interface BannerFormProps {
     mode: "create" | "edit";
@@ -52,6 +53,7 @@ export const BannerForm: React.FC<BannerFormProps> = ({
     submitButtonText,
 }) => {
     const router = useRouter();
+    useEnterToSubmit(onSubmit, isSubmitting);
 
     return (
         <div className="mx-auto p-5 flex flex-col gap-5">

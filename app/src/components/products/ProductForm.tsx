@@ -9,6 +9,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { useRouter } from "@/hooks/use-loading-router";
 import { useProductFormDraft } from "../../hooks/use-product-form-draft";
+import { useEnterToSubmit } from "../../hooks/use-enter-to-submit";
 import { Button } from "../ui/button";
 import { PageHeader } from "../common/PageHeader";
 import {
@@ -601,6 +602,8 @@ export const ProductForm: React.FC<ProductFormProps> = ({
     if (!salePrice || salePrice >= price) return 0;
     return Math.round(((price - salePrice) / price) * 100);
   };
+
+  useEnterToSubmit(handleSubmit, isSubmitting);
 
   return (
     <div className="mx-auto p-5 flex flex-col gap-5">

@@ -14,6 +14,7 @@ import { ImageUpload, ImageUploadItem } from "../ui/image-upload";
 import { PageHeader } from "../common/PageHeader";
 import { Building2 } from "lucide-react";
 import { ProductsTableSection, ProductItem } from "../common/ProductsTableSection";
+import { useEnterToSubmit } from "../../hooks/use-enter-to-submit";
 
 interface VendorFormProps {
   mode: "create" | "edit";
@@ -69,6 +70,7 @@ export const VendorForm: React.FC<VendorFormProps> = ({
   submitButtonText,
 }) => {
   const router = useRouter();
+  useEnterToSubmit(onSubmit, isSubmitting);
 
   const handleBack = () => {
     router.push("/vendors");

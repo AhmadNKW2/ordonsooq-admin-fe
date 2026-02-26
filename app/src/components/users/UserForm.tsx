@@ -28,6 +28,7 @@ import { ProductSelectionModal } from "../common/ProductSelectionModal";
 import { ProductItem } from "../common/ProductsTableSection";
 import { OrdersTableSection } from "../common/OrdersTableSection";
 import type { Order } from "../../services/orders/types/order.types";
+import { useEnterToSubmit } from "../../hooks/use-enter-to-submit";
 
 interface UserFormProps {
   mode: "create" | "edit";
@@ -98,6 +99,7 @@ export const UserForm: React.FC<UserFormProps> = ({
   submitButtonText,
 }) => {
   const router = useRouter();
+  useEnterToSubmit(onSubmit, isSubmitting);
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
 
   // Get wishlist product IDs for the modal

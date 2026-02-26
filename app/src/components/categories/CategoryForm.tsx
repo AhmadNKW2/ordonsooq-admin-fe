@@ -17,6 +17,7 @@ import { Folder } from "lucide-react";
 import { Category } from "../../services/categories/types/category.types";
 import { ProductsTableSection, ProductItem } from "../common/ProductsTableSection";
 import { CategoryTreeSelect } from "../products/CategoryTreeSelect";
+import { useEnterToSubmit } from "../../hooks/use-enter-to-submit";
 
 interface CategoryFormProps {
   mode: "create" | "edit";
@@ -80,6 +81,7 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({
   currentCategoryId,
 }) => {
   const router = useRouter();
+  useEnterToSubmit(onSubmit, isSubmitting);
 
   const handleBack = () => {
     router.push("/categories");

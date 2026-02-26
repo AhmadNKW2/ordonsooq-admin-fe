@@ -14,6 +14,7 @@ import { ImageUpload, ImageUploadItem } from "../ui/image-upload";
 import { PageHeader } from "../common/PageHeader";
 import { Tags } from "lucide-react";
 import { ProductsTableSection, ProductItem } from "../common/ProductsTableSection";
+import { useEnterToSubmit } from "../../hooks/use-enter-to-submit";
 
 interface BrandFormProps {
   mode: "create" | "edit";
@@ -69,6 +70,7 @@ export const BrandForm: React.FC<BrandFormProps> = ({
   submitButtonText,
 }) => {
   const router = useRouter();
+  useEnterToSubmit(onSubmit, isSubmitting);
 
   const handleBack = () => {
     router.push("/brands");
