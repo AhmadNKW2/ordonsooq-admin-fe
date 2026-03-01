@@ -12,6 +12,7 @@ import {
   SidebarGroup,
   SidebarLink,
   SidebarDivider,
+  useSidebar,
 } from './sidebar';
 
 interface SidebarLinkItem {
@@ -43,8 +44,9 @@ interface AppSidebarProps {
   };
 }
 
-export function AppSidebar({ groups, header, footer }: AppSidebarProps) {
-  const { logout, user, isAdmin, isCatalogManager } = useAuth();
+function AppSidebarInner({ groups, header, footer }: AppSidebarProps) {
+  const { logout, user } = useAuth();
+  const { isCollapsed } = useSidebar();
   const userRole = user?.role;
 
   // Returns true if the current user can see this link
@@ -67,7 +69,7 @@ export function AppSidebar({ groups, header, footer }: AppSidebarProps) {
   };
 
   return (
-    <Sidebar>
+    <>
       {header && (
         <SidebarHeader>
           <div className="flex items-center gap-5">
@@ -112,31 +114,36 @@ export function AppSidebar({ groups, header, footer }: AppSidebarProps) {
 
       {footer && (
         <SidebarFooter>
-          <div className="flex items-center gap-5">
+          <div className={`flex items-center gap-5 ${isCollapsed ? 'justify-center' : ''}`}>
             {footer.userAvatar ? (
               <img
                 src={footer.userAvatar}
                 alt={userDisplayName || footer.userName}
-                className="w-10 h-10 rounded-full object-cover"
+                className="w-10 h-10 rounded-full object-cover shrink-0"
               />
             ) : (
-              <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-bold">
+              <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-bold shrink-0">
                 {(userDisplayName || footer.userName).charAt(0).toUpperCase()}
               </div>
             )}
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold  truncate">
-                {userDisplayName || footer.userName}
-              </p>
-              <p className="text-xs  truncate">{user?.email || footer.userEmail}</p>
-            </div>
-            <button
-              onClick={handleLogout}
-              className="p-2 hover: rounded-r1 transition-colors duaration-300"
-              title="Logout"
-            >
+            {/* Name & email — hidden when collapsed */}
+            {!isCollapsed && (
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold truncate">
+                  {userDisplayName || footer.userName}
+                </p>
+                <p className="text-xs truncate">{user?.email || footer.userEmail}</p>
+              </div>
+            )}
+            {/* Logout button — hidden when collapsed to save space */}
+            {!isCollapsed && (
+              <button
+                onClick={handleLogout}
+                className="p-2 hover: rounded-r1 transition-colors duration-300"
+                title="Logout"
+              >
                 <svg
-                  className="w-5 h-5 "
+                  className="w-5 h-5"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -148,10 +155,19 @@ export function AppSidebar({ groups, header, footer }: AppSidebarProps) {
                     d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
                   />
                 </svg>
-            </button>
+              </button>
+            )}
           </div>
         </SidebarFooter>
       )}
+    </>
+  );
+}
+
+export function AppSidebar({ groups, header, footer }: AppSidebarProps) {
+  return (
+    <Sidebar>
+      <AppSidebarInner groups={groups} header={header} footer={footer} />
     </Sidebar>
   );
 }

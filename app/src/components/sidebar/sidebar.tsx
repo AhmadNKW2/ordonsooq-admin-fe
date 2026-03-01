@@ -1,36 +1,46 @@
 'use client';
 
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { ChevronLeft } from 'lucide-react';
+
+// ---------- Context ----------
 
 interface SidebarContextType {
-  // Context for future sidebar features
-  _?: never;
+  isCollapsed: boolean;
+  toggleCollapsed: () => void;
 }
 
 const SidebarContext = createContext<SidebarContextType | undefined>(undefined);
 
-const useSidebar = () => {
+export const useSidebar = () => {
   const context = useContext(SidebarContext);
-  if (!context) {
-    throw new Error('useSidebar must be used within a SidebarProvider');
-  } 
+  if (!context) throw new Error('useSidebar must be used within a Sidebar');
   return context;
 };
+
+// ---------- Sidebar ----------
 
 interface SidebarProps {
   children: React.ReactNode;
 }
 
 export function Sidebar({ children }: SidebarProps) {
+  const [isCollapsed, setIsCollapsed] = useState(false);
+
   return (
-    <SidebarContext.Provider value={{}}>
+    <SidebarContext.Provider
+      value={{ isCollapsed, toggleCollapsed: () => setIsCollapsed((v) => !v) }}
+    >
       <aside
-        className="
+        className={`
           relative h-screen bg-white shadow-s1
-          flex flex-col w-70
-        "
+          flex flex-col shrink-0
+          transition-[width] duration-300 ease-in-out
+          ${isCollapsed ? 'w-18' : 'w-70'}
+        `}
       >
         {children}
       </aside>
@@ -38,17 +48,62 @@ export function Sidebar({ children }: SidebarProps) {
   );
 }
 
+// ---------- Header ----------
+
 interface SidebarHeaderProps {
   children: React.ReactNode;
 }
 
 export function SidebarHeader({ children }: SidebarHeaderProps) {
+  const { isCollapsed, toggleCollapsed } = useSidebar();
+
   return (
-    <div className="border-b border-b1 flex items-center justify-between px-4 py-5">
-      {children}
+    <div
+      className={`
+        border-b border-b1 flex items-center py-5
+        transition-all duration-300 ease-in-out
+        ${isCollapsed ? 'justify-center px-0' : 'justify-between px-4'}
+      `}
+    >
+      <div
+        className={`
+          overflow-hidden transition-all duration-300 ease-in-out whitespace-nowrap
+          ${isCollapsed ? 'max-w-0 opacity-0 pointer-events-none' : 'max-w-[200px] flex-1 opacity-100'}
+        `}
+      >
+        {children}
+      </div>
+
+      <button
+        onClick={toggleCollapsed}
+        title={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        className="
+          absolute -right-3.5 top-13 -translate-y-1/2 z-20
+          flex items-center justify-center
+          w-7 h-7 rounded-full shrink-0
+          bg-white text-primary
+          shadow-[0_2px_8px_rgba(0,0,0,0.14),0_0_0_1px_rgba(0,0,0,0.06)]
+          hover:shadow-[0_4px_12px_rgba(0,0,0,0.18),0_0_0_1px_rgba(0,0,0,0.08)]
+          hover:scale-110
+          transition-all duration-200 ease-out
+          focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40
+        "
+      >
+        <ChevronLeft
+          size={15}
+          strokeWidth={2.5}
+          className={`
+            transition-transform duration-300 ease-in-out
+            ${isCollapsed ? 'rotate-180' : 'rotate-0'}
+          `}
+        />
+      </button>
     </div>
   );
 }
+
+// ---------- Content ----------
 
 interface SidebarContentProps {
   children: React.ReactNode;
@@ -56,11 +111,13 @@ interface SidebarContentProps {
 
 export function SidebarContent({ children }: SidebarContentProps) {
   return (
-    <nav className="flex-1 overflow-y-auto py-4 px-2 custom-scrollbar">
+    <nav className="flex-1 overflow-x-hidden overflow-y-auto py-4 px-2 [&::-webkit-scrollbar]:w-0 [scrollbar-width:none]">
       {children}
     </nav>
   );
 }
+
+// ---------- Footer ----------
 
 interface SidebarFooterProps {
   children: React.ReactNode;
@@ -74,7 +131,7 @@ export function SidebarFooter({ children }: SidebarFooterProps) {
   );
 }
 
-
+// ---------- Group ----------
 
 interface SidebarGroupProps {
   label: string;
@@ -90,51 +147,60 @@ export function SidebarGroup({
   icon,
 }: SidebarGroupProps) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
+  const { isCollapsed } = useSidebar();
 
   return (
     <div className="mb-4">
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="
-          w-full flex items-center justify-between px-3 py-2 mb-1
-          text-sm font-semibold  hover:
-          transition-all duaration-300 group
-        "
-      >
-        <div className="flex items-center gap-2">
-          {icon && (
-            <span className="w-5 h-5 flex items-center justify-center transition-transform duaration-300 group-hover:scale-110">
-              {icon}
-            </span>
-          )}
-          <span className="uppercase tracking-wide">{label}</span>
-        </div>
-        <svg
-          className={`w-4 h-4 transition-transform duaration-300 ${isOpen ? 'rotate-180' : ''
-            }`}
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M19 9l-7 7-7-7"
-          />
-        </svg>
-      </button>
       <div
         className={`
-          transition-all duration-300 ease-in-out overflow-hidden
-          ${isOpen ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'}
+          grid transition-all duration-300 ease-in-out
+          ${isCollapsed ? 'grid-rows-[0fr] opacity-0' : 'grid-rows-[1fr] opacity-100'}
         `}
       >
-        {children}
+        <div className="overflow-hidden">
+          <button
+            onClick={() => setIsOpen(!isOpen)}
+            className="
+              w-full flex items-center justify-between px-3 py-2 mb-1
+              text-sm font-semibold
+              transition-all duration-300 group
+            "
+          >
+            <div className="flex items-center gap-2">
+              {icon && (
+                <span className="w-5 h-5 flex items-center justify-center transition-transform duration-300 group-hover:scale-110">
+                  {icon}
+                </span>
+              )}
+              <span className="uppercase tracking-wide">{label}</span>
+            </div>
+            <svg
+              className={`w-4 h-4 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <div
+        className={`
+          grid transition-all duration-300 ease-in-out
+          ${isCollapsed || isOpen ? 'grid-rows-[1fr] opacity-100' : 'grid-rows-[0fr] opacity-0'}
+        `}
+      >
+        <div className="overflow-hidden">
+          {children}
+        </div>
       </div>
     </div>
   );
 }
+
+// ---------- Link ----------
 
 interface SidebarLinkProps {
   href: string;
@@ -152,57 +218,117 @@ export function SidebarLink({
   onClick,
 }: SidebarLinkProps) {
   const pathname = usePathname();
+  const { isCollapsed } = useSidebar();
   const isActive = pathname === href || pathname.startsWith(`${href}/`);
 
+  const linkRef = useRef<HTMLAnchorElement>(null);
+  const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number } | null>(null);
+
+  const handleMouseEnter = () => {
+    if (!isCollapsed || !linkRef.current) return;
+    const rect = linkRef.current.getBoundingClientRect();
+    setTooltipPos({ x: rect.right + 10, y: rect.top + rect.height / 2 });
+  };
+
+  const handleMouseLeave = () => setTooltipPos(null);
+
   return (
-    <Link
-      href={href}
-      onClick={onClick}
-      className={`
-        group relative flex items-center gap-5 px-3 py-2.5 mb-1 rounded-r1
-        transition-all duaration-1000
-        ${isActive
-          ? 'bg-primary text-white shadow-s2'
-          : ' hover:bg-primary/10 hover:'
-        }
-      `}
-    >
-      <span
+    <>
+      <Link
+        ref={linkRef}
+        href={href}
+        onClick={onClick}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
         className={`
-          flex items-center justify-center w-5 h-5
-          transition-transform duaration-300 group-hover:scale-110
-          ${isActive ? 'text-white' : ''}
+          group relative flex items-center mb-1
+          transition-all duration-300 ease-in-out
+          ${isCollapsed
+            ? 'justify-center px-2 py-1.5 gap-0'
+            : `px-3 py-2.5 gap-3 rounded-r1 ${isActive ? 'bg-primary text-white shadow-s2' : 'hover:bg-primary/10'}`
+          }
         `}
       >
-        {icon}
-      </span>
-
-      <span
-        className={`
-          flex-1 font-medium text-sm transition-all duaration-300
-          ${isActive ? 'text-white' : ''}
-        `}
-      >
-        {label}
-      </span>
-
-      {badge && (
         <span
           className={`
-            px-2 py-0.5 text-xs font-semibold rounded-full
-            transition-all duaration-300
-            ${isActive
-              ? 'bg-white text-primary'
-              : 'bg-primary text-white'
+            flex items-center justify-center shrink-0
+            transition-all duration-300 ease-in-out
+            ${isCollapsed
+              ? `w-10 h-10 rounded-xl ${
+                  isActive
+                    ? 'bg-primary text-white shadow-s2 scale-105'
+                    : 'bg-gray-100 text-gray-500 group-hover:bg-primary/15 group-hover:text-primary group-hover:scale-[1.08] group-hover:shadow-sm'
+                }`
+              : `w-5 h-5 group-hover:scale-110 ${isActive ? 'text-white' : ''}`
             }
           `}
         >
-          {badge}
+          {icon}
         </span>
-      )}
-    </Link>
+
+        <span
+          className={`
+            font-medium text-sm whitespace-nowrap overflow-hidden
+            transition-all duration-300 ease-in-out
+            ${isCollapsed ? 'max-w-0 opacity-0' : 'max-w-[200px] flex-1 opacity-100'}
+            ${isActive ? 'text-white' : ''}
+          `}
+        >
+          {label}
+        </span>
+
+        {badge !== undefined && (
+          <span
+            className={`
+              text-xs font-semibold rounded-full overflow-hidden whitespace-nowrap flex items-center justify-center
+              transition-all duration-300 ease-in-out
+              ${isCollapsed ? 'max-w-0 opacity-0 px-0 py-0' : 'max-w-[50px] px-2 py-0.5 opacity-100'}
+              ${isActive ? 'bg-white text-primary' : 'bg-primary text-white'}
+            `}
+          >
+            {badge}
+          </span>
+        )}
+      </Link>
+
+      {isCollapsed && tooltipPos &&
+        createPortal(
+          <div
+            role="tooltip"
+            style={{ top: tooltipPos.y, left: tooltipPos.x }}
+            className="
+              fixed z-9999 -translate-y-1/2 pointer-events-none
+              flex items-center
+              animate-in fade-in slide-in-from-left-2 duration-150
+            "
+          >
+            <span className="
+              w-0 h-0
+              border-t-[5px] border-t-transparent
+              border-b-[5px] border-b-transparent
+              border-r-[6px] border-r-gray-800
+            " />
+            <span className="
+              whitespace-nowrap px-3 py-1.5
+              bg-gray-800 text-white text-xs font-medium
+              rounded-lg shadow-xl
+            ">
+              {label}
+              {badge !== undefined && (
+                <span className="ml-2 px-1.5 py-0.5 bg-primary rounded-full text-white text-[10px] font-semibold">
+                  {badge}
+                </span>
+              )}
+            </span>
+          </div>,
+          document.body
+        )
+      }
+    </>
   );
 }
+
+// ---------- Divider ----------
 
 interface SidebarDividerProps {
   className?: string;
