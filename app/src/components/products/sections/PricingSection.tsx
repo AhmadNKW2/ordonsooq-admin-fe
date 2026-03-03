@@ -182,7 +182,7 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
             attributeValues: combo.attributeValues,
             cost: existing?.cost,
             price: existing?.price,
-            isSale: existing?.isSale ?? true,
+            isSale: existing?.isSale ?? false,
             salePrice: existing?.salePrice,
             [field]: numValue,
         } as any;
@@ -214,7 +214,7 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
                             <span className="text-sm text-danger">{errors['singlePricing']}</span>
                         )}
                         <Checkbox
-                            checked={singlePricing?.isSale ?? true}
+                            checked={singlePricing?.isSale ?? false}
                             onChange={(checked) => {
                                 const updated: SinglePricing = {
                                     ...singlePricing,
@@ -239,7 +239,7 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
                     cost={singlePricing?.cost}
                     price={singlePricing?.price}
                     salePrice={singlePricing?.salePrice}
-                    isSale={singlePricing?.isSale ?? true}
+                    isSale={singlePricing?.isSale ?? false}
                     salePercentage={salePercentage}
                     onCostChange={(value) => handleSinglePricingChange("cost", value)}
                     onPriceChange={(value) => handleSinglePricingChange("price", value)}
@@ -304,7 +304,7 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
                         <div className="flex gap-5 items-center">
                             <h4 className="font-medium ">{combo.label}</h4>
                             <Checkbox
-                                checked={pricing?.isSale ?? true}
+                                checked={pricing?.isSale ?? false}
                                 onChange={(checked) =>
                                     handleVariantPricingChange(combo.key, "isSale", checked)
                                 }
@@ -316,7 +316,7 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
                             cost={pricing?.cost}
                             price={pricing?.price}
                             salePrice={pricing?.salePrice}
-                            isSale={pricing?.isSale ?? true}
+                            isSale={pricing?.isSale ?? false}
                             salePercentage={salePercentage}
                             onCostChange={(value) => handleVariantPricingChange(combo.key, "cost", value)}
                             onPriceChange={(value) => handleVariantPricingChange(combo.key, "price", value)}

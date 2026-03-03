@@ -156,11 +156,11 @@ export const ProductForm: React.FC<ProductFormProps> = ({
     // Check which variant pricing items have sale enabled
     // We must ensure the array passed here matches the length expected, 
     // or at least mapped from existing data to check `isSale` status
-    const variantPricingItems: { isSale: boolean }[] = formData.variantPricing?.map(vp => ({ isSale: vp.isSale !== false })) || [];
+    const variantPricingItems: { isSale: boolean }[] = formData.variantPricing?.map(vp => ({ isSale: vp.isSale === true })) || [];
 
     return {
       hasPricingAttributes,
-      singlePricingIsSale: formData.singlePricing?.isSale !== false,
+      singlePricingIsSale: formData.singlePricing?.isSale === true,
       variantPricingItems,
       isWeightVariantBased: formData.isWeightVariantBased || false,
       isMediaVariantBased: formData.isMediaVariantBased || false,

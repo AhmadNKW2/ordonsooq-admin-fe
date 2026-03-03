@@ -1059,7 +1059,7 @@ export default function EditProductPage() {
           productPayload.prices = [{
             cost: data.singlePricing.cost,
             price: data.singlePricing.price,
-            sale_price: data.singlePricing.isSale !== false ? data.singlePricing.salePrice : undefined,
+            sale_price: data.singlePricing.isSale === true ? data.singlePricing.salePrice : undefined,
           }];
           console.log('=== DEBUG: Single Pricing Payload ===');
           console.log('productPayload.prices:', productPayload.prices);
@@ -1093,8 +1093,8 @@ export default function EditProductPage() {
               combination,
               cost: vp.cost,
               price: vp.price,
-              // isSale defaults to true, so include salePrice unless explicitly false
-              sale_price: vp.isSale !== false ? vp.salePrice : undefined,
+              // isSale defaults to false; only include salePrice when explicitly enabled
+              sale_price: vp.isSale === true ? vp.salePrice : undefined,
             };
           });
           console.log('productPayload.prices:', productPayload.prices);

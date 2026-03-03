@@ -72,8 +72,8 @@ export function transformFormDataToDto(
       const priceEntry: PriceItem = {
         cost: data.singlePricing.cost,
         price: data.singlePricing.price,
-        // UI/validation treat `isSale` as true by default, so include sale price unless explicitly disabled
-        sale_price: data.singlePricing.isSale !== false ? data.singlePricing.salePrice : undefined,
+        // isSale defaults to false; only include sale price when explicitly enabled
+        sale_price: data.singlePricing.isSale === true ? data.singlePricing.salePrice : undefined,
       };
       if (priceEntry.cost === undefined) delete priceEntry.cost;
       dto.prices = [priceEntry];
@@ -183,7 +183,7 @@ function buildPrices(data: ProductFormData): PriceItem[] {
       const entry: PriceItem = {
         cost: data.singlePricing.cost,
         price: data.singlePricing.price,
-        sale_price: data.singlePricing.isSale !== false ? data.singlePricing.salePrice : undefined,
+        sale_price: data.singlePricing.isSale === true ? data.singlePricing.salePrice : undefined,
       };
       if (entry.cost === undefined) delete entry.cost;
       return [entry];
@@ -195,7 +195,7 @@ function buildPrices(data: ProductFormData): PriceItem[] {
       const entry: PriceItem = {
         cost: first.cost,
         price: first.price,
-        sale_price: first.isSale !== false ? first.salePrice : undefined,
+        sale_price: first.isSale === true ? first.salePrice : undefined,
       };
       if (entry.cost === undefined) delete entry.cost;
       return [entry];
@@ -236,7 +236,7 @@ function buildPrices(data: ProductFormData): PriceItem[] {
         cost: pricing.cost,
         price: pricing.price,
         // `isSale` defaults to true in the form, so only omit when explicitly false
-        sale_price: pricing.isSale !== false ? pricing.salePrice : undefined,
+        sale_price: pricing.isSale === true ? pricing.salePrice : undefined,
       };
       if (entry.cost === undefined) delete entry.cost;
       priceMap.set(key, entry);
