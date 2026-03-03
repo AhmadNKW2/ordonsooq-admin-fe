@@ -42,8 +42,8 @@ const LoadingContext = createContext<LoadingContextType | undefined>(undefined);
 const SimpleOverlay: React.FC<{ show: boolean }> = ({ show }) => {
   return (
     <div 
-      className={`fixed inset-0 z-[9999] bg-white/30 transition-opacity duration-300 ${
-        show ? "opacity-100" : "opacity-0 pointer-events-none"
+      className={`fixed inset-0 z-[9999] bg-white/30 transition-opacity duration-300 pointer-events-none ${
+        show ? "opacity-100" : "opacity-0"
       }`} 
     />
   );
