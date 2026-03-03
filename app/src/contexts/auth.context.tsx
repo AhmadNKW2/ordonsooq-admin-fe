@@ -18,7 +18,7 @@ import { useRouter } from "@/hooks/use-loading-router";
 import { authService } from "../services/auth/api/auth.service";
 import { LoginRequest, User, AuthState, SessionInfo } from "../services/auth/types/auth.types";
 import { httpClient } from "../lib/api/http-client";
-import { sessionManager } from "../lib/session/session-manager";
+import { sessionManager, sessionStorageManager } from "../lib/session/session-manager";
 import { showSuccessToast, showInfoToast, showErrorToast } from "../lib/toast";
 
 // Session configuration
@@ -57,8 +57,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
   const router = useRouter();
+  // Pre-load user from localStorage so role is available synchronously before /auth/profile responds
+  const cachedUser = typeof window !== 'undefined' ? sessionStorageManager.getUser<User>() : null;
   const [authState, setAuthState] = useState<AuthState>({
-    user: null,
+    user: cachedUser,
     isAuthenticated: false,
     isLoading: true,
     sessionExpiresAt: null,
@@ -201,7 +203,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     } catch (error) {
       console.error("Logout API error:", error);
     } finally {
-      sessionManager.clearSession();
+      sessionManager.clearSession(); // also removes auth_user from localStorage
       httpClient.removeAuthToken();
       sessionManager.broadcastEvent({ type: 'logout', timestamp: Date.now() });
 
@@ -333,6 +335,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
 
           const expiresAt = sessionInfo?.expiresAt || Date.now() + 30 * 60 * 1000;
 
+          // Persist user so role is available synchronously on next page load
+          sessionStorageManager.saveUser(finalCheck.user);
+
           setAuthState({
             user: finalCheck.user,
             isAuthenticated: true,
@@ -453,6 +458,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
           lastActivity: Date.now(),
           rememberMe: credentials.rememberMe || false,
         });
+
+        // Persist user so role is available synchronously on next page load
+        sessionStorageManager.saveUser(user);
 
         // Update state
         setAuthState({

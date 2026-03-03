@@ -173,29 +173,12 @@ export const createProductSchema = (config: ProductFormConfig) => {
     schema = schema.extend({
       singlePricing: singlePricingSchema.optional(),
       variantPricing: z.array(variantPricingSchema)
-        .min(config.expectedPricingCount, `Expected ${config.expectedPricingCount} pricing variants`)
-        .superRefine((items, ctx) => {
-          items.forEach((item, index) => {
-             if (item.isSale && (item.salePrice === undefined || item.salePrice === null)) {
-                ctx.addIssue({
-                    code: z.ZodIssueCode.custom,
-                    message: "Required when on sale",
-                    path: [index, "salePrice"]
-                });
-             }
-          });
-        }),
+        .min(config.expectedPricingCount, `Expected ${config.expectedPricingCount} pricing variants`),
     });
   } else {
     // Single pricing required
-    const singlePricingWithSale = config.singlePricingIsSale
-      ? singlePricingSchema.extend({
-          salePrice: z.number({ message: "Required" }).min(0, "Must be 0 or greater"),
-        })
-      : singlePricingSchema;
-
     schema = schema.extend({
-      singlePricing: singlePricingWithSale,
+      singlePricing: singlePricingSchema,
       variantPricing: z.array(variantPricingSchema).optional(),
     });
   }
