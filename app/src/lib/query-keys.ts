@@ -122,4 +122,26 @@ export const queryKeys = {
     detail: (id: string | number) =>
       [...queryKeys.customers.details(), id] as const,
   },
+
+  // Tags
+  tags: {
+    all: ["tags"] as const,
+    lists: () => [...queryKeys.tags.all, "list"] as const,
+    list: (params?: Record<string, any>) =>
+      [...queryKeys.tags.lists(), params] as const,
+    details: () => [...queryKeys.tags.all, "detail"] as const,
+    detail: (id: string | number) =>
+      [...queryKeys.tags.details(), id] as const,
+  },
+
+  // Search Concepts
+  concepts: {
+    all: ["search-concepts"] as const,
+    lists: () => [...queryKeys.concepts.all, "list"] as const,
+    list: (params?: Record<string, any>) =>
+      [...queryKeys.concepts.lists(), params] as const,
+    details: () => [...queryKeys.concepts.all, "detail"] as const,
+    detail: (id: string) =>
+      [...queryKeys.concepts.details(), id] as const,
+  },
 } as const;

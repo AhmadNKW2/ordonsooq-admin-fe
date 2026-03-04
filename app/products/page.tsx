@@ -166,6 +166,44 @@ export default function ProductsPage() {
     return numRating.toFixed(1);
   };
 
+  const getCreatedAtParts = (createdAt?: string | Date) => {
+    if (!createdAt) return null;
+
+    if (typeof createdAt === "string") {
+      const isoMatch = createdAt.match(
+        /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?/
+      );
+
+      if (isoMatch) {
+        const [, year, month, day, hour, minute, second = "0"] = isoMatch;
+        const localWallClockDate = new Date(
+          Number(year),
+          Number(month) - 1,
+          Number(day),
+          Number(hour),
+          Number(minute),
+          Number(second)
+        );
+
+        return {
+          date: localWallClockDate.toLocaleDateString(),
+          time: localWallClockDate.toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+          }),
+        };
+      }
+    }
+
+    const parsedDate = new Date(createdAt);
+    if (Number.isNaN(parsedDate.getTime())) return null;
+
+    return {
+      date: parsedDate.toLocaleDateString(),
+      time: parsedDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+    };
+  };
+
   const products = data?.data.data || [];
 
   if (isError) {
@@ -258,6 +296,7 @@ export default function ProductsPage() {
               <TableHead width="5%">Price</TableHead>
               <TableHead width="9%">Stock</TableHead>
               <TableHead width="6%">Rating</TableHead>
+              <TableHead width="10%">Created At</TableHead>
               <TableHead width="6%">Visibility</TableHead>
               <TableHead width="9%">Actions</TableHead>
             </TableRow>
@@ -422,6 +461,24 @@ export default function ProductsPage() {
                       <span className="text-xs text-gray-500">({product.total_ratings})</span>
                     ) : null}
                   </div>
+                </TableCell>
+                <TableCell>
+                  {(() => {
+                    const createdAtParts = getCreatedAtParts(
+                      product.created_at || (product as any).createdAt
+                    );
+
+                    if (!createdAtParts) {
+                      return <span className="text-gray-400">—</span>;
+                    }
+
+                    return (
+                      <div className="flex flex-col leading-tight">
+                        <span>{createdAtParts.date}</span>
+                        <span className="text-xs text-gray-500">{createdAtParts.time}</span>
+                      </div>
+                    );
+                  })()}
                 </TableCell>
                 <TableCell>
                   <Badge

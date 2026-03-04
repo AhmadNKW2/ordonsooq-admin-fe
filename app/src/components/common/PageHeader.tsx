@@ -18,6 +18,7 @@ interface PageHeaderProps {
     onClick: () => void;
     disabled?: boolean;
   };
+  extraActions?: React.ReactNode;
 }
 
 export const PageHeader: React.FC<PageHeaderProps> = ({
@@ -27,6 +28,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
   iconBgColor = "bg-primary",
   action,
   cancelAction,
+  extraActions,
 }) => {
   return (
     <div className="w-full justify-between items-center flex gap-5">
@@ -41,8 +43,9 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
           <p className="mt-1">{description}</p>
         </div>
       </div>
-      {(action || cancelAction) && (
+      {(action || cancelAction || extraActions) && (
         <div className="flex items-center gap-3">
+          {extraActions}
           {cancelAction && (
             <Button
               variant="solid"

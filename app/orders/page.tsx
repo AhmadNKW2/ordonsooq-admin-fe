@@ -102,7 +102,7 @@ export default function OrdersPage() {
   ];
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="flex flex-col justify-center items-center gap-5 p-5">
       <PageHeader
         icon={<Receipt />}
         title="Orders"

@@ -58,7 +58,7 @@ export default function CashbackRulesPage() {
   };
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="flex flex-col justify-center items-center gap-5 p-5">
       <PageHeader
         icon={<Wallet />}
         title="Cashback Rules"

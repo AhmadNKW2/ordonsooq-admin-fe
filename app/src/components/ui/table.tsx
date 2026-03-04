@@ -1,5 +1,6 @@
 import React from 'react';
 import { ArrowUpDown, ArrowUp, ArrowDown, Inbox } from 'lucide-react';
+import { Pagination, type PaginationData } from './pagination';
 
 // Context to communicate empty state from TableBody to Table
 const TableContext = React.createContext<{
@@ -11,38 +12,54 @@ interface TableProps {
   children: React.ReactNode;
   className?: string;
   emptyMessage?: string;
+  pagination?: PaginationData;
+  onPageChange?: (page: number) => void;
+  onPageSizeChange?: (pageSize: number) => void;
 }
 
 export const Table: React.FC<TableProps> = ({ 
   children, 
   className = '', 
-  emptyMessage = "No data available"
+  emptyMessage = "No data available",
+  pagination,
+  onPageChange,
+  onPageSizeChange,
 }) => {
   const [isEmpty, setIsEmpty] = React.useState(false);
 
   return (
-    <TableContext.Provider value={{ isEmpty, setIsEmpty }}>
-      {isEmpty && (
-        <div className="w-full rounded-r1 border border-primary/20 shadow-s1 bg-white">
-          <div className="flex flex-col items-center justify-center py-20 px-6">
-            <div className="bg-primary/10 w-24 h-24 rounded-full flex items-center justify-center mb-6 shadow-s1 ring-4 ring-white">
-              <Inbox className="w-10 h-10 text-primary" strokeWidth={1.5} />
+    <div className="flex flex-col gap-4 w-full">
+      <TableContext.Provider value={{ isEmpty, setIsEmpty }}>
+        {isEmpty && (
+          <div className="w-full rounded-r1 border border-primary/20 shadow-s1 bg-white">
+            <div className="flex flex-col items-center justify-center py-20 px-6">
+              <div className="bg-primary/10 w-24 h-24 rounded-full flex items-center justify-center mb-6 shadow-s1 ring-4 ring-white">
+                <Inbox className="w-10 h-10 text-primary" strokeWidth={1.5} />
+              </div>
+              <h3 className="text-xl font-bold  mb-2 tracking-tight">{emptyMessage}</h3>
+              <p className=" text-base max-w-sm mx-auto leading-relaxed text-center">
+                It looks like there are no items here yet. <br />
+                New data will appear here once available.
+              </p>
             </div>
-            <h3 className="text-xl font-bold  mb-2 tracking-tight">{emptyMessage}</h3>
-            <p className=" text-base max-w-sm mx-auto leading-relaxed text-center">
-              It looks like there are no items here yet. <br />
-              New data will appear here once available.
-            </p>
           </div>
+        )}
+        
+        <div className={`w-full overflow-x-auto overflow-y-visible rounded-r1 border border-primary/20 shadow-s1 ${isEmpty ? 'hidden' : ''}`}>
+          <table className={`w-full border-collapse bg-white ${className}`} style={{ tableLayout: 'fixed' }}>
+            {children}
+          </table>
         </div>
+      </TableContext.Provider>
+
+      {pagination && onPageChange && !isEmpty && (
+        <Pagination
+          pagination={pagination}
+          onPageChange={onPageChange}
+          onPageSizeChange={onPageSizeChange}
+        />
       )}
-      
-      <div className={`w-full overflow-x-auto overflow-y-visible rounded-r1 border border-primary/20 shadow-s1 ${isEmpty ? 'hidden' : ''}`}>
-        <table className={`w-full border-collapse bg-white ${className}`} style={{ tableLayout: 'fixed' }}>
-          {children}
-        </table>
-      </div>
-    </TableContext.Provider>
+    </div>
   );
 };
 
