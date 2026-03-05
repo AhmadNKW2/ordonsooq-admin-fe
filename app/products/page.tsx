@@ -297,6 +297,7 @@ export default function ProductsPage() {
               <TableHead width="9%">Stock</TableHead>
               <TableHead width="6%">Rating</TableHead>
               <TableHead width="10%">Created At</TableHead>
+              <TableHead width="10%">Created By</TableHead>
               <TableHead width="6%">Visibility</TableHead>
               <TableHead width="9%">Actions</TableHead>
             </TableRow>
@@ -479,6 +480,22 @@ export default function ProductsPage() {
                       </div>
                     );
                   })()}
+                </TableCell>
+                <TableCell>
+                  {product.created_by ? (
+                    <div className="flex flex-col text-sm">
+                      <span className="font-medium">
+                        {[product.created_by.firstName, product.created_by.lastName].filter(Boolean).join(" ") || "Unknown Creator"}
+                      </span>
+                      {product.created_by.email && (
+                        <span className="text-xs text-gray-500 truncate" title={product.created_by.email}>
+                          {product.created_by.email}
+                        </span>
+                      )}
+                    </div>
+                  ) : (
+                    <span className="text-gray-400">—</span>
+                  )}
                 </TableCell>
                 <TableCell>
                   <Badge

@@ -168,6 +168,15 @@ export default function ViewProductPage() {
               <p className=" font-semibold">{getVendorName(product.vendor_id)}</p>
             </div>
             <div>
+              <label className="text-sm font-medium ">Created By</label>
+              <p className=" font-semibold">
+                {product.created_by 
+                  ? [product.created_by.firstName, product.created_by.lastName].filter(Boolean).join(" ") || product.created_by.email || "Unknown" 
+                  : "N/A"
+                }
+              </p>
+            </div>
+            <div>
               <label className="text-sm font-medium ">Status</label>
               <Badge variant={product.is_active ? "success" : "danger"}>
                 {product.is_active ? "Active" : "Inactive"}

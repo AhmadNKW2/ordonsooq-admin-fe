@@ -204,6 +204,7 @@ export default function ArchivedProductsPage() {
               <TableHead>SKU</TableHead>
               <TableHead>Category</TableHead>
               <TableHead>Vendor</TableHead>
+              <TableHead>Created By</TableHead>
               <TableHead>Archived Date</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
@@ -252,6 +253,22 @@ export default function ArchivedProductsPage() {
                       </Badge>
                     )}
                   </div>
+                </TableCell>
+                <TableCell>
+                  {product.created_by ? (
+                    <div className="flex flex-col text-sm">
+                      <span className="font-medium">
+                        {[product.created_by.firstName, product.created_by.lastName].filter(Boolean).join(" ") || "Unknown Creator"}
+                      </span>
+                      {product.created_by.email && (
+                        <span className="text-xs text-gray-500 truncate" title={product.created_by.email}>
+                          {product.created_by.email}
+                        </span>
+                      )}
+                    </div>
+                  ) : (
+                    <span className="text-gray-400">—</span>
+                  )}
                 </TableCell>
                 <TableCell>
                   <span className="text-gray-500">{formatDate(product.archived_at)}</span>

@@ -90,6 +90,16 @@ export const stockSummarySchema = z.object({
 
 export type StockSummary = z.infer<typeof stockSummarySchema>;
 
+// User Schema
+export const userSchema = z.object({
+  id: z.number(),
+  firstName: z.string().optional().nullable(),
+  lastName: z.string().optional().nullable(),
+  email: z.string().optional().nullable(),
+});
+
+export type User = z.infer<typeof userSchema>;
+
 // Product Schema for validation (matches backend)
 export const productSchema = z.object({
   id: z.number(),
@@ -126,6 +136,8 @@ export const productSchema = z.object({
   archived_by: z.number().optional().nullable(),
   created_at: z.string().or(z.date()).optional(),
   updated_at: z.string().or(z.date()).optional(),
+  created_by: userSchema.optional().nullable(),
+
   
   // New API Structure Support
   media_groups: z.record(z.string(), z.any()).optional(),
@@ -264,10 +276,12 @@ export interface ProductDetail extends Omit<Product, 'vendor' | 'category' | 'st
     visible?: boolean;
     is_active?: boolean;
     sort_order?: number;
-    status?: "active" | "archived";
-    archived_at?: string | Date | null;
-    created_at?: string | Date;
-    updated_at?: string | Date;
+  } | null;
+  created_by?: {
+    id: number;
+    firstName?: string | null;
+    lastName?: string | null;
+    email?: string | null;
   } | null;
   media?: ProductMedia[];
   pricing?: ProductPricing[];
