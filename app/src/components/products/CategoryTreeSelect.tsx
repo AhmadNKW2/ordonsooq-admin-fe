@@ -93,10 +93,9 @@ const CategoryTreeNode: React.FC<CategoryTreeNodeProps> = ({
   if (hasChildren) {
     return (
       <Accordion 
-        type="single" 
-        collapsible 
+        type="multiple" 
         className="w-full" 
-        defaultValue={defaultValue}
+        defaultValue={[category.id.toString()]}
         // Key is important to reset state when search changes
         key={`${category.id}-${searchTerm}`} 
       >

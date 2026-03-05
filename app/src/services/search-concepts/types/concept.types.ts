@@ -3,7 +3,7 @@ export type ConceptSource = "ai" | "manual";
 
 export interface Concept {
   id: string;
-  concept_key: string;
+  concept_key_en: string;
   concept_key_ar: string | null;
   terms_en: string[];
   terms_ar: string[];
@@ -35,14 +35,14 @@ export interface ConceptListResponse {
 }
 
 export interface CreateConceptDto {
-  concept_key: string;
+  concept_key_en: string;
   concept_key_ar?: string | null;
   terms_en: string[];
   terms_ar: string[];
 }
 
 export interface UpdateConceptDto {
-  concept_key?: string;
+  concept_key_en?: string;
   concept_key_ar?: string | null;
   terms_en?: string[];
   terms_ar?: string[];

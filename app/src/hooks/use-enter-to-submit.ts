@@ -26,7 +26,15 @@ export function useEnterToSubmit(
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key !== "Enter") return;
       const tag = (e.target as HTMLElement)?.tagName?.toLowerCase();
-      if (tag === "textarea") return; // let textarea handle newlines
+      
+      // Let textarea handle newlines on Shift+Enter, otherwise submit
+      if (tag === "textarea") {
+        if (e.shiftKey) return; // Allow Shift+Enter in textarea
+        e.preventDefault(); // Prevent new line on regular Enter
+      } else if (e.shiftKey) {
+        return; // Maybe other things need Shift+Enter? Typically no, but just in case
+      }
+
       if (disabled) return;
       e.preventDefault();
       onSubmitRef.current();

@@ -54,7 +54,7 @@ export default function ConceptDetailPage() {
 
   useEffect(() => {
     if (concept) {
-      setConceptKey(concept.concept_key);
+      setConceptKey(concept.concept_key_en);
       setConceptKeyAr(concept.concept_key_ar ?? "");
       setTermsEn(concept.terms_en);
       setTermsAr(concept.terms_ar);
@@ -66,7 +66,7 @@ export default function ConceptDetailPage() {
   useEffect(() => {
     if (!concept) return;
     const changed =
-      conceptKey !== concept.concept_key ||
+      conceptKey !== concept.concept_key_en ||
       conceptKeyAr !== (concept.concept_key_ar ?? "") ||
       JSON.stringify(termsEn) !== JSON.stringify(concept.terms_en) ||
       JSON.stringify(termsAr) !== JSON.stringify(concept.terms_ar);
@@ -80,7 +80,7 @@ export default function ConceptDetailPage() {
     await updateConcept.mutateAsync({
       id,
       data: {
-        concept_key: conceptKey.trim(),
+        concept_key_en: conceptKey.trim(),
         concept_key_ar: conceptKeyAr.trim() || null,
         terms_en: termsEn,
         terms_ar: termsAr,
@@ -136,7 +136,7 @@ export default function ConceptDetailPage() {
     <div className="flex flex-col justify-center items-center gap-5 p-5">
       <PageHeader
         icon={<Search />}
-        title={concept.concept_key}
+        title={concept.concept_key_en}
         description={`Concept · ${concept.source} · ${concept.status}`}
         cancelAction={{
           label: "Back",
@@ -236,7 +236,7 @@ export default function ConceptDetailPage() {
         onTermsArChange={setTermsAr}
         onSubmit={handleSave}
         onDiscard={() => {
-          setConceptKey(concept.concept_key);
+          setConceptKey(concept.concept_key_en);
           setTermsEn(concept.terms_en);
           setTermsAr(concept.terms_ar);
         }}
@@ -257,7 +257,7 @@ export default function ConceptDetailPage() {
         onClose={() => setShowDisableModal(false)}
         onConfirm={handleDisableConfirm}
         title="Disable Concept"
-        message={`Remove "${concept.concept_key}" from Typesense? The concept will be set to rejected but not deleted.`}
+        message={`Remove "${concept.concept_key_en}" from Typesense? The concept will be set to rejected but not deleted.`}
         confirmText="Disable"
         confirmVariant="danger"
         isLoading={disableConcept.isPending}
@@ -269,7 +269,7 @@ export default function ConceptDetailPage() {
         onClose={() => setShowDeleteModal(false)}
         onConfirm={handleDeleteConfirm}
         title="Delete Concept"
-        message={`Permanently delete "${concept.concept_key}"? If approved, its Typesense synonym will be removed first.`}
+        message={`Permanently delete "${concept.concept_key_en}"? If approved, its Typesense synonym will be removed first.`}
         isLoading={deleteConcept.isPending}
       />
     </div>

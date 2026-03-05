@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
@@ -49,6 +49,20 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
     className = '',
 }) => {
     const [isFocused, setIsFocused] = useState(false);
+    const containerRef = useRef<HTMLDivElement>(null);
+
+    // Native DOM listener (bubble phase) — fires after the editor processes
+    // the key but BEFORE the event reaches `document`, which is where
+    // useEnterToSubmit listens. stopPropagation here reliably blocks submission.
+    useEffect(() => {
+        const container = containerRef.current;
+        if (!container) return;
+        const stop = (e: KeyboardEvent) => {
+            if (e.key === 'Enter' && e.shiftKey) e.stopPropagation();
+        };
+        container.addEventListener('keydown', stop);
+        return () => container.removeEventListener('keydown', stop);
+    }, []);
 
     const editor = useEditor({
         immediatelyRender: false,
@@ -65,6 +79,12 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
         onFocus: () => setIsFocused(true),
         onBlur: () => setIsFocused(false),
         editorProps: {
+            handleKeyDown: (_view, event) => {
+                if (event.key === 'Enter' && !event.shiftKey) {
+                    return true; // prevent default tiptap behavior
+                }
+                return false; 
+            },
             attributes: {
                 class: `prose prose-sm max-w-none focus:outline-none min-h-[100px] px-4 py-3 ${
                     isRtl ? 'text-right' : 'text-left'
@@ -116,7 +136,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
             isClearButton={false} // Complex to clear rich text via simple button
             className={className}
         >
-            <div id={id} className={`w-full rounded-lg border bg-white overflow-hidden transition-colors ${borderColor}`}>
+            <div ref={containerRef} id={id} className={`w-full rounded-lg border bg-white overflow-hidden transition-colors ${borderColor}`}>
                 {/* Toolbar */}
                 <div className="flex items-center gap-1 border-b border-gray-100 px-2 py-1 bg-gray-50/50">
                     <ToolbarButton

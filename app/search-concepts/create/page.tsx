@@ -21,7 +21,7 @@ export default function CreateConceptPage() {
 
   const handleSubmit = async () => {
     await createConcept.mutateAsync({
-      concept_key: conceptKey.trim(),
+      concept_key_en: conceptKey.trim(),
       concept_key_ar: conceptKeyAr.trim() || null,
       terms_en: termsEn,
       terms_ar: termsAr,

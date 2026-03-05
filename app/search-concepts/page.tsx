@@ -53,7 +53,14 @@ export default function SearchConceptsPage() {
   const [page, setPage] = useState<number>(PAGINATION.defaultPage);
   const [pageSize, setPageSize] = useState<number>(PAGINATION.defaultPageSize);
 
-  const params = tab === "all" ? {} : { status: tab };
+  // Reset to first page when tab changes (search is local, doesn't need reset)
+  useEffect(() => { setPage(1); }, [tab]);
+
+  const params = {
+    ...(tab !== "all" ? { status: tab } : {}),
+    page,
+    per_page: pageSize,
+  };
   const { data, isLoading, isError, error, refetch } = useConcepts(params);
 
   const approveConcept = useApproveConcept();
@@ -64,35 +71,28 @@ export default function SearchConceptsPage() {
     setShowOverlay(isLoading);
   }, [isLoading, setShowOverlay]);
 
-  // Reset to first page when tab or search changes
-  useEffect(() => { setPage(1); }, [tab, search]);
-
   const concepts = (data?.items ?? []) as Concept[];
 
+  // Local search on the current page's items
   const filtered = useMemo(() => {
     if (!search.trim()) return concepts;
     const term = search.trim().toLowerCase();
     return concepts.filter(
       (c) =>
-        c.concept_key.toLowerCase().includes(term) ||
+        c.concept_key_en.toLowerCase().includes(term) ||
         c.terms_en.some((t) => t.toLowerCase().includes(term)) ||
         c.terms_ar.some((t) => t.includes(term))
     );
   }, [concepts, search]);
 
-  const paginatedConcepts = useMemo(() => {
-    const start = (page - 1) * pageSize;
-    return filtered.slice(start, start + pageSize);
-  }, [filtered, page, pageSize]);
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  // Server-side pagination data
   const paginationData: PaginationData = {
-    currentPage: page,
-    pageSize,
-    totalItems: filtered.length,
-    totalPages,
-    hasNextPage: page < totalPages,
-    hasPreviousPage: page > 1,
+    currentPage: data?.page ?? page,
+    pageSize: data?.per_page ?? pageSize,
+    totalItems: data?.total ?? 0,
+    totalPages: data?.total_pages ?? 1,
+    hasNextPage: (data?.page ?? 1) < (data?.total_pages ?? 1),
+    hasPreviousPage: (data?.page ?? 1) > 1,
   };
 
   const handleApprove = async (c: Concept, e: React.MouseEvent) => {
@@ -182,23 +182,26 @@ export default function SearchConceptsPage() {
             <TableRow>
               <TableHead>Key</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>EN Terms</TableHead>
               <TableHead className="w-36">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {paginatedConcepts.map((concept) => (
+            {filtered.map((concept) => (
               <TableRow
                 key={concept.id}
                 className="hover:bg-primary/5 cursor-pointer"
                 onClick={() => router.push(`/search-concepts/${concept.id}`)}
               >
-                <TableCell className="font-mono text-sm">{concept.concept_key}</TableCell>
+                <TableCell className="max-w-xs">
+                  <div className="flex flex-col">
+                    <span className="truncate" title={concept.concept_key_en}>{concept.concept_key_en}</span>
+                    {concept.concept_key_ar && (
+                      <span className="text-sm text-gray-500 truncate" title={concept.concept_key_ar} dir="rtl">{concept.concept_key_ar}</span>
+                    )}
+                  </div>
+                </TableCell>
                 <TableCell>
                   <Badge variant={STATUS_VARIANT[concept.status as ConceptStatus]}>{concept.status}</Badge>
-                </TableCell>
-                <TableCell className="max-w-xs">
-                  <p className="text-sm truncate">{concept.terms_en.join(", ")}</p>
                 </TableCell>
                 <TableCell>
                   <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
@@ -244,7 +247,7 @@ export default function SearchConceptsPage() {
         onClose={() => setConceptToDelete(null)}
         onConfirm={handleDeleteConfirm}
         title="Delete Concept"
-        message={`Permanently delete concept "${conceptToDelete?.concept_key}"? If approved, its Typesense synonym will be removed.`}
+        message={`Permanently delete concept "${conceptToDelete?.concept_key_en}"? If approved, its Typesense synonym will be removed.`}
         isLoading={deleteConcept.isPending}
       />
     </div>
