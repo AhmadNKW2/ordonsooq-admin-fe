@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Input } from "../../ui/input";
 import { RichTextEditor } from "../../ui/rich-text-editor";
 import { Select } from "../../ui/select";
@@ -7,6 +7,33 @@ import { Card } from "@/components/ui";
 import { Toggle } from "@/components/ui/toggle";
 import { Category } from "../../../services/categories/types/category.types";
 import { CategoryTreeSelect } from "../CategoryTreeSelect";
+
+const RECENT_VENDOR_KEY = 'recent_vendor_ids';
+const RECENT_BRAND_KEY = 'recent_brand_ids';
+const RECENT_CATEGORY_KEY = 'recent_category_ids';
+
+const getRecentIds = (key: string): string[] => {
+    if (typeof window === 'undefined') return [];
+    try {
+        const stored = localStorage.getItem(key);
+        return stored ? JSON.parse(stored) : [];
+    } catch {
+        return [];
+    }
+};
+
+const addRecentId = (key: string, id: string | string[]) => {
+    if (typeof window === 'undefined') return;
+    try {
+        const recent = getRecentIds(key);
+        const ids = Array.isArray(id) ? id : [id];
+        if (ids.length === 0) return;
+        const updated = [...new Set([...ids, ...recent])].slice(0, 5);
+        localStorage.setItem(key, JSON.stringify(updated));
+    } catch {
+        // ignore
+    }
+};
 
 interface BasicInformationSectionProps {
     formData: {
@@ -36,6 +63,88 @@ export const BasicInformationSection: React.FC<BasicInformationSectionProps> = (
     brands,
     onChange,
 }) => {
+    // Save to localStorage when selected
+    useEffect(() => {
+        if (formData.vendorId) addRecentId(RECENT_VENDOR_KEY, formData.vendorId);
+    }, [formData.vendorId]);
+    
+    useEffect(() => {
+        if (formData.brandId) addRecentId(RECENT_BRAND_KEY, formData.brandId);
+    }, [formData.brandId]);
+    
+    useEffect(() => {
+        if (formData.categoryIds && formData.categoryIds.length > 0) {
+            addRecentId(RECENT_CATEGORY_KEY, formData.categoryIds);
+        }
+    }, [formData.categoryIds]);
+
+    // Sorting logic to bring recent and selected items to top
+    const sortedVendors = useMemo(() => {
+        const recentIds = getRecentIds(RECENT_VENDOR_KEY);
+        // Prioritize currently selected, then recent, then rest
+        const priorityIds = new Set([formData.vendorId, ...recentIds].filter(Boolean));
+        
+        const priority = vendors.filter(v => priorityIds.has(v.id));
+        const rest = vendors.filter(v => !priorityIds.has(v.id));
+        
+        // Sort priority items so currently selected is first, then rest of recent by index
+        priority.sort((a, b) => {
+            if (a.id === formData.vendorId) return -1;
+            if (b.id === formData.vendorId) return 1;
+            return recentIds.indexOf(a.id) - recentIds.indexOf(b.id);
+        });
+
+        return [...priority, ...rest];
+    }, [vendors, formData.vendorId]);
+
+    const sortedBrands = useMemo(() => {
+        const recentIds = getRecentIds(RECENT_BRAND_KEY);
+        const priorityIds = new Set([formData.brandId, ...recentIds].filter(Boolean));
+        
+        const priority = brands.filter(b => priorityIds.has(b.id));
+        const rest = brands.filter(b => !priorityIds.has(b.id));
+        
+        priority.sort((a, b) => {
+            if (a.id === formData.brandId) return -1;
+            if (b.id === formData.brandId) return 1;
+            return recentIds.indexOf(a.id) - recentIds.indexOf(b.id);
+        });
+
+        return [...priority, ...rest];
+    }, [brands, formData.brandId]);
+
+    const sortedCategories = useMemo(() => {
+        const recentIds = getRecentIds(RECENT_CATEGORY_KEY);
+        // Include both current selection and recent choices
+        const priorityIds = new Set([...(formData.categoryIds || []), ...recentIds].filter(Boolean));
+
+        if (priorityIds.size === 0) return categories;
+
+        const isPriorityNode = (cat: Category): boolean => {
+            if (priorityIds.has(cat.id.toString())) return true;
+            if (cat.children) return cat.children.some(isPriorityNode);
+            return false;
+        };
+
+        const sortTree = (cats: Category[]): Category[] => {
+            const priority = cats.filter(isPriorityNode);
+            const rest = cats.filter(c => !isPriorityNode(c));
+            
+            return [
+                ...priority.map(c => ({
+                    ...c, 
+                    children: c.children ? sortTree(c.children) : undefined
+                })), 
+                ...rest.map(c => ({
+                    ...c, 
+                    children: c.children ? sortTree(c.children) : undefined
+                }))
+            ];
+        };
+
+        return sortTree(categories);
+    }, [categories, formData.categoryIds]);
+
     return (
         <Card>
             <h2 className="text-xl font-semibold ">
@@ -113,7 +222,7 @@ export const BasicInformationSection: React.FC<BasicInformationSectionProps> = (
                 <CategoryTreeSelect
                     id="categoryIds"
                     label="Categories"
-                    categories={categories}
+                    categories={sortedCategories}
                     selectedIds={formData.categoryIds || []}
                     onChange={(ids) => onChange("categoryIds", ids)}
                     error={errors.categoryIds}
@@ -125,7 +234,7 @@ export const BasicInformationSection: React.FC<BasicInformationSectionProps> = (
                     value={formData.vendorId || ""}
                     onChange={(value) => onChange("vendorId", value as string)}
                     options={[
-                        ...vendors.map((vendor) => ({
+                        ...sortedVendors.map((vendor) => ({
                             value: vendor.id,
                             label: vendor.nameEn && vendor.nameAr
                                 ? `${vendor.nameEn} - ${vendor.nameAr}`
@@ -142,7 +251,7 @@ export const BasicInformationSection: React.FC<BasicInformationSectionProps> = (
                     value={formData.brandId || ""}
                     onChange={(value) => onChange("brandId", value as string)}
                     options={[
-                        ...brands.map((brand) => ({
+                        ...sortedBrands.map((brand) => ({
                             value: brand.id,
                             label: brand.nameEn && brand.nameAr
                                 ? `${brand.nameEn} - ${brand.nameAr}`

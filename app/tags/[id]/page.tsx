@@ -170,7 +170,7 @@ export default function TagDetailPage() {
               <TableBody>
                 {tag.concepts.map((concept: Concept) => (
                   <TableRow key={concept.id} className="hover:bg-primary/5">
-                    <TableCell className="font-mono text-sm">{concept.concept_key}</TableCell>
+                    <TableCell className="font-mono text-sm">{concept.concept_key_en}</TableCell>
                     <TableCell>
                       <Badge variant={STATUS_VARIANT[concept.status] ?? "default"}>
                         {concept.status}
@@ -215,7 +215,7 @@ export default function TagDetailPage() {
         onClose={() => setConceptToUnlink(null)}
         onConfirm={handleUnlinkConfirm}
         title="Unlink Concept"
-        message={`Remove concept "${conceptToUnlink?.concept_key}" from tag "${tag.name}"? The concept itself is not deleted.`}
+        message={`Remove concept "${conceptToUnlink?.concept_key_en}" from tag "${tag.name}"? The concept itself is not deleted.`}
         confirmText="Unlink"
         confirmVariant="danger"
         isLoading={unlinkConcept.isPending}
