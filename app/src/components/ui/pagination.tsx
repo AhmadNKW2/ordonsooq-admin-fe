@@ -79,12 +79,29 @@ export const Pagination: React.FC<PaginationProps> = ({
   const fromItem = totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1;
   const toItem = Math.min(currentPage * pageSize, totalItems);
 
-  // Generate page numbers to display
-  const getPageNumbers = () => {
-    const pages: number[] = [];
-    for (let i = 1; i <= totalPages; i++) {
+  // Generate page numbers with ellipsis
+  const getPageNumbers = (): (number | '...')[] => {
+    if (totalPages <= 7) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+
+    const delta = 2;
+    const left = currentPage - delta;
+    const right = currentPage + delta;
+    const pages: (number | '...')[] = [];
+
+    pages.push(1);
+
+    if (left > 2) pages.push('...');
+
+    for (let i = Math.max(2, left); i <= Math.min(totalPages - 1, right); i++) {
       pages.push(i);
     }
+
+    if (right < totalPages - 1) pages.push('...');
+
+    pages.push(totalPages);
+
     return pages;
   };
 
@@ -163,16 +180,20 @@ export const Pagination: React.FC<PaginationProps> = ({
 
           {/* Page numbers */}
           <div className="flex items-center gap-1">
-            {pages.map((page, index) => (
-              <PageNumber
-                key={`page-${index}`}
-                page={page}
-                isActive={page === currentPage}
-                currentPage={currentPage}
-                onPageChange={onPageChange}
-                index={index}
-              />
-            ))}
+            {pages.map((page, index) =>
+              page === '...' ? (
+                <span key={`ellipsis-${index}`} className="w-8 h-8 flex items-center justify-center text-primary2 select-none">…</span>
+              ) : (
+                <PageNumber
+                  key={`page-${page}`}
+                  page={page}
+                  isActive={page === currentPage}
+                  currentPage={currentPage}
+                  onPageChange={onPageChange}
+                  index={index}
+                />
+              )
+            )}
           </div>
 
           <PaginationButton
