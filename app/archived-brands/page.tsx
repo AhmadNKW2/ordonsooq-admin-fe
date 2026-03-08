@@ -43,7 +43,8 @@ export default function ArchivedBrandsPage() {
   const [brandToRestore, setBrandToRestore] = useState<Brand | null>(null);
 
   const { data: brands, isLoading, isError, error, refetch } = useArchivedBrands();
-  const { data: allBrands } = useBrands();
+  const { data: allBrandsData } = useBrands();
+  const allBrands = allBrandsData?.data;
   const restoreBrand = useRestoreBrand();
   const permanentDeleteBrand = usePermanentDeleteBrand();
 
@@ -190,7 +191,7 @@ export default function ArchivedBrandsPage() {
           description="Archived brands will appear here"
         />
       ) : !isLoading && (
-        <Table>
+        <Table noPagination={true}>
           <TableHeader>
             <TableRow isHeader>
               <TableHead>Logo</TableHead>

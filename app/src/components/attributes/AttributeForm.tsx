@@ -813,7 +813,7 @@ export const AttributeForm: React.FC<AttributeFormProps> = ({
                 collisionDetection={closestCenter}
                 onDragEnd={handleDragEnd}
               >
-                <Table>
+                <Table noPagination={true}>
                   <TableHeader className="bg-gray-50/80">
                     <TableRow isHeader className="hover:bg-transparent border-gray-100">
                       <TableHead width="60px"><span className="sr-only">Sort</span></TableHead>

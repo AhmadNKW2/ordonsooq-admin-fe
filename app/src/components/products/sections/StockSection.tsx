@@ -387,7 +387,7 @@ export const StockSection: React.FC<StockSectionProps> = ({
             )}
 
             {/* Variants Table */}
-            <Table key={filteredCombinations.length > 0 ? 'has-data' : 'no-data'}>
+            <Table noPagination={true} key={filteredCombinations.length > 0 ? 'has-data' : 'no-data'}>
                 <TableHeader>
                     <TableRow isHeader>
                         <TableHead width="50%">

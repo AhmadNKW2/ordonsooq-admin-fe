@@ -216,7 +216,18 @@ export const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
                         )}
                     </div>
 
-                    <Table>
+                    <Table
+                        pagination={pagination ? {
+                            currentPage: pagination.page,
+                            pageSize: pagination.limit,
+                            totalItems: pagination.total,
+                            totalPages: pagination.totalPages,
+                            hasNextPage: pagination.page < pagination.totalPages,
+                            hasPreviousPage: pagination.page > 1,
+                        } : undefined}
+                        onPageChange={handlePageChange}
+                        onPageSizeChange={handlePageSizeChange}
+                    >
                         <TableHeader>
                             <TableRow isHeader>
                                 <TableHead width="4%">
@@ -375,25 +386,6 @@ export const ProductSelectionModal: React.FC<ProductSelectionModalProps> = ({
                     </Table>
                 </>
             )
-            }
-
-            {/* Pagination */}
-            {
-                filteredProducts.length > 0 && pagination && (
-                    <Pagination
-                        pagination={{
-                            currentPage: pagination.page,
-                            pageSize: pagination.limit,
-                            totalItems: pagination.total,
-                            totalPages: pagination.totalPages,
-                            hasNextPage: pagination.page < pagination.totalPages,
-                            hasPreviousPage: pagination.page > 1,
-                        }}
-                        onPageChange={handlePageChange}
-                        onPageSizeChange={handlePageSizeChange}
-                        showPageSize={true}
-                    />
-                )
             }
         </Modal >
     );

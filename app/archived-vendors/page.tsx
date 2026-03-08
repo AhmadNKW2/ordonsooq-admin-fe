@@ -43,7 +43,8 @@ export default function ArchivedVendorsPage() {
   const [vendorToRestore, setVendorToRestore] = useState<Vendor | null>(null);
 
   const { data: vendors, isLoading, isError, error, refetch } = useArchivedVendors();
-  const { data: allVendors } = useVendors();
+  const { data: allVendorsData } = useVendors();
+  const allVendors = allVendorsData?.data;
   const restoreVendor = useRestoreVendor();
   const permanentDeleteVendor = usePermanentDeleteVendor();
 
@@ -193,7 +194,7 @@ export default function ArchivedVendorsPage() {
           description="Archived vendors will appear here"
         />
       ) : !isLoading && (
-        <Table>
+        <Table noPagination={true}>
           <TableHeader>
             <TableRow isHeader>
               <TableHead>Logo</TableHead>

@@ -5,7 +5,7 @@
  * Main page component for displaying and managing vendors
  */
 
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useRouter } from "@/hooks/use-loading-router";
 import { useLoading } from "../src/providers/loading-provider";
 import {
@@ -177,14 +177,18 @@ export default function VendorsPage() {
   const router = useRouter();
   const { setShowOverlay } = useLoading();
   const [searchTerm, setSearchTerm] = useState("");
+  const [queryParams, setQueryParams] = useState({ page: 1, limit: 10, search: "" });
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [vendorToDelete, setVendorToDelete] = useState<Vendor | null>(null);
   const [vendorToView, setVendorToView] = useState<Vendor | null>(null);
 
-  const { data: vendors, isLoading, isError, error, refetch } = useVendors();
+  const { data, isLoading, isError, error, refetch } = useVendors(queryParams);
   const archiveVendor = useArchiveVendor();
   const reorderVendors = useReorderVendors();
+
+  const vendors = data?.data ?? [];
+  const meta = data?.meta;
 
   // Show loading overlay while data is loading
   useEffect(() => {
@@ -196,24 +200,10 @@ export default function VendorsPage() {
 
   // Update ordered vendors when data changes
   useEffect(() => {
-    if (vendors && Array.isArray(vendors)) {
+    if (vendors) {
       setOrderedVendors(vendors);
     }
-  }, [vendors]);
-
-  // Filter vendors based on search
-  const filteredVendors = useMemo(() => {
-    if (!orderedVendors || !Array.isArray(orderedVendors)) return [];
-    if (!searchTerm) return orderedVendors;
-    
-    const term = searchTerm.toLowerCase();
-    return orderedVendors.filter(
-      (vendor) =>
-        vendor.name_en.toLowerCase().includes(term) ||
-        vendor.name_ar.includes(searchTerm) ||
-        vendor.id.toString().includes(term)
-    );
-  }, [orderedVendors, searchTerm]);
+  }, [data]);
 
   // DnD sensors
   const sensors = useSensors(
@@ -285,11 +275,25 @@ export default function VendorsPage() {
     router.push("/vendors/create");
   };
 
+  const searchDebounceRef = useRef<NodeJS.Timeout | null>(null);
+
   const handleSearchChange = (value: string) => {
     setSearchTerm(value);
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    searchDebounceRef.current = setTimeout(() => {
+      setQueryParams((prev) => ({ ...prev, search: value, page: 1 }));
+    }, 400);
   };
 
-  const hasActiveFilters = !!searchTerm;
+  const handlePageChange = (page: number) => {
+    setQueryParams((prev) => ({ ...prev, page }));
+  };
+
+  const handlePageSizeChange = (pageSize: number) => {
+    setQueryParams((prev) => ({ ...prev, limit: pageSize, page: 1 }));
+  };
+
+  const hasActiveFilters = !!queryParams.search;
 
   if (isError) {
     return (
@@ -326,7 +330,7 @@ export default function VendorsPage() {
       />
 
       {/* Filters */}
-      {(filteredVendors.length > 0 || hasActiveFilters) && (
+      {(orderedVendors.length > 0 || hasActiveFilters) && (
         <FiltersCard>
           <div className="flex items-center gap-5">
             <div className="relative flex-1 max-w-sm">
@@ -342,7 +346,7 @@ export default function VendorsPage() {
       )}
 
       {/* Vendors Table */}
-      {!isLoading && filteredVendors.length === 0 ? (
+      {!isLoading && orderedVendors.length === 0 ? (
         <EmptyState
           icon={<Building2 />}
           title="No vendors found"
@@ -360,10 +364,21 @@ export default function VendorsPage() {
           }}
         >
           <SortableContext
-            items={filteredVendors.map((v) => v.id)}
+            items={orderedVendors.map((v) => v.id)}
             strategy={verticalListSortingStrategy}
           >
-            <Table>
+            <Table
+              pagination={meta ? {
+                currentPage: meta.page,
+                pageSize: meta.limit,
+                totalItems: meta.total,
+                totalPages: meta.totalPages,
+                hasNextPage: meta.page < meta.totalPages,
+                hasPreviousPage: meta.page > 1,
+              } : undefined}
+              onPageChange={handlePageChange}
+              onPageSizeChange={handlePageSizeChange}
+            >
               <TableHeader>
                 <TableRow isHeader>
                   <TableHead className="w-12">{""}</TableHead>
@@ -376,11 +391,11 @@ export default function VendorsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredVendors.map((vendor, index) => (
+                {orderedVendors.map((vendor, index) => (
                   <SortableVendorRow
                     key={vendor.id}
                     vendor={vendor}
-                    displayIndex={index + 1}
+                    displayIndex={(meta ? (meta.page - 1) * meta.limit : 0) + index + 1}
                     onView={handleView}
                     onEdit={handleEdit}
                     onDelete={handleDeleteClick}

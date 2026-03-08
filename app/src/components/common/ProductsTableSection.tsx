@@ -89,7 +89,7 @@ export const ProductsTableSection: React.FC<ProductsTableSectionProps> = ({
           <p className="text-gray-500">{emptyMessage}</p>
         </div>
       ) : (
-        <Table>
+        <Table noPagination={true}>
           <TableHeader>
             <TableRow isHeader>
               <TableHead>Image</TableHead>

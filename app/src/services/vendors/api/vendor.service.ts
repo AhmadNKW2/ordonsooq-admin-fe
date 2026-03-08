@@ -4,9 +4,10 @@
  */
 
 import { httpClient } from "../../../lib/api/http-client";
-import { ApiResponse } from "../../../types/common.types";
+import { ApiResponse, PaginatedApiResponse } from "../../../types/common.types";
 import {
   Vendor,
+  VendorQueryParams,
   CreateVendorDto,
   UpdateVendorDto,
   ReorderVendorsDto,
@@ -19,10 +20,10 @@ class VendorService {
   private endpoint = "/vendors";
 
   /**
-   * Get all vendors
+   * Get vendors with pagination and filters
    */
-  async getVendors(): Promise<ApiResponse<Vendor[]>> {
-    return httpClient.get<ApiResponse<Vendor[]>>(this.endpoint);
+  async getVendors(params?: VendorQueryParams): Promise<PaginatedApiResponse<Vendor>> {
+    return httpClient.get<PaginatedApiResponse<Vendor>>(this.endpoint, params as Record<string, any>);
   }
 
   /**

@@ -235,7 +235,7 @@ class HttpClient {
         // Prefer backend-declared success when JSON is available.
         // Some backends may return 200 with { success: false }.
         try {
-          const json = (await response.clone().json()) as Partial<ApiResponse<{ access_token?: string }>> & {
+          const json = (await response.clone().json()) as Partial<ApiResponse<{ access_token?: string, expires_in?: number }>> & {
             access_token?: string;
             expires_in?: number;
           };
@@ -246,6 +246,17 @@ class HttpClient {
           const tokenFromBody = (json as any)?.data?.access_token ?? (json as any)?.access_token;
           if (success && typeof tokenFromBody === "string" && tokenFromBody.length > 0) {
             this.setAuthToken(tokenFromBody);
+          }
+
+          const expiresIn = (json as any)?.data?.expires_in ?? (json as any)?.expires_in;
+          if (success && typeof expiresIn === "number") {
+             const sessionInfo = sessionManager.getSessionInfo();
+             sessionManager.setSessionInfo({
+               ...(sessionInfo ?? { rememberMe: false }),
+               expiresAt: Date.now() + (expiresIn * 1000),
+               lastActivity: Date.now(),
+             });
+             sessionManager.broadcastEvent({ type: 'session_refresh', timestamp: Date.now() });
           }
 
           return success;

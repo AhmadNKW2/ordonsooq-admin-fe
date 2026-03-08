@@ -284,7 +284,18 @@ export default function ProductsPage() {
           description="Try adjusting your filters or add new products"
         />
       ) : !isLoading && (
-        <Table>
+        <Table
+          pagination={data?.data.pagination ? {
+            currentPage: data.data.pagination.page,
+            pageSize: data.data.pagination.limit,
+            totalItems: data.data.pagination.total,
+            totalPages: data.data.pagination.totalPages,
+            hasNextPage: data.data.pagination.page < data.data.pagination.totalPages,
+            hasPreviousPage: data.data.pagination.page > 1,
+          } : undefined}
+          onPageChange={handlePageChange}
+          onPageSizeChange={handlePageSizeChange}
+        >
           <TableHeader>
             <TableRow isHeader>
               <TableHead width="5%">#</TableHead>
@@ -539,23 +550,6 @@ export default function ProductsPage() {
           })}
           </TableBody>
         </Table>
-      )}
-
-      {/* Pagination - Only show when there are products */}
-      {products.length > 0 && data?.data.pagination && (
-        <Pagination
-          pagination={{
-            currentPage: data.data.pagination.page,
-            pageSize: data.data.pagination.limit,
-            totalItems: data.data.pagination.total,
-            totalPages: data.data.pagination.totalPages,
-            hasNextPage: data.data.pagination.page < data.data.pagination.totalPages,
-            hasPreviousPage: data.data.pagination.page > 1,
-          }}
-          onPageChange={handlePageChange}
-          onPageSizeChange={handlePageSizeChange}
-          showPageSize={true}
-        />
       )}
 
       {/* Product View Modal */}

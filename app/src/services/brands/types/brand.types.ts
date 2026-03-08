@@ -77,6 +77,17 @@ export interface RestoreBrandDto {
   product_ids?: number[];
 }
 
+// Brand Query Params
+export interface BrandQueryParams {
+  page?: number;
+  limit?: number;
+  sortBy?: string;
+  sortOrder?: 'ASC' | 'DESC';
+  search?: string;
+  status?: 'active' | 'archived';
+  visible?: boolean;
+}
+
 // Restore Result
 export interface BrandRestoreResult {
   brand: Brand;

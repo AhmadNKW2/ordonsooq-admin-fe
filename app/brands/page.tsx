@@ -5,7 +5,7 @@
  * Main page component for displaying and managing brands (mirrors vendors page)
  */
 
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useRouter } from "@/hooks/use-loading-router";
 import { useLoading } from "../src/providers/loading-provider";
 import {
@@ -172,14 +172,18 @@ export default function BrandsPage() {
   const router = useRouter();
   const { setShowOverlay } = useLoading();
   const [searchTerm, setSearchTerm] = useState("");
+  const [queryParams, setQueryParams] = useState({ page: 1, limit: 10, search: "" });
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [brandToDelete, setBrandToDelete] = useState<Brand | null>(null);
   const [brandToView, setBrandToView] = useState<Brand | null>(null);
 
-  const { data: brands, isLoading, isError, error, refetch } = useBrands();
+  const { data, isLoading, isError, error, refetch } = useBrands(queryParams);
   const archiveBrand = useArchiveBrand();
   const reorderBrands = useReorderBrands();
+
+  const brands = data?.data ?? [];
+  const meta = data?.meta;
 
   // Show loading overlay while data is loading
   useEffect(() => {
@@ -189,23 +193,10 @@ export default function BrandsPage() {
   const [orderedBrands, setOrderedBrands] = useState<Brand[]>([]);
 
   useEffect(() => {
-    if (brands && Array.isArray(brands)) {
+    if (brands) {
       setOrderedBrands(brands);
     }
-  }, [brands]);
-
-  const filteredBrands = useMemo(() => {
-    if (!orderedBrands || !Array.isArray(orderedBrands)) return [];
-    if (!searchTerm) return orderedBrands;
-
-    const term = searchTerm.toLowerCase();
-    return orderedBrands.filter(
-      (brand) =>
-        brand.name_en.toLowerCase().includes(term) ||
-        brand.name_ar.includes(searchTerm) ||
-        brand.id.toString().includes(term)
-    );
-  }, [orderedBrands, searchTerm]);
+  }, [data]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -275,15 +266,30 @@ export default function BrandsPage() {
     router.push("/brands/create");
   };
 
+  const searchDebounceRef = useRef<NodeJS.Timeout | null>(null);
+
   const handleSearchChange = (value: string) => {
     setSearchTerm(value);
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    searchDebounceRef.current = setTimeout(() => {
+      setQueryParams((prev) => ({ ...prev, search: value, page: 1 }));
+    }, 400);
   };
 
   const handleClearFilters = () => {
     setSearchTerm("");
+    setQueryParams((prev) => ({ ...prev, search: "", page: 1 }));
   };
 
-  const hasActiveFilters = !!searchTerm;
+  const handlePageChange = (page: number) => {
+    setQueryParams((prev) => ({ ...prev, page }));
+  };
+
+  const handlePageSizeChange = (pageSize: number) => {
+    setQueryParams((prev) => ({ ...prev, limit: pageSize, page: 1 }));
+  };
+
+  const hasActiveFilters = !!queryParams.search;
 
   if (isError) {
     return (
@@ -319,7 +325,7 @@ export default function BrandsPage() {
         action={{ label: "Create", onClick: handleCreateNew }}
       />
 
-      {(filteredBrands.length > 0 || hasActiveFilters) && (
+      {(orderedBrands.length > 0 || hasActiveFilters) && (
         <Card>
           <h2 className="text-lg font-semibold">Filters</h2>
           <div className="flex items-center gap-5">
@@ -346,7 +352,7 @@ export default function BrandsPage() {
         </Card>
       )}
 
-      {!isLoading && filteredBrands.length === 0 ? (
+      {!isLoading && orderedBrands.length === 0 ? (
         <EmptyState
           icon={<Tags />}
           title="No brands found"
@@ -364,10 +370,21 @@ export default function BrandsPage() {
           }}
         >
           <SortableContext
-            items={filteredBrands.map((b) => b.id)}
+            items={orderedBrands.map((b) => b.id)}
             strategy={verticalListSortingStrategy}
           >
-            <Table>
+            <Table
+              pagination={meta ? {
+                currentPage: meta.page,
+                pageSize: meta.limit,
+                totalItems: meta.total,
+                totalPages: meta.totalPages,
+                hasNextPage: meta.page < meta.totalPages,
+                hasPreviousPage: meta.page > 1,
+              } : undefined}
+              onPageChange={handlePageChange}
+              onPageSizeChange={handlePageSizeChange}
+            >
               <TableHeader>
                 <TableRow isHeader>
                   <TableHead className="w-12"> </TableHead>
@@ -380,11 +397,11 @@ export default function BrandsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredBrands.map((brand, index) => (
+                {orderedBrands.map((brand, index) => (
                   <SortableBrandRow
                     key={brand.id}
                     brand={brand}
-                    displayIndex={index + 1}
+                    displayIndex={(meta ? (meta.page - 1) * meta.limit : 0) + index + 1}
                     onView={handleView}
                     onEdit={handleEdit}
                     onDelete={handleDeleteClick}

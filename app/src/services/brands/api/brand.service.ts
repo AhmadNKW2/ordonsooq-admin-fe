@@ -4,9 +4,10 @@
  */
 
 import { httpClient } from "../../../lib/api/http-client";
-import { ApiResponse } from "../../../types/common.types";
+import { ApiResponse, PaginatedApiResponse } from "../../../types/common.types";
 import {
   Brand,
+  BrandQueryParams,
   CreateBrandDto,
   UpdateBrandDto,
   ReorderBrandsDto,
@@ -18,8 +19,8 @@ import {
 class BrandService {
   private endpoint = "/brands";
 
-  async getBrands(): Promise<ApiResponse<Brand[]>> {
-    return httpClient.get<ApiResponse<Brand[]>>(this.endpoint);
+  async getBrands(params?: BrandQueryParams): Promise<PaginatedApiResponse<Brand>> {
+    return httpClient.get<PaginatedApiResponse<Brand>>(this.endpoint, params as Record<string, any>);
   }
 
   async getBrand(id: number): Promise<ApiResponse<Brand>> {

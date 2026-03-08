@@ -6,6 +6,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { vendorService } from "../api/vendor.service";
 import { queryKeys } from "../../../lib/query-keys";
 import {
+  VendorQueryParams,
   CreateVendorDto,
   UpdateVendorDto,
   ReorderVendorsDto,
@@ -14,11 +15,10 @@ import {
 } from "../types/vendor.types";
 import { showSuccessToast } from "../../../lib/toast";
 
-export const useVendors = () => {
+export const useVendors = (params?: VendorQueryParams) => {
   return useQuery({
-    queryKey: [queryKeys.vendors.all],
-    queryFn: () => vendorService.getVendors(),
-    select: (response) => response.data,
+    queryKey: queryKeys.vendors.list(params),
+    queryFn: () => vendorService.getVendors(params),
   });
 };
 

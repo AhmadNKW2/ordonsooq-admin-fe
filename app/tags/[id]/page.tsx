@@ -156,7 +156,7 @@ export default function TagDetailPage() {
           />
         ) : (
           <div className="rounded-r1 overflow-hidden border border-gray-100">
-            <Table>
+            <Table noPagination={true}>
               <TableHeader>
                 <TableRow>
                   <TableHead>Key</TableHead>

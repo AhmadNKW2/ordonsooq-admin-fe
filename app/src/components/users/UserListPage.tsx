@@ -191,7 +191,18 @@ export const UserListPage: React.FC<UserListPageProps> = ({ userType }) => {
         />
       ) : !isLoading && (
         <>
-          <Table>
+          <Table
+            pagination={{
+              currentPage: meta.page,
+              pageSize: meta.limit,
+              totalItems: meta.total,
+              totalPages: meta.totalPages,
+              hasNextPage: meta.page < meta.totalPages,
+              hasPreviousPage: meta.page > 1,
+            }}
+            onPageChange={setPage}
+            showPageSize={false}
+          >
             <TableHeader>
               <TableRow isHeader>
                 <TableHead>{label}</TableHead>
@@ -278,22 +289,6 @@ export const UserListPage: React.FC<UserListPageProps> = ({ userType }) => {
               ))}
             </TableBody>
           </Table>
-
-          {/* Pagination */}
-          {meta.totalPages > 1 && (
-            <Pagination
-              pagination={{
-                currentPage: meta.page,
-                pageSize: meta.limit,
-                totalItems: meta.total,
-                totalPages: meta.totalPages,
-                hasNextPage: meta.page < meta.totalPages,
-                hasPreviousPage: meta.page > 1,
-              }}
-              onPageChange={setPage}
-              showPageSize={false}
-            />
-          )}
         </>
       )}
 

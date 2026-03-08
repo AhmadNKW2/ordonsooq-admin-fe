@@ -6,6 +6,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { brandService } from "../api/brand.service";
 import { queryKeys } from "../../../lib/query-keys";
 import {
+  BrandQueryParams,
   CreateBrandDto,
   UpdateBrandDto,
   ReorderBrandsDto,
@@ -14,11 +15,10 @@ import {
 } from "../types/brand.types";
 import { showSuccessToast } from "../../../lib/toast";
 
-export const useBrands = () => {
+export const useBrands = (params?: BrandQueryParams) => {
   return useQuery({
-    queryKey: [queryKeys.brands.all],
-    queryFn: () => brandService.getBrands(),
-    select: (response) => response.data,
+    queryKey: queryKeys.brands.list(params),
+    queryFn: () => brandService.getBrands(params),
   });
 };
 

@@ -33,14 +33,14 @@ export default function CreateProductPage() {
   // Transform backend data to frontend format
   const categories = categoriesData || [];
 
-  const vendors = vendorsData?.map(vendor => ({
+  const vendors = vendorsData?.data?.map(vendor => ({
     id: vendor.id.toString(),
     name: vendor.name_en,
     nameEn: vendor.name_en,
     nameAr: vendor.name_ar,
   })) || [];
 
-  const brands = brandsData?.map(brand => ({
+  const brands = brandsData?.data?.map(brand => ({
     id: brand.id.toString(),
     name: brand.name_en,
     nameEn: brand.name_en,

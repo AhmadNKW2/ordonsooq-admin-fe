@@ -355,7 +355,18 @@ export default function BannerListPage() {
                             },
                         }}
                     >
-                        <Table>
+                        <Table
+                            pagination={data?.meta ? {
+                                currentPage: data.meta.page,
+                                pageSize: data.meta.limit,
+                                totalItems: data.meta.total,
+                                totalPages: data.meta.totalPages,
+                                hasNextPage: data.meta.page < data.meta.totalPages,
+                                hasPreviousPage: data.meta.page > 1,
+                            } : undefined}
+                            onPageChange={handlePageChange}
+                            onPageSizeChange={handlePageSizeChange}
+                        >
                             <TableHeader>
                                 <TableRow isHeader>
                                     <TableHead className="w-12">#</TableHead>
@@ -383,23 +394,6 @@ export default function BannerListPage() {
                             </TableBody>
                         </Table>
                     </DndContext>
-            )}
-
-            {/* Pagination */}
-            {items.length > 0 && data?.meta && (
-                <Pagination
-                    pagination={{
-                        currentPage: data.meta.page,
-                        pageSize: data.meta.limit,
-                        totalItems: data.meta.total,
-                        totalPages: data.meta.totalPages,
-                        hasNextPage: data.meta.page < data.meta.totalPages,
-                        hasPreviousPage: data.meta.page > 1,
-                    }}
-                    onPageChange={handlePageChange}
-                    onPageSizeChange={handlePageSizeChange}
-                    showPageSize={true}
-                />
             )}
 
             <DeleteConfirmationModal

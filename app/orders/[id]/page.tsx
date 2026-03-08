@@ -305,7 +305,7 @@ export default function OrderDetailsPage() {
                                 </p>
                             </div>
                             <div className="overflow-x-auto">
-                                <Table>
+                                <Table noPagination={true}>
                                     <TableHeader>
                                         <TableRow>
                                             <TableHead className="w-[80px]">Product</TableHead>

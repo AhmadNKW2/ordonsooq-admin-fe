@@ -15,6 +15,8 @@ interface TableProps {
   pagination?: PaginationData;
   onPageChange?: (page: number) => void;
   onPageSizeChange?: (pageSize: number) => void;
+  showPageSize?: boolean;
+  noPagination?: boolean;
 }
 
 export const Table: React.FC<TableProps> = ({ 
@@ -24,6 +26,8 @@ export const Table: React.FC<TableProps> = ({
   pagination,
   onPageChange,
   onPageSizeChange,
+  showPageSize = true,
+  noPagination = false,
 }) => {
   const [isEmpty, setIsEmpty] = React.useState(false);
 
@@ -52,11 +56,12 @@ export const Table: React.FC<TableProps> = ({
         </div>
       </TableContext.Provider>
 
-      {pagination && onPageChange && !isEmpty && (
+      {!noPagination && pagination && onPageChange && !isEmpty && (
         <Pagination
           pagination={pagination}
           onPageChange={onPageChange}
           onPageSizeChange={onPageSizeChange}
+          showPageSize={showPageSize}
         />
       )}
     </div>

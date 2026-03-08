@@ -268,7 +268,7 @@ export const UserForm: React.FC<UserFormProps> = ({
               </Button>
             </div>
           ) : (
-            <Table>
+            <Table noPagination={true}>
               <TableHeader>
                 <TableRow isHeader>
                   <TableHead>Image</TableHead>

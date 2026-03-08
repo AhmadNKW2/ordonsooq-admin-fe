@@ -120,7 +120,7 @@ export default function CashbackRulesPage() {
         </div>
       ) : (
         <Card className="p-0 overflow-hidden">
-          <Table>
+          <Table noPagination={true}>
             <TableHeader>
               <TableRow>
                 <TableHead className="w-24">ID</TableHead>

@@ -78,6 +78,17 @@ export interface RestoreVendorDto {
   product_ids?: number[];
 }
 
+// Vendor Query Params
+export interface VendorQueryParams {
+  page?: number;
+  limit?: number;
+  sortBy?: string;
+  sortOrder?: 'ASC' | 'DESC';
+  search?: string;
+  status?: 'active' | 'archived';
+  visible?: boolean;
+}
+
 // Restore Result
 export interface VendorRestoreResult {
   vendor: Vendor;

@@ -166,7 +166,18 @@ export default function OrdersPage() {
       ) : (
         <>
             <Card className="p-0 overflow-hidden">
-            <Table>
+            <Table
+                pagination={{
+                    currentPage: meta.page,
+                    totalPages: meta.totalPages,
+                    pageSize: meta.limit,
+                    totalItems: meta.total,
+                    hasNextPage: meta.page < meta.totalPages,
+                    hasPreviousPage: meta.page > 1
+                }}
+                onPageChange={handlePageChange}
+                onPageSizeChange={handlePageSizeChange}
+            >
                 <TableHeader>
                 <TableRow>
                     <TableHead className="w-24">ID</TableHead>
@@ -204,19 +215,6 @@ export default function OrdersPage() {
                 </TableBody>
             </Table>
             </Card>
-
-            <Pagination
-                pagination={{
-                    currentPage: meta.page,
-                    totalPages: meta.totalPages,
-                    pageSize: meta.limit,
-                    totalItems: meta.total,
-                    hasNextPage: meta.page < meta.totalPages,
-                    hasPreviousPage: meta.page > 1
-                }}
-                onPageChange={handlePageChange}
-                onPageSizeChange={handlePageSizeChange}
-            />
         </>
       )}
     </div>

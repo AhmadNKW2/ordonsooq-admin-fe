@@ -346,7 +346,7 @@ export default function AttributesPage() {
             },
           }}
         >
-          <Table>
+          <Table noPagination={true}>
             <TableHeader>
               <TableRow isHeader>
                 <TableHead className="w-12">{""}</TableHead>

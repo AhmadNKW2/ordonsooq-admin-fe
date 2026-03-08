@@ -46,7 +46,7 @@ export const OrdersTableSection: React.FC<OrdersTableSectionProps> = ({
           description="This customer hasn't placed any orders yet."
         />
       ) : (
-        <Table>
+        <Table noPagination={true}>
           <TableHeader>
             <TableRow isHeader>
               <TableHead>Order ID</TableHead>

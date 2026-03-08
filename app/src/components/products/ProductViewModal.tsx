@@ -654,7 +654,7 @@ export const ProductViewModal: React.FC<ProductViewModalProps> = ({
                                 </div>
                             ) : (
                                 <div>
-                                    <Table>
+                                    <Table noPagination={true}>
                                         <TableHeader>
                                             <TableRow isHeader>
                                                 <TableHead>Variant</TableHead>
@@ -744,7 +744,7 @@ export const ProductViewModal: React.FC<ProductViewModalProps> = ({
                                 </div>
                             ) : (
                                 <div>
-                                    <Table>
+                                    <Table noPagination={true}>
                                         <TableHeader>
                                             <TableRow isHeader>
                                                 <TableHead>Variant</TableHead>
@@ -804,7 +804,7 @@ export const ProductViewModal: React.FC<ProductViewModalProps> = ({
                                 </div>
                             ) : (
                                 <div>
-                                    <Table>
+                                    <Table noPagination={true}>
                                         <TableHeader>
                                             <TableRow isHeader>
                                                 <TableHead>Variant</TableHead>

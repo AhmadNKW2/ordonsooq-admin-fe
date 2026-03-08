@@ -190,7 +190,7 @@ export const AttributeViewModal: React.FC<AttributeViewModalProps> = ({
               </div>
             </div>
           ) : (
-            <Table>
+            <Table noPagination={true}>
               <TableHeader>
                 <TableRow isHeader>
                   <TableHead width="15%">ID</TableHead>

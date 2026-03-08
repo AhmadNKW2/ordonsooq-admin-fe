@@ -39,7 +39,7 @@ export default function ViewProductPage() {
 
   const product = productData?.data;
   const categories = categoriesData || [];
-  const vendors = vendorsData || [];
+  const vendors = vendorsData?.data || [];
 
   const getCategoryName = (categoryId?: number | null) => {
     if (!categoryId) return null;

@@ -196,7 +196,7 @@ export default function ArchivedProductsPage() {
           description="Archived products will appear here"
         />
       ) : !isLoading && (
-        <Table>
+        <Table noPagination={true}>
           <TableHeader>
             <TableRow isHeader>
               <TableHead>Image</TableHead>
