@@ -183,6 +183,7 @@ export default function CreateProductPage() {
     } catch (error: any) {
       console.error("Error creating product:", error);
       finishToastError(toastId, error?.message || "Failed to create product");
+      throw error; // Re-throw so ProductForm knows submission failed and won't clear draft
     }
   };
 

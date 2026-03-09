@@ -449,13 +449,13 @@ export default function ProductsPage() {
               <TableHead width="4%">#</TableHead>
               <TableHead width="6%">Image</TableHead>
               <TableHead width="11%">Product Name</TableHead>
-              <TableHead width="6%">Category</TableHead>
+              <TableHead width="8%">Category</TableHead>
               <TableHead width="11%">Brand</TableHead>
               <TableHead width="11%">Vendor</TableHead>
               <TableHead width="5%">Price</TableHead>
               <TableHead width="7%">Stock</TableHead>
               <TableHead width="5%">Rating</TableHead>
-              <TableHead width="9%">Created At</TableHead>
+              <TableHead width="7%">Created At</TableHead>
               <TableHead width="10%">Created By</TableHead>
               <TableHead width="7%">Visibility</TableHead>
               <TableHead width="8%">Actions</TableHead>
