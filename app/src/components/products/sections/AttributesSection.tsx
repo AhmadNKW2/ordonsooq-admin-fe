@@ -399,7 +399,13 @@ const AttributeCard: React.FC<AttributeCardProps> = ({
              });
         });
 
-        return result;
+        // Deduplicate by originalId to prevent duplicate option keys and values
+        const seen = new Set<string>();
+        return result.filter(opt => {
+            if (seen.has(opt.originalId)) return false;
+            seen.add(opt.originalId);
+            return true;
+        });
     }, [availableAttr, allAttributes]);
 
     const handleValuesChange = (values: string | string[]) => {

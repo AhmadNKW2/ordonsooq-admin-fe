@@ -360,7 +360,7 @@ export const Select = React.forwardRef<HTMLDivElement, SelectProps>(
                 const prevGroup = index > 0 ? filteredOptions[index - 1].group : undefined;
                 const showGroupHeader = option.group && option.group !== prevGroup;
                 return (
-                  <React.Fragment key={option.value}>
+                  <React.Fragment key={`${option.value}__${index}`}>
                     {showGroupHeader && (
                       <div className="px-4 py-1.5 text-xs font-semibold text-primary/50 uppercase tracking-wider border-t border-primary/10 first:border-t-0">
                         {option.group}

@@ -134,16 +134,6 @@ export default function EditProductPage() {
   const transformProductAttributes = () => {
     // Handle new dictionary format (Record<string, ProductAttribute>)
     if (product?.attributes && !Array.isArray(product.attributes) && Object.keys(product.attributes).length > 0) {
-      // Determines which attributes are actually used in variants to set control flags correctly
-      const usedAttributeIds = new Set<string>();
-      if (product.variants && Array.isArray(product.variants)) {
-         product.variants.forEach((v: any) => {
-            if (v.attribute_values) {
-                Object.keys(v.attribute_values).forEach(k => usedAttributeIds.add(k));
-            }
-         });
-      }
-
       // 1. Convert current backend attributes to a list
       const backendAttributes = Object.entries(product.attributes).map(([attrId, attrData]: [string, any], index) => {
         const values = attrData.values ? Object.entries(attrData.values).map(([valId, valData]: [string, any], vIdx) => ({
@@ -153,16 +143,14 @@ export default function EditProductPage() {
           order: vIdx
         })) : [];
 
-        const isUsedInVariants = usedAttributeIds.has(attrId);
-
         return {
           id: attrId,
           name: attrData.name_en,
           values,
           order: index,
-          controlsPricing: isUsedInVariants && Object.keys((product as any)?.price_groups || {}).length > 1,
-          controlsWeightDimensions: isUsedInVariants && Object.keys((product as any)?.weight_groups || {}).length > 1,
-          controlsMedia: isUsedInVariants && Object.keys((product as any)?.media_groups || {}).length > 1,
+          controlsPricing: attrData.controls_pricing || false,
+          controlsWeightDimensions: attrData.controls_weight || false,
+          controlsMedia: attrData.controls_media || false,
         };
       });
 
@@ -295,8 +283,16 @@ export default function EditProductPage() {
                };
           });
 
+          // Propagate control flags from any descendant attribute that has them set
+          const controlsPricing = familyAttributes.some(fa => fa.controlsPricing);
+          const controlsWeightDimensions = familyAttributes.some(fa => fa.controlsWeightDimensions);
+          const controlsMedia = familyAttributes.some(fa => fa.controlsMedia);
+
           return {
              ...rootAttr,
+             controlsPricing,
+             controlsWeightDimensions,
+             controlsMedia,
              values: enrichedValues // This attribute now contains only leaf values with full path names
           };
       });
