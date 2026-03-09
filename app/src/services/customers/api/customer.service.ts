@@ -24,29 +24,10 @@ class CustomerService {
   async getCustomers(filters?: CustomerFilters): Promise<CustomerListResponse> {
     // Intercept array roles to bypass backend single-enum validation restrictions
     if (filters?.role && Array.isArray(filters.role)) {
-      const roles = filters.role;
-      const results = await Promise.all(
-        roles.map((role) =>
-          httpClient.get<CustomerListResponse>(this.endpoint, { ...filters, role })
-        )
-      );
-
-      const mergedData = results.flatMap((res) => res.data || []);
-      // If we ask for 10 per page, we might get 10 admins + 10 catalog_managers, 
-      // which is 20 total. This is an acceptable tradeoff for frontend aggregation.
-      
-      const total = results.reduce((acc, res) => acc + (res.meta?.total || 0), 0);
-      const limit = filters.limit || 10;
-
-      return {
-        data: mergedData,
-        meta: {
-          total,
-          page: filters.page || 1,
-          limit,
-          totalPages: Math.ceil(total / limit),
-        },
-      };
+      const rolesStr = filters.role.join(',');
+      const filtersWithoutRole = { ...filters };
+      delete filtersWithoutRole.role;
+      return httpClient.get<CustomerListResponse>(this.endpoint, { ...filtersWithoutRole, roles: rolesStr });
     }
 
     return httpClient.get<CustomerListResponse>(this.endpoint, filters);
