@@ -7,6 +7,7 @@ export interface SelectOption {
   value: string;
   label: string;
   disabled?: boolean;
+  group?: string;
 }
 
 interface SelectProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'onChange'> {
@@ -356,9 +357,16 @@ export const Select = React.forwardRef<HTMLDivElement, SelectProps>(
             ) : (
               filteredOptions.map((option, index) => {
                 const isSelected = selectedValues.includes(option.value);
+                const prevGroup = index > 0 ? filteredOptions[index - 1].group : undefined;
+                const showGroupHeader = option.group && option.group !== prevGroup;
                 return (
+                  <React.Fragment key={option.value}>
+                    {showGroupHeader && (
+                      <div className="px-4 py-1.5 text-xs font-semibold text-primary/50 uppercase tracking-wider border-t border-primary/10 first:border-t-0">
+                        {option.group}
+                      </div>
+                    )}
                   <div
-                    key={option.value}
                     role="option"
                     aria-selected={isSelected}
                     aria-disabled={option.disabled}
@@ -382,6 +390,7 @@ export const Select = React.forwardRef<HTMLDivElement, SelectProps>(
                     )}
                     <span>{option.label}</span>
                   </div>
+                  </React.Fragment>
                 );
               })
             )}

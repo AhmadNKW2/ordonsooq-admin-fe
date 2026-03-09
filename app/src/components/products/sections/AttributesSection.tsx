@@ -1,7 +1,30 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { Button } from "../../ui/button";
 import { Select } from "../../ui/select";
 import { Checkbox } from "../../ui/checkbox";
+
+const RECENT_ATTRIBUTE_KEY = 'recent_attribute_ids';
+
+const getRecentAttributeIds = (): string[] => {
+    if (typeof window === 'undefined') return [];
+    try {
+        const stored = localStorage.getItem(RECENT_ATTRIBUTE_KEY);
+        return stored ? JSON.parse(stored) : [];
+    } catch {
+        return [];
+    }
+};
+
+const addRecentAttributeId = (id: string) => {
+    if (typeof window === 'undefined') return;
+    try {
+        const recent = getRecentAttributeIds();
+        const updated = [...new Set([id, ...recent])].slice(0, 10);
+        localStorage.setItem(RECENT_ATTRIBUTE_KEY, JSON.stringify(updated));
+    } catch {
+        // ignore
+    }
+};
 import {
     Attribute,
     AttributeValue,
@@ -34,6 +57,7 @@ export const AttributesSection: React.FC<AttributesSectionProps> = ({
     errors = {},
 }) => {
     const [selectedPredefined, setSelectedPredefined] = useState<string>("");
+    const [recentAttributeIds, setRecentAttributeIds] = useState<string[]>(() => getRecentAttributeIds());
 
     // Calculate total combinations
     const calculateCombinations = () => {
@@ -62,6 +86,8 @@ export const AttributesSection: React.FC<AttributesSectionProps> = ({
             controlsMedia: false,
         };
 
+        addRecentAttributeId(attributeId);
+        setRecentAttributeIds(getRecentAttributeIds());
         onChange([...attributes, newAttribute]);
         setSelectedPredefined("");
     };
@@ -194,14 +220,27 @@ export const AttributesSection: React.FC<AttributesSectionProps> = ({
                         onChange={(value) => {
                             setSelectedPredefined(value as string);
                         }}
-                        options={[
-                            ...availableAttributes
-                                .filter(attr => !attr.parentId && !attributes.some(a => a.id === attr.id))
-                                .map((attr) => ({
+                        options={(() => {
+                            const eligible = availableAttributes.filter(
+                                attr => !attr.parentId && !attributes.some(a => a.id === attr.id)
+                            );
+                            const recent = eligible.filter(attr => recentAttributeIds.includes(attr.id));
+                            const rest = eligible.filter(attr => !recentAttributeIds.includes(attr.id));
+                            // Sort recent by last-used order
+                            recent.sort((a, b) => recentAttributeIds.indexOf(a.id) - recentAttributeIds.indexOf(b.id));
+                            return [
+                                ...recent.map(attr => ({
                                     value: attr.id,
                                     label: `${attr.name} (${attr.displayName})`,
+                                    group: 'Recently Used',
                                 })),
-                        ]}
+                                ...rest.map(attr => ({
+                                    value: attr.id,
+                                    label: `${attr.name} (${attr.displayName})`,
+                                    group: recent.length > 0 ? 'All Attributes' : undefined,
+                                })),
+                            ];
+                        })()}
                         search={true}
                     />
 
