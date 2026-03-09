@@ -144,6 +144,15 @@ const NewValueRow: React.FC<NewValueRowProps> = ({
     form.reset();
   });
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      e.stopPropagation();
+      e.nativeEvent.stopImmediatePropagation();
+      onSubmit();
+    }
+  };
+
   return (
     <TableRow className="bg-primary/5">
       <TableCell>
@@ -158,6 +167,7 @@ const NewValueRow: React.FC<NewValueRowProps> = ({
           error={errors.value_en?.message}
           autoFocus
           className="w-full"
+          onKeyDown={handleKeyDown}
         />
       </TableCell>
       <TableCell>
@@ -168,6 +178,7 @@ const NewValueRow: React.FC<NewValueRowProps> = ({
           isRtl
           error={errors.value_ar?.message}
           className="w-full"
+          onKeyDown={handleKeyDown}
         />
       </TableCell>
       {isColor && (
@@ -359,6 +370,15 @@ const EditableValueRow: React.FC<EditableValueRowProps> = ({
     onSave(data);
   });
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      e.stopPropagation();
+      e.nativeEvent.stopImmediatePropagation();
+      onSubmit();
+    }
+  };
+
   return (
     <TableRow
       ref={setNodeRef}
@@ -387,6 +407,7 @@ const EditableValueRow: React.FC<EditableValueRowProps> = ({
           className="w-full"
           size="sm"
           error={errors.value_en?.message}
+          onKeyDown={handleKeyDown}
         />
       </TableCell>
       <TableCell>
@@ -396,6 +417,7 @@ const EditableValueRow: React.FC<EditableValueRowProps> = ({
           size="sm"
           isRtl
           error={errors.value_ar?.message}
+          onKeyDown={handleKeyDown}
         />
       </TableCell>
       {isColor && (

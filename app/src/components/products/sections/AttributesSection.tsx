@@ -335,11 +335,10 @@ const AttributeCard: React.FC<AttributeCardProps> = ({
                 }
             });
 
-            // If we found dependent attributes but NO matching values for this specific value, 
-            // then this branch is incomplete according to strict hierarchy rules.
-            // We return an empty array to prune this path (e.g. Intel > Core i3 [dead end] -> Hide).
+            // If child attributes exist but NO matching child values for this specific value,
+            // treat it as a leaf and show it as a selectable option.
             if (!hasChildrenValues) {
-                return [];
+                return [{ value: currentLabelPath, id: currentValueId }];
             }
 
             return descendants;

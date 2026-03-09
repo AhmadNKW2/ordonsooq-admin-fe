@@ -117,8 +117,9 @@ export const productSchema = z.object({
   vendor: vendorSchema.optional().nullable(),
   brand_id: z.number().optional().nullable(),
   brand: z.any().optional().nullable(),
+  slug: z.string().optional().nullable(),
   sku: z.string(),
-  is_active: z.boolean(),
+  is_active: z.boolean().optional(),
   average_rating: z.union([z.number(), z.string()]).optional().nullable(),
   total_ratings: z.number().optional().nullable(),
   image: z.string().optional().nullable(), // Direct image URL
