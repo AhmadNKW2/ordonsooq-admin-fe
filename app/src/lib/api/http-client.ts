@@ -479,14 +479,21 @@ class HttpClient {
    * GET request
    */
   public get<T>(endpoint: string, params?: Record<string, any>): Promise<T> {
-    const queryString = params
-      ? "?" +
-        new URLSearchParams(
-          Object.entries(params)
-            .filter(([, value]) => value !== undefined && value !== null)
-            .map(([key, value]) => [key, String(value)])
-        ).toString()
-      : "";
+    let queryString = "";
+    if (params) {
+      const searchParams = new URLSearchParams();
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          if (Array.isArray(value)) {
+            value.forEach((v) => searchParams.append(key, String(v)));
+          } else {
+            searchParams.append(key, String(value));
+          }
+        }
+      });
+      const str = searchParams.toString();
+      if (str) queryString = "?" + str;
+    }
 
     return this.request<T>(`${endpoint}${queryString}`, {
       method: "GET",

@@ -38,15 +38,14 @@ export interface UserListPageProps {
 export const UserListPage: React.FC<UserListPageProps> = ({ userType }) => {
   const router = useRouter();
   const [searchTerm, setSearchTerm] = useState("");
-  const [page, setPage] = useSessionStoragePage(userType === "admin" ? "admins" : "customers");
+  const { page, setPage, limit, setLimit } = useSessionStoragePage(userType === "admin" ? "admins" : "customers");
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState<Customer | null>(null);
   const [userToView, setUserToView] = useState<Customer | null>(null);
 
-  const limit = 10;
   const isAdmin = userType === "admin";
-  const role: UserRole = isAdmin ? "admin" : "user";
+  const role: "user" | ("admin" | "catalog_manager")[] = isAdmin ? ["admin", "catalog_manager"] : "user";
   const basePath = isAdmin ? "/admins" : "/customers";
   const label = isAdmin ? "Admin" : "Customer";
   const labelPlural = isAdmin ? "Admins" : "Customers";
@@ -201,7 +200,7 @@ export const UserListPage: React.FC<UserListPageProps> = ({ userType }) => {
               hasPreviousPage: meta.page > 1,
             }}
             onPageChange={setPage}
-            showPageSize={false}
+            onPageSizeChange={setLimit}
           >
             <TableHeader>
               <TableRow isHeader>

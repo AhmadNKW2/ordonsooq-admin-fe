@@ -300,8 +300,10 @@ export interface ProductDetail extends Omit<Product, 'vendor' | 'category' | 'st
 export interface ProductFilters {
   page?: number;
   limit?: number;
-  category_id?: number;
-  vendor_id?: number;
+  category_ids?: string;
+  vendor_ids?: string;
+  brand_ids?: string;
+  created_by?: string;
   min_price?: number;
   max_price?: number;
   search?: string;

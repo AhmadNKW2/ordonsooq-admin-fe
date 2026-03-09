@@ -11,8 +11,7 @@ import { useSessionStoragePage } from "@/hooks/use-session-storage-page";
 import { useLoading } from "../src/providers/loading-provider";
 import Image from "next/image";
 import { useProducts, useDeleteProduct, useProduct } from "../src/services/products/hooks/use-products";
-import { Plus, RefreshCw, Package, AlertCircle, Star } from "lucide-react";
-import { Pagination } from "../src/components/ui/pagination";
+import { Package, AlertCircle, Star } from "lucide-react";
 import { Card } from "../src/components/ui/card";
 import { Button } from "../src/components/ui/button";
 import { PageHeader } from "../src/components/common/PageHeader";
@@ -28,29 +27,50 @@ import {
   TableHeader,
   TableRow,
 } from "../src/components/ui/table";
-import { PAGINATION } from "../src/lib/constants";
 import { ProductFilters, Product } from "../src/services/products/types/product.types";
 import { ProductViewModal } from "../src/components/products/ProductViewModal";
 import { DeleteConfirmationModal } from "../src/components/common/DeleteConfirmationModal";
 import { DatePicker } from "../src/components/ui/date-picker";
+import { CategoryTreeSelect } from "../src/components/products/CategoryTreeSelect";
+import { Select } from "../src/components/ui/select";
+import { useVendors } from "../src/services/vendors/hooks/use-vendors";
+import { useBrands } from "../src/services/brands/hooks/use-brands";
+import { useCategories } from "../src/services/categories/hooks/use-categories";
+import { useCustomers } from "../src/services/customers/hooks/use-customers";
 
 export default function ProductsPage() {
   const router = useRouter();
   const { setShowOverlay } = useLoading();
-  const [storedPage, setStoredPage] = useSessionStoragePage("products");
+  const {
+    page: storedPage,
+    setPage: setStoredPage,
+    limit: storedLimit,
+    setLimit: setStoredLimit,
+  } = useSessionStoragePage("products");
+  
   const [queryParams, setQueryParams] = useState<ProductFilters>({
     page: storedPage,
-    limit: PAGINATION.defaultPageSize,
+    limit: storedLimit,
   });
 
-  // Persist current page to sessionStorage whenever it changes
+  // Persist current page and limit to storage whenever they change
   useEffect(() => {
     setStoredPage(queryParams.page ?? 1);
-  }, [queryParams.page]);
+  }, [queryParams.page, setStoredPage]);
+
+  useEffect(() => {
+    if (queryParams.limit) {
+      setStoredLimit(queryParams.limit);
+    }
+  }, [queryParams.limit, setStoredLimit]);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [selectedVendorIds, setSelectedVendorIds] = useState<string[]>([]);
+  const [selectedBrandIds, setSelectedBrandIds] = useState<string[]>([]);
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
+  const [selectedCreatedByIds, setSelectedCreatedByIds] = useState<string[]>([]);
   const [viewProductId, setViewProductId] = useState<number | null>(null);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
@@ -58,6 +78,29 @@ export default function ProductsPage() {
   const { data, isLoading, isError, error, refetch } =
     useProducts(queryParams);
   const deleteProduct = useDeleteProduct();
+
+  // Dropdown data for filters
+  const { data: vendorsData } = useVendors();
+  const { data: brandsData } = useBrands();
+  const categoriesData = useCategories();
+  const { data: adminsData } = useCustomers({ role: ['admin', 'catalog_manager'], limit: 100 } as any);
+
+  const vendorOptions = (vendorsData?.data ?? []).map((v: any) => ({
+    value: String(v.id),
+    label: v.name_en || v.name || String(v.id),
+  }));
+  const brandOptions = (brandsData?.data ?? []).map((b: any) => ({
+    value: String(b.id),
+    label: b.name_en || b.name || String(b.id),
+  }));
+  const categoryOptions = (categoriesData.data ?? []).map((c: any) => ({
+    value: String(c.id),
+    label: c.name_en || c.name || String(c.id),
+  }));
+  const adminOptions = (adminsData?.data ?? []).map((a: any) => ({
+    value: String(a.id),
+    label: [a.firstName, a.lastName].filter(Boolean).join(' ') || a.email || String(a.id),
+  }));
 
   // Show loading overlay while data is loading
   useEffect(() => {
@@ -135,6 +178,40 @@ export default function ProductsPage() {
     if (field === 'start_date') setStartDate(value);
     else setEndDate(value);
     handleFilterChange({ [field]: value || undefined });
+  };
+
+  const handleVendorChange = (value: string | string[]) => {
+    const v = Array.isArray(value) ? value : [value].filter(Boolean);
+    setSelectedVendorIds(v);
+    handleFilterChange({ vendor_ids: v.length > 0 ? v.join(",") : undefined });
+  };
+
+  const handleBrandChange = (value: string | string[]) => {
+    const v = Array.isArray(value) ? value : [value].filter(Boolean);
+    setSelectedBrandIds(v);
+    handleFilterChange({ brand_ids: v.length > 0 ? v.join(",") : undefined });
+  };
+
+  const handleCategoryChange = (ids: string[]) => {
+    setSelectedCategoryIds(ids);
+    handleFilterChange({ category_ids: ids.length > 0 ? ids.join(",") : undefined });
+  };
+
+  const handleCreatedByChange = (value: string | string[]) => {
+    const v = Array.isArray(value) ? value : [value].filter(Boolean);
+    setSelectedCreatedByIds(v);
+    handleFilterChange({ created_by: v.length > 0 ? v.join(",") : undefined });
+  };
+
+  const handleClearAllFilters = () => {
+    setSearchTerm("");
+    setStartDate("");
+    setEndDate("");
+    setSelectedVendorIds([]);
+    setSelectedBrandIds([]);
+    setSelectedCategoryIds([]);
+    setSelectedCreatedByIds([]);
+    setQueryParams({ page: 1, limit: storedLimit });
   };
 
   const hasActiveFilters = Object.keys(queryParams).some(
@@ -231,6 +308,9 @@ export default function ProductsPage() {
     );
   }
 
+  const today = new Date();
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
   return (
     <div className="flex flex-col justify-center items-center gap-5 p-5">
       <PageHeader
@@ -243,35 +323,103 @@ export default function ProductsPage() {
       {/* Filters - Only show when there are products or when filters are active */}
       {(products.length > 0 || hasActiveFilters) && (
         <Card>
-          <h2 className="text-lg font-semibold ">Filters</h2>
-          <div className="flex items-center gap-4 flex-wrap">
-            <div className="relative flex-1 min-w-48 max-w-sm">
-              <Input
-                value={searchTerm}
-                onChange={(e) => handleSearchChange(e.target.value)}
-                label="Search"
-                variant="search"
-              />
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold ">Filters</h2>
+            {hasActiveFilters && (
+              <button
+                onClick={handleClearAllFilters}
+                className="text-sm text-danger hover:text-danger2"
+              >
+                Clear all
+              </button>
+            )}
+          </div>
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center gap-4">
+              <div className="relative w-1/3 shrink-0">
+                <Input
+                  value={searchTerm}
+                  onChange={(e) => handleSearchChange(e.target.value)}
+                  label="Search"
+                  variant="search"
+                />
+              </div>
+
+              <div className="relative flex-1">
+                <DatePicker
+                  label="Start Date"
+                  value={startDate}
+                  onChange={(v) => handleDateChange('start_date', v)}
+                  max={endDate || todayStr}
+                />
+              </div>
+
+              <div className="relative flex-1">
+                <DatePicker
+                  label="End Date"
+                  value={endDate}
+                  onChange={(v) => handleDateChange('end_date', v)}
+                  min={startDate || undefined}
+                  max={todayStr}
+                />
+              </div>
+
+              {adminOptions.length > 0 && (
+                <div className="relative flex-1">
+                  <Select
+                    label="Created By"
+                    value={selectedCreatedByIds}
+                    onChange={handleCreatedByChange}
+                    options={adminOptions}
+                    search={adminOptions.length > 6}
+                    multiple={true}
+                    placeholder="All Admins"
+                  />
+                </div>
+              )}
             </div>
 
-            <div className="relative min-w-44">
-              <DatePicker
-                label="Start Date"
-                value={startDate}
-                onChange={(v) => handleDateChange('start_date', v)}
-                max={endDate || undefined}
-              />
-            </div>
+            <div className="flex items-center gap-4">
+              {categoryOptions.length > 0 && (
+                <div className="relative w-1/3 shrink-0 z-50">
+                  <CategoryTreeSelect
+                    categories={categoriesData.data ?? []}
+                    selectedIds={selectedCategoryIds}
+                    onChange={handleCategoryChange}
+                    singleSelect={false}
+                    label="Category"
+                  />
+                </div>
+              )}
 
-            <div className="relative min-w-44">
-              <DatePicker
-                label="End Date"
-                value={endDate}
-                onChange={(v) => handleDateChange('end_date', v)}
-                min={startDate || undefined}
-              />
-            </div>
+              {vendorOptions.length > 0 && (
+                <div className="relative w-1/3">
+                  <Select
+                    label="Vendor"
+                    value={selectedVendorIds}
+                    onChange={handleVendorChange}
+                    options={vendorOptions}
+                    search={vendorOptions.length > 6}
+                    multiple={true}
+                    placeholder="All Vendors"
+                  />
+                </div>
+              )}
 
+              {brandOptions.length > 0 && (
+                <div className="relative w-1/3">
+                  <Select
+                    label="Brand"
+                    value={selectedBrandIds}
+                    onChange={handleBrandChange}
+                    options={brandOptions}
+                    search={brandOptions.length > 6}
+                    multiple={true}
+                    placeholder="All Brands"
+                  />
+                </div>
+              )}
+            </div>
           </div>
         </Card>
       )}

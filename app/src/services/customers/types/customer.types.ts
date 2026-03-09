@@ -54,7 +54,7 @@ export interface WishlistItem {
 }
 
 // User Role
-export type UserRole = "user" | "admin";
+export type UserRole = "user" | "admin" | "catalog_manager";
 
 // Customer/User Schema (matches backend /api/users)
 export const customerSchema = z.object({
@@ -63,7 +63,7 @@ export const customerSchema = z.object({
   firstName: z.string(),
   lastName: z.string(),
   phone: z.string().optional().nullable(),
-  role: z.enum(["user", "admin"]).default("user"),
+  role: z.enum(["user", "admin", "catalog_manager"]).default("user"),
   isActive: z.boolean().default(true),
   emailVerified: z.boolean().optional(),
   createdAt: z.string().or(z.date()).optional(),
@@ -94,7 +94,7 @@ export interface CustomerFilters {
   limit?: number;
   sortBy?: "createdAt" | "email" | "firstName" | "lastName";
   sortOrder?: "ASC" | "DESC";
-  role?: UserRole;
+  role?: UserRole | UserRole[];
   isActive?: boolean;
   search?: string;
 }

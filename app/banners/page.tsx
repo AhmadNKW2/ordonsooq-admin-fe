@@ -163,7 +163,7 @@ export default function BannerListPage() {
     const [items, setItems] = useState<Banner[]>([]);
     const [searchTerm, setSearchTerm] = useState("");
     const [languageFilter, setLanguageFilter] = useState<"" | "en" | "ar">("");
-    const [storedPage, setStoredPage] = useSessionStoragePage("banners");
+    const { page: storedPage, setPage: setStoredPage, limit: storedLimit, setLimit: setStoredLimit } = useSessionStoragePage("banners");
     const [queryParams, setQueryParams] = useState<{
         page: number;
         limit: number;
@@ -171,14 +171,19 @@ export default function BannerListPage() {
         language?: "en" | "ar";
     }>({
         page: storedPage,
-        limit: PAGINATION.defaultPageSize,
+        limit: storedLimit || PAGINATION.defaultPageSize,
         search: "",
     });
 
     // Persist current page to sessionStorage whenever it changes
     useEffect(() => {
         setStoredPage(queryParams.page ?? 1);
-    }, [queryParams.page]);
+    }, [queryParams.page, setStoredPage]);
+
+    // Persist current limit to sessionStorage whenever it changes
+    useEffect(() => {
+        if (queryParams.limit) setStoredLimit(queryParams.limit);
+    }, [queryParams.limit, setStoredLimit]);
 
     const { data, isLoading } = useBanners(queryParams);
     const deleteBanner = useDeleteBanner();

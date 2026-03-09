@@ -8,6 +8,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
+import { useRouter } from "@/hooks/use-loading-router";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useLoading } from "../../src/providers/loading-provider";
@@ -28,6 +29,7 @@ import { attributeSchema, type AttributeFormData, type AttributeFormOutput } fro
 export default function AttributeEditPage() {
   const params = useParams();
   const attributeId = Number(params.id);
+  const router = useRouter();
   const { setShowOverlay } = useLoading();
 
   // React Hook Form with Zod
@@ -143,6 +145,7 @@ export default function AttributeEditPage() {
           values: valuesPayload,
         },
       });
+      router.push('/attributes');
     } catch (error) {
       console.error("Failed to update attribute:", error);
     }

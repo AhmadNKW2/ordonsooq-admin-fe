@@ -53,10 +53,10 @@ export default function OrdersPage() {
   const router = useRouter();
   const { setShowOverlay } = useLoading();
   
-  const [storedPage, setStoredPage] = useSessionStoragePage("orders");
+  const { page: storedPage, setPage: setStoredPage, limit: storedLimit, setLimit: setStoredLimit } = useSessionStoragePage("orders");
   const [queryParams, setQueryParams] = useState<OrderFilters>({
     page: storedPage,
-    limit: PAGINATION.defaultPageSize,
+    limit: storedLimit,
     search: "",
     status: "",
   });
@@ -64,7 +64,12 @@ export default function OrdersPage() {
   // Persist current page to sessionStorage whenever it changes
   useEffect(() => {
     setStoredPage(queryParams.page ?? 1);
-  }, [queryParams.page]);
+  }, [queryParams.page, setStoredPage]);
+
+  // Persist current limit to sessionStorage whenever it changes
+  useEffect(() => {
+    if (queryParams.limit) setStoredLimit(queryParams.limit);
+  }, [queryParams.limit, setStoredLimit]);
 
   // Debounced search
   const [searchTerm, setSearchTerm] = useState("");
