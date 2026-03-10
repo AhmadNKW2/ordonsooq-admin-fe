@@ -364,115 +364,141 @@ export default function EditProductPage() {
   };
 
   // Transform variant pricing from prices array
-  const transformVariantPricing = () => {
-    // Only for variant products (products with attributes)
-    // Check if attributes exist (either as array or object)
-    const hasAttributes = Array.isArray(product?.attributes) ? product.attributes.length > 0 : (product?.attributes && Object.keys(product.attributes).length > 0);
+const transformVariantPricing = (stockVariants: any[], attrs: any[]) => {
+    const hasAttributes = attrs && attrs.length > 0;
     if (!hasAttributes) return undefined;
-    
-    // NEW: Handle pricing via variants linking to price_groups
+
+    const controllingIds = attrs.filter((a: any) => a.controlsPricing).map((a: any) => String(a.id));
+    if (controllingIds.length === 0) return undefined;
+
     if (product?.price_groups && product?.variants) {
-       return product.variants.map((variant: any) => {
+       const uniqueMap = new Map();
+       
+       product.variants.forEach((variant: any) => {
           const pgId = variant.price_group_id?.toString();
-          if (!pgId || !product.price_groups![pgId]) return null;
-          
+          if (!pgId || !product.price_groups![pgId]) return;
+
           const pg = product.price_groups![pgId];
+          const stockVariant = stockVariants.find((sv: any) => sv.id === variant.id.toString());
           
-          // Convert attribute_values { "1": 5 } to { "1": "5" }
-          const attributeValues: { [key: string]: string } = {};
-          if (variant.attribute_values) {
-             Object.entries(variant.attribute_values).forEach(([k, v]) => {
-                if (v !== null && v !== undefined) attributeValues[k] = v.toString();
-             });
+          const attributeValues: any = {};
+          if (stockVariant) {
+            controllingIds.forEach(id => {
+               if (stockVariant.attributeValues[id] !== undefined) {
+                   attributeValues[id] = stockVariant.attributeValues[id];
+               }
+            });
           }
           
           const key = generateVariantKey(attributeValues);
-          
-          // Avoid duplicates if multiple variants map to same pricing logic representation? 
-          // Actually the form typically iterates unique combinations. 
-          // But here we are just mapping initial data.
-          
-          return {
-             key,
-             attributeValues,
-             cost: pg.cost ? parseFloat(pg.cost) : 0,
-             price: parseFloat(pg.price),
-             isSale: !!pg.sale_price,
-             salePrice: pg.sale_price ? parseFloat(pg.sale_price) : undefined
-          };
-       }).filter((item: any) => item !== null) as any;
+          if (!uniqueMap.has(key)) {
+             uniqueMap.set(key, {
+                key,
+                attributeValues,
+                cost: pg.cost !== null && pg.cost !== undefined ? parseFloat(pg.cost) : 0,
+                price: parseFloat(pg.price),
+                isSale: !!pg.sale_price,
+                salePrice: pg.sale_price ? parseFloat(pg.sale_price) : undefined
+             });
+          }
+       });
+       return Array.from(uniqueMap.values());
     }
 
     // Use prices array with groupValues or combination for variant pricing
     const prices = (product as any).prices;
     if (prices && prices.length > 0) {
-      return prices.map((pg: any) => {
-        const attributeValues = buildAttributeValuesFromItem(pg);
-        const key = generateVariantKey(attributeValues);
-        
-        return {
-          key,
-          attributeValues,
-          cost: pg.cost ? parseFloat(pg.cost) : 0,
-          price: pg.price ? parseFloat(pg.price) : 0,
-          isSale: !!pg.sale_price,
-          salePrice: pg.sale_price ? parseFloat(pg.sale_price) : undefined,
-        };
+      const uniqueMap = new Map();
+      prices.forEach((pg: any) => {
+        let attributeValues = buildAttributeValuesFromItem(pg);
+        const filteredAttrValues: any = {};
+        controllingIds.forEach(id => {
+           if (attributeValues[id] !== undefined) filteredAttrValues[id] = attributeValues[id];
+        });
+        const key = generateVariantKey(filteredAttrValues);
+        if (!uniqueMap.has(key)) {
+            uniqueMap.set(key, {
+              key,
+              attributeValues: filteredAttrValues,
+              cost: pg.cost ? parseFloat(pg.cost) : 0,
+              price: pg.price ? parseFloat(pg.price) : 0,
+              isSale: !!pg.sale_price,
+              salePrice: pg.sale_price ? parseFloat(pg.sale_price) : undefined,
+            });
+        }
       });
+      return Array.from(uniqueMap.values());
     }
     
     return undefined;
   };
 
   // Transform variant weight/dimensions from weights array
-  const transformVariantWeightDimensions = () => {
+const transformVariantWeightDimensions = (stockVariants: any[], attrs: any[]) => {
+    if (!attrs) return undefined;
+    const controllingIds = attrs.filter((a: any) => a.controlsWeightDimensions).map((a: any) => String(a.id));
+    if (controllingIds.length === 0) return undefined;
+
     // NEW: Handle weights via variants linking to weight_groups
     if (product?.weight_groups && product?.variants) {
-         // Filter unique weight entries per combination key to avoid duplicates in list?
-         // Actually, let's just map all variants that have valid weight groups.
-         return product.variants.map((variant: any) => {
+         const uniqueMap = new Map();
+         
+         product.variants.forEach((variant: any) => {
           const wgId = variant.weight_group_id?.toString();
-          if (!wgId || !product.weight_groups![wgId]) return null;
-          
+          if (!wgId || !product.weight_groups![wgId]) return;
+
           const wg = product.weight_groups![wgId];
-          
-          // Convert attribute_values
-          const attributeValues: { [key: string]: string } = {};
-          if (variant.attribute_values) {
-             Object.entries(variant.attribute_values).forEach(([k, v]) => {
-                if (v !== null && v !== undefined) attributeValues[k] = v.toString();
+
+          const stockVariant = stockVariants.find((sv: any) => sv.id === variant.id.toString());
+          const attributeValues: any = {};
+          if (stockVariant) {
+             controllingIds.forEach(id => {
+                if (stockVariant.attributeValues[id] !== undefined) {
+                    attributeValues[id] = stockVariant.attributeValues[id];
+                }
              });
           }
           const key = generateVariantKey(attributeValues);
-          
-          return {
-            key,
-            attributeValues,
-            weight: wg.weight ? parseFloat(wg.weight) : undefined,
-            length: wg.dimensions?.length ? parseFloat(wg.dimensions.length) : undefined,
-            width: wg.dimensions?.width ? parseFloat(wg.dimensions.width) : undefined,
-            height: wg.dimensions?.height ? parseFloat(wg.dimensions.height) : undefined,
-          };
-       }).filter((item: any) => item !== null) as any;
+
+          if (!uniqueMap.has(key)) {
+              uniqueMap.set(key, {
+                key,
+                attributeValues,
+                weight: wg.weight ? parseFloat(wg.weight) : undefined,
+                length: wg.dimensions?.length ? parseFloat(wg.dimensions.length) : undefined,
+                width: wg.dimensions?.width ? parseFloat(wg.dimensions.width) : undefined,
+                height: wg.dimensions?.height ? parseFloat(wg.dimensions.height) : undefined,
+              });
+          }
+       });
+       return Array.from(uniqueMap.values());
     }
 
     // Use weights array with groupValues or combination for variant weights
     const weights = (product as any).weights;
     if (!weights || weights.length === 0) return undefined;
 
-    return weights.map((wg: any) => {
-      const attributeValues = buildAttributeValuesFromItem(wg);
-      const key = generateVariantKey(attributeValues);
-      
-      return {
-        key,
-        attributeValues,
-        weight: wg.weight ? parseFloat(wg.weight) : undefined,
-        length: wg.length ? parseFloat(wg.length) : undefined,
-        width: wg.width ? parseFloat(wg.width) : undefined,
-        height: wg.height ? parseFloat(wg.height) : undefined,
-      };
+    const uniqueMap = new Map();
+    weights.forEach((wg: any) => {
+      let attributeValues = buildAttributeValuesFromItem(wg);
+      const filteredAttrValues: any = {};
+      controllingIds.forEach(id => {
+          if (attributeValues[id] !== undefined) filteredAttrValues[id] = attributeValues[id];
+      });
+      const key = generateVariantKey(filteredAttrValues);
+
+      if (!uniqueMap.has(key)) {
+          uniqueMap.set(key, {
+            key,
+            attributeValues: filteredAttrValues,
+            weight: wg.weight ? parseFloat(wg.weight) : undefined,
+            length: wg.length ? parseFloat(wg.length) : undefined,
+            width: wg.width ? parseFloat(wg.width) : undefined,
+            height: wg.height ? parseFloat(wg.height) : undefined,
+          });
+      }
     });
+    return Array.from(uniqueMap.values());
   };
 
   // Transform variants (stock) from product data
@@ -721,11 +747,15 @@ export default function EditProductPage() {
   };
 
   // Transform variant media from media array with media_group
-  const transformVariantMedia = () => {
+const transformVariantMedia = (stockVariants: any[], attrs: any[]) => {
+    if (!attrs) return undefined;
+    const controllingIds = attrs.filter((a: any) => a.controlsMedia).map((a: any) => String(a.id));
+    if (controllingIds.length === 0) return undefined;
+
     // NEW: Handle media via variants linking to media_groups
     if (product?.media_groups && product?.variants) {
          const mediaGroupItems = new Map();
-         
+
          Object.entries(product.media_groups).forEach(([groupId, group]: [string, any]) => {
              if (group.media && Array.isArray(group.media)) {
                  mediaGroupItems.set(groupId, group.media.map((m: any) => ({
@@ -736,28 +766,36 @@ export default function EditProductPage() {
                     order: m.sort_order || 0,
                     isPrimary: m.is_primary,
                     isGroupPrimary: m.is_group_primary
-                 })));
+                 })).sort((a: any, b: any) => a.order - b.order));
              }
          });
+
+         const uniqueMap = new Map();
          
-         return product.variants.map((variant: any) => {
+         product.variants.forEach((variant: any) => {
              const mgId = variant.media_group_id?.toString();
-             if (!mgId || !mediaGroupItems.has(mgId)) return null;
-             
-             const attributeValues: { [key: string]: string } = {};
-             if (variant.attribute_values) {
-                Object.entries(variant.attribute_values).forEach(([k, v]) => {
-                    if (v !== null && v !== undefined) attributeValues[k] = v.toString();
+             if (!mgId || !mediaGroupItems.has(mgId)) return;
+
+             const stockVariant = stockVariants.find((sv: any) => sv.id === variant.id.toString());
+             const attributeValues: any = {};
+             if (stockVariant) {
+                controllingIds.forEach(id => {
+                   if (stockVariant.attributeValues[id] !== undefined) {
+                       attributeValues[id] = stockVariant.attributeValues[id];
+                   }
                 });
              }
              const key = generateVariantKey(attributeValues);
-             
-             return {
-                 key,
-                 attributeValues,
-                 media: mediaGroupItems.get(mgId),
-             };
-         }).filter((item: any) => item !== null) as any;
+
+             if (!uniqueMap.has(key)) {
+                 uniqueMap.set(key, {
+                     key,
+                     attributeValues,
+                     media: mediaGroupItems.get(mgId),
+                 });
+             }
+         });
+         return Array.from(uniqueMap.values());
     }
 
     if (!product?.media || product.media.length === 0) return undefined;
@@ -788,16 +826,24 @@ export default function EditProductPage() {
     });
 
     // Convert to array format
-    return Array.from(mediaGroupMap.values()).map((group) => {
-      const attributeValues = buildAttributeValuesFromGroupValues(group.groupValues);
-      const key = generateVariantKey(attributeValues);
+    const uniqueMap = new Map();
+    Array.from(mediaGroupMap.values()).forEach((group) => {
+      let attributeValues = buildAttributeValuesFromGroupValues(group.groupValues);
+      const filteredAttrValues: any = {};
+      controllingIds.forEach(id => {
+          if (attributeValues[id] !== undefined) filteredAttrValues[id] = attributeValues[id];
+      });
+      const key = generateVariantKey(filteredAttrValues);
       
-      return {
-        key,
-        attributeValues,
-        media: group.mediaItems.sort((a: any, b: any) => a.order - b.order),
-      };
+      if (!uniqueMap.has(key)) {
+          uniqueMap.set(key, {
+            key,
+            attributeValues: filteredAttrValues,
+            media: group.mediaItems.sort((a: any, b: any) => a.order - b.order),
+          });
+      }
     });
+    return Array.from(uniqueMap.values());
   };
 
   const transformSingleWeight = () => {
@@ -869,6 +915,8 @@ export default function EditProductPage() {
     const attrs = hasAttributes ? transformProductAttributes() : undefined;
     const hasPricingAttributes = !!(attrs && attrs.some((a: any) => a.controlsPricing));
 
+    const stockVariants = transformVariants();
+
     return {
       // Basic Information
       nameEn: product.name_en,
@@ -891,20 +939,20 @@ export default function EditProductPage() {
     
     // Pricing
     singlePricing: !hasPricingAttributes ? transformSinglePricing() : undefined,
-    variantPricing: hasPricingAttributes ? transformVariantPricing() : undefined,
+    variantPricing: hasPricingAttributes ? transformVariantPricing(stockVariants || [], attrs || []) : undefined,
     
     // Weight & Dimensions
     isWeightVariantBased: isWeightVariantBased(),
     singleWeightDimensions: !isWeightVariantBased() ? transformSingleWeight() : undefined,
-    variantWeightDimensions: isWeightVariantBased() ? transformVariantWeightDimensions() : undefined,
+    variantWeightDimensions: isWeightVariantBased() ? transformVariantWeightDimensions(stockVariants || [], attrs || []) : undefined,
     
     // Media
     isMediaVariantBased: isMediaVariantBased(),
     singleMedia: !isMediaVariantBased() ? transformSingleMedia() : [],
-    variantMedia: isMediaVariantBased() ? transformVariantMedia() : undefined,
+    variantMedia: isMediaVariantBased() ? transformVariantMedia(stockVariants || [], attrs || []) : undefined,
     
     // Stock/Variants
-    variants: transformVariants(),
+    variants: stockVariants,
   };
   }, [product, attributesData]);
 
@@ -1181,6 +1229,7 @@ export default function EditProductPage() {
       // ========== MEDIA ==========
       // New flow: upload new files first, then build complete media array
       const mediaArray: MediaInputDto[] = [];
+      let hasSetProductPrimary = false;
 
       // Get media-controlling attribute IDs
       const mediaControllingAttrIds = (data.attributes || [])
@@ -1211,7 +1260,7 @@ export default function EditProductPage() {
             });
             mediaArray.push({
               media_id: uploadResult.data.id,
-              is_primary: media.isPrimary,
+              is_primary: media.isPrimary ? (hasSetProductPrimary ? false : (hasSetProductPrimary = true, true)) : false,
               is_group_primary: media.isGroupPrimary,
               sort_order: media.order,
             });
@@ -1221,7 +1270,7 @@ export default function EditProductPage() {
             if (!isNaN(mediaId)) {
               mediaArray.push({
                 media_id: mediaId,
-                is_primary: media.isPrimary,
+                is_primary: media.isPrimary ? (hasSetProductPrimary ? false : (hasSetProductPrimary = true, true)) : false,
                 is_group_primary: media.isGroupPrimary,
                 sort_order: media.order,
               });
@@ -1257,7 +1306,7 @@ export default function EditProductPage() {
               });
               mediaArray.push({
                 media_id: uploadResult.data.id,
-                is_primary: media.isPrimary,
+                is_primary: media.isPrimary ? (hasSetProductPrimary ? false : (hasSetProductPrimary = true, true)) : false,
                 is_group_primary: media.isGroupPrimary,
                 sort_order: media.order,
                 combination: Object.keys(combination).length > 0 ? combination : undefined,
@@ -1268,7 +1317,7 @@ export default function EditProductPage() {
               if (!isNaN(mediaId)) {
                 mediaArray.push({
                   media_id: mediaId,
-                  is_primary: media.isPrimary,
+                  is_primary: media.isPrimary ? (hasSetProductPrimary ? false : (hasSetProductPrimary = true, true)) : false,
                   is_group_primary: media.isGroupPrimary,
                   sort_order: media.order,
                   combination: Object.keys(combination).length > 0 ? combination : undefined,

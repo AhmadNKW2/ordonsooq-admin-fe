@@ -478,7 +478,9 @@ export const ProductForm: React.FC<ProductFormProps> = ({
       
       const result = zodSchema.safeParse(normalizedData);
       if (!result.success) {
+        console.log('=== ZOD ERRORS ===', JSON.stringify(result.error.format(), null, 2));
         const newErrors = flattenZodErrors(result.error);
+        console.log('=== FLATTENED ERRORS ===', newErrors);
         const firstErrorField = Object.keys(newErrors)[0];
         
         if (firstErrorField) {
