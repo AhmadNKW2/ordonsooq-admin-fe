@@ -56,7 +56,6 @@ export const AttributesSection: React.FC<AttributesSectionProps> = ({
     availableAttributes = [],
     errors = {},
 }) => {
-    const [selectedPredefined, setSelectedPredefined] = useState<string>("");
     const [recentAttributeIds, setRecentAttributeIds] = useState<string[]>(() => getRecentAttributeIds());
 
     // Calculate total combinations
@@ -68,28 +67,40 @@ export const AttributesSection: React.FC<AttributesSectionProps> = ({
         }, 1);
     };
 
-    const handleAddAttribute = () => {
-        const attributeId = selectedPredefined;
-        if (!attributeId) return;
+    const handleAttributesSelectChange = (values: string | string[]) => {
+        const selectedIds = Array.isArray(values) ? values : [values];
 
-        // Find the attribute from available attributes
-        const selectedAttr = availableAttributes.find(a => a.id === attributeId);
-        if (!selectedAttr) return;
+        const removed = attributes.some(attr => !selectedIds.includes(attr.id));
 
-        const newAttribute: Attribute = {
-            id: selectedAttr.id,
-            name: selectedAttr.name,
-            values: [], // Values will be added by user
-            order: attributes.length,
-            controlsPricing: false,
-            controlsWeightDimensions: false,
-            controlsMedia: false,
-        };
+        const newAttributes: Attribute[] = [];
+        
+        for (const attrId of selectedIds) {
+            const existingAttr = attributes.find(a => a.id === attrId);
+            if (existingAttr) {
+                newAttributes.push(existingAttr);
+            } else {
+                const selectedAttr = availableAttributes.find(a => a.id === attrId);
+                if (selectedAttr) {
+                    addRecentAttributeId(attrId);
+                    newAttributes.push({
+                        id: selectedAttr.id,
+                        name: selectedAttr.name,
+                        values: [],
+                        order: newAttributes.length,
+                        controlsPricing: false,
+                        controlsWeightDimensions: false,
+                        controlsMedia: false,
+                    });
+                }
+            }
+        }
 
-        addRecentAttributeId(attributeId);
-        setRecentAttributeIds(getRecentAttributeIds());
-        onChange([...attributes, newAttribute]);
-        setSelectedPredefined("");
+        newAttributes.forEach((attr, index) => {
+            attr.order = index;
+        });
+
+        
+        onChange(newAttributes, removed ? 'all' : undefined);
     };
 
     const handleRemoveAttribute = (attributeId: string) => {
@@ -214,20 +225,20 @@ export const AttributesSection: React.FC<AttributesSectionProps> = ({
             </div>
 
             <div className="flex gap-5">
+                <div className="flex-1">
                     <Select
-                        label="Select Attribute"
-                        value={selectedPredefined}
-                        onChange={(value) => {
-                            setSelectedPredefined(value as string);
-                        }}
+                        label="Select Attributes"
+                        value={attributes.map(a => a.id)}
+                        onChange={handleAttributesSelectChange}
                         options={(() => {
                             const eligible = availableAttributes.filter(
-                                attr => !attr.parentId && !attributes.some(a => a.id === attr.id)
+                                attr => !attr.parentId
                             );
                             const recent = eligible.filter(attr => recentAttributeIds.includes(attr.id));
                             const rest = eligible.filter(attr => !recentAttributeIds.includes(attr.id));
                             // Sort recent by last-used order
                             recent.sort((a, b) => recentAttributeIds.indexOf(a.id) - recentAttributeIds.indexOf(b.id));
+
                             return [
                                 ...recent.map(attr => ({
                                     value: attr.id,
@@ -242,16 +253,13 @@ export const AttributesSection: React.FC<AttributesSectionProps> = ({
                             ];
                         })()}
                         search={true}
+                        multiple={true}
+                        onOpenChange={(isOpen) => {
+                            if (!isOpen) {
+                                setRecentAttributeIds(getRecentAttributeIds());
+                            }
+                        }}
                     />
-
-                <div className="flex items-end">
-                    <Button
-                        onClick={handleAddAttribute}
-                        disabled={!selectedPredefined}
-                        className="bg-primary hover:bg-primary/90"
-                    >
-                        Add Attribute
-                    </Button>
                 </div>
             </div>
 

@@ -24,10 +24,11 @@ interface SelectProps extends Omit<React.HTMLAttributes<HTMLDivElement>, 'onChan
   multiple?: boolean;
   size?: 'default' | 'sm';
   name?: string;
+  onOpenChange?: (isOpen: boolean) => void;
 }
 
 export const Select = React.forwardRef<HTMLDivElement, SelectProps>(
-  ({ label, error, className = '', value, onChange, onClear, options, placeholder, disabled = false, search = true, onSearchChange, multiple = false, size = 'default', ...props }, ref) => {
+  ({ label, error, className = '', value, onChange, onClear, options, placeholder, disabled = false, search = true, onSearchChange, multiple = false, size = 'default', onOpenChange, ...props }, ref) => {
     const [isFocused, setIsFocused] = useState(false);
     const [isOpen, setIsOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
@@ -99,7 +100,15 @@ export const Select = React.forwardRef<HTMLDivElement, SelectProps>(
       }
     }, [isOpen, search]);
 
-    const [menuWidth, setMenuWidth] = useState<string | number>('100%');
+    const prevIsOpen = useRef(isOpen);
+    useEffect(() => {
+      if (prevIsOpen.current !== isOpen) {
+        if (onOpenChange) onOpenChange(isOpen);
+        prevIsOpen.current = isOpen;
+      }
+    }, [isOpen, onOpenChange]);
+
+    const [menuWidth, setMenuWidth]= useState<string | number>('100%');
 
     useEffect(() => {
       if (isOpen && containerRef.current && !isSm) {
