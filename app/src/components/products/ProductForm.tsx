@@ -613,6 +613,20 @@ export const ProductForm: React.FC<ProductFormProps> = ({
         icon={<Package />}
         title={isEditMode ? "Edit Product" : "Create New Product"}
         description={isEditMode ? "Update product information and variants" : "Fill in the details to create a new product"}
+        extraActions={
+          isEditMode && formData.nameEn ? (
+            <Button
+              variant="outline"
+              disabled={isSubmitting}
+              onClick={() => {
+                const slug = formData.nameEn!.toLowerCase().replace(/\s+/g, '-');
+                window.open(`https://ordonsooq.com/product/${slug}`, '_blank');
+              }}
+            >
+              Preview Product
+            </Button>
+          ) : undefined
+        }
         cancelAction={{
           label: "Cancel",
           onClick: () => { clearDraft(); router.push('/products'); },
@@ -661,6 +675,34 @@ export const ProductForm: React.FC<ProductFormProps> = ({
               isWeightVariantBased: hasAttributes ? hasWeight : false,
               isMediaVariantBased: hasAttributes ? hasMedia : false,
             };
+
+            const prevAttributes = prev.attributes || [];
+            let shouldClearMedia = false;
+            let shouldClearPricing = false;
+            let shouldClearWeight = false;
+
+            prevAttributes.forEach(pa => {
+              const na = attributes.find(a => a.id === pa.id);
+              if (!na) {
+                // Attribute removed
+                if (pa.values.length > 1) {
+                  if (pa.controlsMedia) shouldClearMedia = true;
+                  if (pa.controlsPricing) shouldClearPricing = true;
+                  if (pa.controlsWeightDimensions) shouldClearWeight = true;
+                }
+              } else {
+                // Attribute control toggled off
+                if (pa.values.length > 1) {
+                  if (pa.controlsMedia && !na.controlsMedia) shouldClearMedia = true;
+                  if (pa.controlsPricing && !na.controlsPricing) shouldClearPricing = true;
+                  if (pa.controlsWeightDimensions && !na.controlsWeightDimensions) shouldClearWeight = true;
+                }
+              }
+            });
+
+            if (shouldClearMedia) updates.variantMedia = [];
+            if (shouldClearPricing) updates.variantPricing = [];
+            if (shouldClearWeight) updates.variantWeightDimensions = [];
 
             // If switching to single (no attributes), reset all variant data
             if (!hasAttributes) {
