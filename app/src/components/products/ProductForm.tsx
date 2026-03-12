@@ -277,7 +277,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
       variantWeightDimensions: filteredVariantWeight,
       singleMedia: formData.singleMedia,
       variantMedia: filteredVariantMedia,
-      variants: (formData.variants || []).filter(v => v.active !== false),
+      variants: formData.variants || [],
     };
 
     // -----------------------------------------------------
