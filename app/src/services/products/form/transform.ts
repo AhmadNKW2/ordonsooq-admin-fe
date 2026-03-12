@@ -113,6 +113,20 @@ export function transformFormDataToDto(
   } else if (data.variants && data.variants.length > 0) {
     // Variant stocks - with combinations
     dto.stocks = buildStocks(data);
+    
+    // Explicit standalone variants array to support active/inactive states natively
+    dto.variants = data.variants.filter((v: any) => v.id !== 'single').map((variant: any) => {
+      const combination: Record<string, number> = {};
+      for (const [attrId, valueId] of Object.entries(variant.attributeValues)) {
+        if (valueId && valueId !== '') {
+          combination[attrId] = parseInt(valueId as string, 10);
+        }
+      }
+      return {
+        combination,
+        is_active: variant.active !== false
+      };
+    });
   }
 
   // Extract media data for separate upload
