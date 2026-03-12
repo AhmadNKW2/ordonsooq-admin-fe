@@ -619,7 +619,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
               variant="outline"
               disabled={isSubmitting}
               onClick={() => {
-                window.open(`https://ordonsooq.com/product/${formData.slug}`, '_blank');
+                window.open(`https://ordonsooq.com/products/${formData.slug}`, '_blank');
               }}
             >
               Preview Product
