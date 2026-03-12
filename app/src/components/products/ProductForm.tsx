@@ -614,13 +614,12 @@ export const ProductForm: React.FC<ProductFormProps> = ({
         title={isEditMode ? "Edit Product" : "Create New Product"}
         description={isEditMode ? "Update product information and variants" : "Fill in the details to create a new product"}
         extraActions={
-          isEditMode && formData.nameEn ? (
+          isEditMode && formData.slug ? (
             <Button
               variant="outline"
               disabled={isSubmitting}
               onClick={() => {
-                const slug = formData.nameEn!.toLowerCase().replace(/\s+/g, '-');
-                window.open(`https://ordonsooq.com/product/${slug}`, '_blank');
+                window.open(`https://ordonsooq.com/product/${formData.slug}`, '_blank');
               }}
             >
               Preview Product

@@ -919,6 +919,7 @@ const transformVariantMedia = (stockVariants: any[], attrs: any[]) => {
 
     return {
       // Basic Information
+      slug: (product as any).slug,
       nameEn: product.name_en,
       nameAr: product.name_ar,
       categoryIds: (product.categories && product.categories.length > 0)
