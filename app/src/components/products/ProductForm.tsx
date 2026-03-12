@@ -673,29 +673,9 @@ export const ProductForm: React.FC<ProductFormProps> = ({
               updates.singleMedia = prev.singleMedia || [];
             }
 
-            // Reset ALL variant data when an attribute is removed
-            // because existing combinations become invalid
-            if (resetType === 'all') {
-              updates.variantPricing = [];
-              updates.singleWeightDimensions = undefined;
-              updates.variantWeightDimensions = [];
-              updates.singleMedia = [];
-              updates.variantMedia = [];
-              updates.variants = [];
-            } else if (resetType === 'pricing') {
-              // Reset data when control changes (both toggling ON and OFF)
-              // This ensures variant combinations are recalculated with fresh data
-              updates.variantPricing = [];
-            } else if (resetType === 'weight') {
-              updates.singleWeightDimensions = undefined;
-              updates.variantWeightDimensions = [];
-            } else if (resetType === 'media') {
-              updates.singleMedia = [];
-              updates.variantMedia = [];
-            } else if (resetType === 'stock') {
-              // Reset stock/variants when attributes or their values change
-              updates.variants = [];
-            }
+            // Let StockSection and other sections automatically reconcile 
+            // the data with the updated attributes via their internal logic 
+            // and the `getVariantData` fallback logic, preserving existing valid entries.
 
             return updates as ProductFormData;
           });

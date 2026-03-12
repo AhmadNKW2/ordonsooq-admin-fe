@@ -48,9 +48,22 @@ export default function ProductsPage() {
     setLimit: setStoredLimit,
   } = useSessionStoragePage("products");
   
-  const [queryParams, setQueryParams] = useState<ProductFilters>({
-    page: storedPage,
-    limit: storedLimit,
+  const [queryParams, setQueryParams] = useState<ProductFilters>(() => {
+    if (typeof window !== "undefined") {
+      const stored = sessionStorage.getItem("products_filters");
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          return { ...parsed, page: storedPage, limit: storedLimit };
+        } catch (e) {
+          // Ignore parse errors
+        }
+      }
+    }
+    return {
+      page: storedPage,
+      limit: storedLimit,
+    };
   });
 
   // Persist current page and limit to storage whenever they change
@@ -64,13 +77,21 @@ export default function ProductsPage() {
     }
   }, [queryParams.limit, setStoredLimit]);
 
-  const [searchTerm, setSearchTerm] = useState("");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
-  const [selectedVendorIds, setSelectedVendorIds] = useState<string[]>([]);
-  const [selectedBrandIds, setSelectedBrandIds] = useState<string[]>([]);
-  const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
-  const [selectedCreatedByIds, setSelectedCreatedByIds] = useState<string[]>([]);
+  // Persist filters to storage
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const { page, limit, ...filtersToStore } = queryParams;
+      sessionStorage.setItem("products_filters", JSON.stringify(filtersToStore));
+    }
+  }, [queryParams]);
+
+  const [searchTerm, setSearchTerm] = useState(queryParams.search || "");
+  const [startDate, setStartDate] = useState(queryParams.start_date || "");
+  const [endDate, setEndDate] = useState(queryParams.end_date || "");
+  const [selectedVendorIds, setSelectedVendorIds] = useState<string[]>(queryParams.vendor_ids?.split(",") || []);
+  const [selectedBrandIds, setSelectedBrandIds] = useState<string[]>(queryParams.brand_ids?.split(",") || []);
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>(queryParams.category_ids?.split(",") || []);
+  const [selectedCreatedByIds, setSelectedCreatedByIds] = useState<string[]>(queryParams.created_by?.split(",") || []);
   const [viewProductId, setViewProductId] = useState<number | null>(null);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);

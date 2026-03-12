@@ -45,6 +45,14 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
       onChange?.(e);
     };
 
+    const handleWheel = (e: React.WheelEvent<HTMLInputElement>) => {
+      if (props.type === 'number') {
+        (e.target as HTMLInputElement).blur();
+      }
+    };
+
+    const typeNumberClasses = props.type === 'number' ? '[&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none [-moz-appearance:textfield]' : '';
+
     const inputClasses = getFieldClassesBySize(size, error, hasValue, isSearchVariant, isNum, className, isRtl);
     const rightIconPosition = getRightIconPosition(size);
     // For RTL, position the # icon on the left side
@@ -66,8 +74,9 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
               onChange={handleNumChange}
               onFocus={handleFocus}
               onBlur={handleBlur}
+              onWheel={props.onWheel || handleWheel}
               placeholder={props.placeholder || " "}
-              className={`${inputClasses} disabled:opacity-50 peer`}
+              className={`${inputClasses} disabled:opacity-50 peer ${typeNumberClasses}`}
               dir={isRtl ? 'rtl' : 'ltr'}
               {...props}
             />
@@ -104,8 +113,9 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
           onChange={handleNumChange}
           onFocus={handleFocus}
           onBlur={handleBlur}
+          onWheel={props.onWheel || handleWheel}
           placeholder=""
-          className={`${inputClasses} peer`}
+          className={`${inputClasses} peer ${typeNumberClasses}`}
           dir={isRtl ? 'rtl' : 'ltr'}
           {...props}
         />
