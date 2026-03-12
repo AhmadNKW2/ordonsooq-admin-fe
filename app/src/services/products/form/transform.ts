@@ -313,7 +313,7 @@ function buildStocks(data: ProductFormData): StockItem[] {
 
   const stocks: StockItem[] = [];
 
-  for (const variant of data.variants) {
+  for (const variant of data.variants) {      if (variant.active === false) continue; // Only send stock for active variants
     // Build combination from all attribute values
     const combination: Record<string, number> = {};
     
