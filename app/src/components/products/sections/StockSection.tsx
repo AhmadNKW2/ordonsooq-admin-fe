@@ -408,7 +408,7 @@ export const StockSection: React.FC<StockSectionProps> = ({
 
                         return (
                             <TableRow key={variant.id}>
-                                <TableCell className="font-medium">
+                                <TableCell className={`font-medium ${variant.active === false ? 'text-red-500' : ''}`}>
                                     {label}
                                 </TableCell>
                                 <TableCell>

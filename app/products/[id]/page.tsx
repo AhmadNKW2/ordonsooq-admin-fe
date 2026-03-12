@@ -605,7 +605,7 @@ const transformVariantWeightDimensions = (stockVariants: any[], attrs: any[]) =>
         return {
           id: variant.id.toString(),
           attributeValues: collapsedAttributeValues,
-          is_out_of_stock: variant.is_out_of_stock ?? (variant.quantity === 0),
+          is_out_of_stock: typeof variant.is_out_of_stock === 'boolean' ? variant.is_out_of_stock : false,
         };
       });
     }
