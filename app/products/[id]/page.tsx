@@ -1212,20 +1212,38 @@ const transformVariantMedia = (stockVariants: any[], attrs: any[]) => {
         }
       } else if (data.variants && data.variants.length > 0) {
         // Variant stocks - with combinations
-        productPayload.stocks = data.variants.map(v => {
-          const combination: Record<string, number> = {};
-          Object.entries(v.attributeValues || {}).forEach(([attrId, attrValueId]) => {
-            if (attrValueId) {
-              combination[attrId] = parseInt(attrValueId);
-            }
+        productPayload.stocks = data.variants
+          .filter(v => v.active !== false)
+          .map(v => {
+            const combination: Record<string, number> = {};
+            Object.entries(v.attributeValues || {}).forEach(([attrId, attrValueId]) => {
+              if (attrValueId) {
+                combination[attrId] = parseInt(attrValueId);
+              }
+            });
+
+            return {
+              combination,
+              quantity: 0,
+              is_out_of_stock: v.is_out_of_stock ?? false,
+            };
           });
-          
-          return {
-            combination,
-            quantity: 0,
-            is_out_of_stock: v.is_out_of_stock ?? false,
-          };
-        });
+
+        productPayload.variants = data.variants
+          .filter(v => v.id !== 'single')
+          .map(v => {
+            const combination: Record<string, number> = {};
+            Object.entries(v.attributeValues || {}).forEach(([attrId, attrValueId]) => {
+              if (attrValueId) {
+                combination[attrId] = parseInt(attrValueId);
+              }
+            });
+
+            return {
+              combination,
+              is_active: v.active !== false
+            };
+          });
       }
 
       // ========== MEDIA ==========
