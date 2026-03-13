@@ -497,31 +497,41 @@ export default function ProductsPage() {
                // Helper to find image
                let imageUrl = null;
                
-               // Try variants first
-                if (product.variants?.length && product.media_groups) {
-                  const firstVariant = product.variants[0];
-                  // Ensure media_groups exists and has the key
-                  if (product.media_groups[firstVariant.media_group_id]?.media?.length) {
-                     imageUrl = product.media_groups[firstVariant.media_group_id].media[0].url;
-                  }
-                }
-                
-                // Fallback to simple product media groups
-                if (!imageUrl && product.media_groups) {
-                  const groupKeys = Object.keys(product.media_groups);
-                  if (groupKeys.length > 0) {
-                    const firstGroup = product.media_groups[groupKeys[0]];
-                    if (firstGroup?.media?.length) {
-                       // Try to find primary
-                       const primary = firstGroup.media.find((m: any) => m.is_primary) || firstGroup.media[0];
-                       imageUrl = primary.url;
+                 // 1. Try to find explicitly primary image across all media groups
+                 if (product.media_groups) {
+                   for (const key in product.media_groups) {
+                     const group = product.media_groups[key];
+                     if (group?.media?.length) {
+                       const primaryMedia = group.media.find((m: any) => m.is_primary);
+                       if (primaryMedia) {
+                         imageUrl = primaryMedia.url;
+                         break;
+                       }
+                     }
+                   }
+                 }
+
+                 // 2. Try variants first if no primary found
+                  if (!imageUrl && product.variants?.length && product.media_groups) {
+                    const firstVariant = product.variants[0];
+                    // Ensure media_groups exists and has the key
+                    if (product.media_groups[firstVariant.media_group_id]?.media?.length) {
+                       imageUrl = product.media_groups[firstVariant.media_group_id].media[0].url;
                     }
                   }
-                }
 
-                // Fallback to legacy fields if any
-                if (!imageUrl && product.image) imageUrl = product.image;
-                if (!imageUrl && product.media && product.media.length > 0) imageUrl = product.media[0].url || product.media[0].image;
+                  // 3. Fallback to simple product media groups
+                  if (!imageUrl && product.media_groups) {
+                    const groupKeys = Object.keys(product.media_groups);
+                    if (groupKeys.length > 0) {
+                      const firstGroup = product.media_groups[groupKeys[0]];
+                      if (firstGroup?.media?.length) {
+                         imageUrl = firstGroup.media[0].url;
+                      }
+                    }
+                  }
+
+                  // 4. Fallback to legacy fields if any
 
                return (
               <TableRow key={product.id}>
