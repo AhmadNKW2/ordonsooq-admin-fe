@@ -184,16 +184,25 @@ export default function ProductsPage() {
   };
 
   const handleSearchChange = (value: string) => {
-    setSearchTerm(value);
+    // Truncate search to avoid URI Too Long error from huge copy-paste strings
+    const safeValue = value.slice(0, 150);
+    setSearchTerm(safeValue);
+  };
+
+  // Debounce search term changes
+  useEffect(() => {
     const debounce = setTimeout(() => {
-      if (value !== queryParams.search) {
-        const newFilters = { ...queryParams, search: value || undefined, page: 1 };
-        handleFilterChange(newFilters);
+      if (searchTerm !== (queryParams.search || "")) {
+        setQueryParams((prev) => ({
+          ...prev,
+          search: searchTerm || undefined,
+          page: 1,
+        }));
       }
-    }, 300);
+    }, 500);
 
     return () => clearTimeout(debounce);
-  };
+  }, [searchTerm, queryParams.search]);
 
   const handleDateChange = (field: 'start_date' | 'end_date', value: string) => {
     if (field === 'start_date') setStartDate(value);
@@ -363,6 +372,7 @@ export default function ProductsPage() {
                   onChange={(e) => handleSearchChange(e.target.value)}
                   label="Search"
                   variant="search"
+                  maxLength={150}
                 />
               </div>
 
