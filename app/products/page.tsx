@@ -48,9 +48,22 @@ export default function ProductsPage() {
     setLimit: setStoredLimit,
   } = useSessionStoragePage("products");
   
-  const [queryParams, setQueryParams] = useState<ProductFilters>({
-    page: storedPage,
-    limit: storedLimit,
+  const [queryParams, setQueryParams] = useState<ProductFilters>(() => {
+    if (typeof window !== "undefined") {
+      const stored = sessionStorage.getItem("products_filters");
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          return { ...parsed, page: storedPage, limit: storedLimit };
+        } catch (e) {
+          // Ignore parse errors
+        }
+      }
+    }
+    return {
+      page: storedPage,
+      limit: storedLimit,
+    };
   });
 
   // Persist current page and limit to storage whenever they change
@@ -64,13 +77,21 @@ export default function ProductsPage() {
     }
   }, [queryParams.limit, setStoredLimit]);
 
-  const [searchTerm, setSearchTerm] = useState("");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
-  const [selectedVendorIds, setSelectedVendorIds] = useState<string[]>([]);
-  const [selectedBrandIds, setSelectedBrandIds] = useState<string[]>([]);
-  const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
-  const [selectedCreatedByIds, setSelectedCreatedByIds] = useState<string[]>([]);
+  // Persist filters to storage
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const { page, limit, ...filtersToStore } = queryParams;
+      sessionStorage.setItem("products_filters", JSON.stringify(filtersToStore));
+    }
+  }, [queryParams]);
+
+  const [searchTerm, setSearchTerm] = useState(queryParams.search || "");
+  const [startDate, setStartDate] = useState(queryParams.start_date || "");
+  const [endDate, setEndDate] = useState(queryParams.end_date || "");
+  const [selectedVendorIds, setSelectedVendorIds] = useState<string[]>(queryParams.vendor_ids?.split(",") || []);
+  const [selectedBrandIds, setSelectedBrandIds] = useState<string[]>(queryParams.brand_ids?.split(",") || []);
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>(queryParams.category_ids?.split(",") || []);
+  const [selectedCreatedByIds, setSelectedCreatedByIds] = useState<string[]>(queryParams.created_by?.split(",") || []);
   const [viewProductId, setViewProductId] = useState<number | null>(null);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
@@ -163,16 +184,25 @@ export default function ProductsPage() {
   };
 
   const handleSearchChange = (value: string) => {
-    setSearchTerm(value);
+    // Truncate search to avoid URI Too Long error from huge copy-paste strings
+    const safeValue = value.slice(0, 150);
+    setSearchTerm(safeValue);
+  };
+
+  // Debounce search term changes
+  useEffect(() => {
     const debounce = setTimeout(() => {
-      if (value !== queryParams.search) {
-        const newFilters = { ...queryParams, search: value || undefined, page: 1 };
-        handleFilterChange(newFilters);
+      if (searchTerm !== (queryParams.search || "")) {
+        setQueryParams((prev) => ({
+          ...prev,
+          search: searchTerm || undefined,
+          page: 1,
+        }));
       }
-    }, 300);
+    }, 500);
 
     return () => clearTimeout(debounce);
-  };
+  }, [searchTerm, queryParams.search]);
 
   const handleDateChange = (field: 'start_date' | 'end_date', value: string) => {
     if (field === 'start_date') setStartDate(value);
@@ -342,6 +372,7 @@ export default function ProductsPage() {
                   onChange={(e) => handleSearchChange(e.target.value)}
                   label="Search"
                   variant="search"
+                  maxLength={150}
                 />
               </div>
 
@@ -466,31 +497,41 @@ export default function ProductsPage() {
                // Helper to find image
                let imageUrl = null;
                
-               // Try variants first
-                if (product.variants?.length && product.media_groups) {
-                  const firstVariant = product.variants[0];
-                  // Ensure media_groups exists and has the key
-                  if (product.media_groups[firstVariant.media_group_id]?.media?.length) {
-                     imageUrl = product.media_groups[firstVariant.media_group_id].media[0].url;
-                  }
-                }
-                
-                // Fallback to simple product media groups
-                if (!imageUrl && product.media_groups) {
-                  const groupKeys = Object.keys(product.media_groups);
-                  if (groupKeys.length > 0) {
-                    const firstGroup = product.media_groups[groupKeys[0]];
-                    if (firstGroup?.media?.length) {
-                       // Try to find primary
-                       const primary = firstGroup.media.find((m: any) => m.is_primary) || firstGroup.media[0];
-                       imageUrl = primary.url;
+                 // 1. Try to find explicitly primary image across all media groups
+                 if (product.media_groups) {
+                   for (const key in product.media_groups) {
+                     const group = product.media_groups[key];
+                     if (group?.media?.length) {
+                       const primaryMedia = group.media.find((m: any) => m.is_primary);
+                       if (primaryMedia) {
+                         imageUrl = primaryMedia.url;
+                         break;
+                       }
+                     }
+                   }
+                 }
+
+                 // 2. Try variants first if no primary found
+                  if (!imageUrl && product.variants?.length && product.media_groups) {
+                    const firstVariant = product.variants[0];
+                    // Ensure media_groups exists and has the key
+                    if (product.media_groups[firstVariant.media_group_id]?.media?.length) {
+                       imageUrl = product.media_groups[firstVariant.media_group_id].media[0].url;
                     }
                   }
-                }
 
-                // Fallback to legacy fields if any
-                if (!imageUrl && product.image) imageUrl = product.image;
-                if (!imageUrl && product.media && product.media.length > 0) imageUrl = product.media[0].url || product.media[0].image;
+                  // 3. Fallback to simple product media groups
+                  if (!imageUrl && product.media_groups) {
+                    const groupKeys = Object.keys(product.media_groups);
+                    if (groupKeys.length > 0) {
+                      const firstGroup = product.media_groups[groupKeys[0]];
+                      if (firstGroup?.media?.length) {
+                         imageUrl = firstGroup.media[0].url;
+                      }
+                    }
+                  }
+
+                  // 4. Fallback to legacy fields if any
 
                return (
               <TableRow key={product.id}>

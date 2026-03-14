@@ -85,6 +85,7 @@ export interface VariantMedia {
 // Product Form Data Schema
 export const productFormSchema = z.object({
   // Basic Information
+  slug: z.string().optional(),
   nameEn: z.string().min(1, "English name is required"),
   nameAr: z.string().min(1, "Arabic name is required"),
   categoryIds: z.array(z.string()).min(1, "At least one category is required"), // Changed from categoryId to categoryIds

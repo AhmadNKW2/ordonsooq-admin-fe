@@ -463,6 +463,10 @@ interface AttributeFormProps {
   onParentValueIdChange: (value: string) => void;
   onIsColorChange: (value: boolean) => void;
   onIsActiveChange: (value: boolean) => void;
+  attributeType?: "spec_attribute" | "variant_attribute" | null;
+  listSeparately?: boolean | null;
+  onAttributeTypeChange?: (value: "spec_attribute" | "variant_attribute") => void;
+  onListSeparatelyChange?: (value: boolean) => void;
   attributes?: Attribute[]; // List of available attributes for parent selection
   // Validation - now using React Hook Form
   formErrors?: { name_en?: string; name_ar?: string };
@@ -495,6 +499,10 @@ export const AttributeForm: React.FC<AttributeFormProps> = ({
   onParentValueIdChange,
   onIsColorChange,
   onIsActiveChange,
+  attributeType = "spec_attribute",
+  listSeparately = false,
+  onAttributeTypeChange,
+  onListSeparatelyChange,
   attributes = [], // Default to empty array
   formErrors,
   values,
@@ -668,7 +676,7 @@ export const AttributeForm: React.FC<AttributeFormProps> = ({
       />
 
       {/* Attribute Details Form */}
-      <Card className="w-full">
+        <Card className="w-full relative z-10">
         <h2 className="text-lg font-semibold">Attribute Details</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           <Input
@@ -703,7 +711,16 @@ export const AttributeForm: React.FC<AttributeFormProps> = ({
           />
         </div>
         
-        <div className="mt-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-4">
+          <Select
+            label="Attribute Type *"
+            value={attributeType || "spec_attribute"}
+            onChange={(val) => onAttributeTypeChange?.(val as "spec_attribute" | "variant_attribute")}
+            options={[
+              { value: "spec_attribute", label: "Spec Attribute" },
+              { value: "variant_attribute", label: "Variant Attribute" },
+            ]}
+          />
           <Select
             label="Parent Attribute (Optional)"
             value={parentId || ""}
@@ -724,10 +741,14 @@ export const AttributeForm: React.FC<AttributeFormProps> = ({
           />
         </div>
 
-        <div className="flex items-center gap-8 mt-4">
+        <div className="flex items-center gap-8 mt-5">
           <div className="flex items-center gap-3">
             <Toggle checked={isColor} onChange={onIsColorChange} />
             <span className="text-sm font-medium">Is Color Attribute</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <Toggle checked={!!listSeparately} onChange={(val) => onListSeparatelyChange?.(val)} />
+            <span className="text-sm font-medium">List Separately</span>
           </div>
           <div className="flex items-center gap-3">
             <Toggle checked={isActive} onChange={onIsActiveChange} />
@@ -829,7 +850,7 @@ export const AttributeForm: React.FC<AttributeFormProps> = ({
               </Button>
             </div>
           ) : (
-            <div className="rounded-xl overflow-hidden shadow-sm bg-white">
+            <div className="rounded-xl overflow-hidden shadow-sm bg-white isolate transform-gpu relative z-0">
               <DndContext
                 sensors={sensors}
                 collisionDetection={closestCenter}

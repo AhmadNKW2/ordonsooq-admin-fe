@@ -483,11 +483,16 @@ class HttpClient {
     if (params) {
       const searchParams = new URLSearchParams();
       Object.entries(params).forEach(([key, value]) => {
-        if (value !== undefined && value !== null) {
+        if (value !== undefined && value !== null && value !== '') {
           if (Array.isArray(value)) {
             value.forEach((v) => searchParams.append(key, String(v)));
           } else {
-            searchParams.append(key, String(value));
+            let strValue = String(value);
+            // Protect against 414 URI Too Long by capping overly long search inputs generically
+            if (key === 'search' && strValue.length > 150) {
+              strValue = strValue.slice(0, 150);
+            }
+            searchParams.append(key, strValue);
           }
         }
       });

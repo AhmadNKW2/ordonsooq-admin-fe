@@ -605,7 +605,8 @@ const transformVariantWeightDimensions = (stockVariants: any[], attrs: any[]) =>
         return {
           id: variant.id.toString(),
           attributeValues: collapsedAttributeValues,
-          is_out_of_stock: variant.is_out_of_stock ?? (variant.quantity === 0),
+          is_out_of_stock: typeof variant.is_out_of_stock === 'boolean' ? variant.is_out_of_stock : false,
+          active: variant.is_active ?? true,
         };
       });
     }
@@ -919,6 +920,7 @@ const transformVariantMedia = (stockVariants: any[], attrs: any[]) => {
 
     return {
       // Basic Information
+      slug: (product as any).slug,
       nameEn: product.name_en,
       nameAr: product.name_ar,
       categoryIds: (product.categories && product.categories.length > 0)
@@ -1124,7 +1126,8 @@ const transformVariantMedia = (stockVariants: any[], attrs: any[]) => {
           console.log('pricingControllingAttrIds:', pricingControllingAttrIds);
           console.log('data.variantPricing:', data.variantPricing);
 
-          productPayload.prices = data.variantPricing.map(vp => {
+          const priceMap = new Map<string, any>();
+          data.variantPricing.forEach(vp => {
             const combination: Record<string, number> = {};
             pricingControllingAttrIds.forEach(attrId => {
               const attrValueId = vp.attributeValues[attrId];
@@ -1132,15 +1135,23 @@ const transformVariantMedia = (stockVariants: any[], attrs: any[]) => {
                 combination[attrId] = parseInt(attrValueId);
               }
             });
-            
-            return {
-              combination,
-              cost: vp.cost,
-              price: vp.price,
-              // isSale defaults to false; only include salePrice when explicitly enabled
-              sale_price: vp.isSale === true ? vp.salePrice : undefined,
-            };
+
+            const key = Object.entries(combination)
+              .sort(([a], [b]) => a.localeCompare(b))
+              .map(([k, v]) => `${k}:${v}`)
+              .join('|');
+
+            if (!priceMap.has(key) && Object.keys(combination).length > 0) {
+              priceMap.set(key, {
+                combination,
+                cost: vp.cost,
+                price: vp.price,
+                // isSale defaults to false; only include salePrice when explicitly enabled
+                sale_price: vp.isSale === true ? vp.salePrice : undefined,
+              });
+            }
           });
+          productPayload.prices = Array.from(priceMap.values());
           console.log('productPayload.prices:', productPayload.prices);
         } else if (shouldClearPrices) {
           // No variant pricing provided but we need to clear old prices
@@ -1175,7 +1186,8 @@ const transformVariantMedia = (stockVariants: any[], attrs: any[]) => {
           .map(attr => attr.id);
 
         // Variant weights - with combinations
-        productPayload.weights = data.variantWeightDimensions.map(vw => {
+        const weightMap = new Map<string, any>();
+        data.variantWeightDimensions.forEach(vw => {
           const combination: Record<string, number> = {};
           weightControllingAttrIds.forEach(attrId => {
             const attrValueId = vw.attributeValues[attrId];
@@ -1183,15 +1195,23 @@ const transformVariantMedia = (stockVariants: any[], attrs: any[]) => {
               combination[attrId] = parseInt(attrValueId);
             }
           });
-          
-          return {
-            combination,
-            weight: vw.weight,
-            length: vw.length,
-            width: vw.width,
-            height: vw.height,
-          };
+
+          const key = Object.entries(combination)
+            .sort(([a], [b]) => a.localeCompare(b))
+            .map(([k, v]) => `${k}:${v}`)
+            .join('|');
+
+          if (!weightMap.has(key) && Object.keys(combination).length > 0 && vw.weight) {
+            weightMap.set(key, {
+              combination,
+              weight: vw.weight,
+              length: vw.length,
+              width: vw.width,
+              height: vw.height,
+            });
+          }
         });
+        productPayload.weights = Array.from(weightMap.values());
       } else if (shouldClearWeights) {
         // No weight data provided but we need to clear old weights
         productPayload.weights = [];
@@ -1209,21 +1229,47 @@ const transformVariantMedia = (stockVariants: any[], attrs: any[]) => {
           }];
         }
       } else if (data.variants && data.variants.length > 0) {
-        // Variant stocks - with combinations
-        productPayload.stocks = data.variants.map(v => {
+        // Variant stocks and explicit variants - with deduplication
+        const stocksMap = new Map<string, any>();
+        const variantsMap = new Map<string, any>();
+
+        data.variants.forEach(v => {
+          if (v.id === 'single') return;
+
           const combination: Record<string, number> = {};
           Object.entries(v.attributeValues || {}).forEach(([attrId, attrValueId]) => {
             if (attrValueId) {
-              combination[attrId] = parseInt(attrValueId);
+              combination[attrId] = typeof attrValueId === 'string' ? parseInt(attrValueId) : attrValueId;
             }
           });
-          
-          return {
-            combination,
-            quantity: 0,
-            is_out_of_stock: v.is_out_of_stock ?? false,
-          };
+
+          const key = Object.entries(combination)
+            .sort(([a], [b]) => a.localeCompare(b))
+            .map(([k, val]) => `${k}:${val}`)
+            .join('|');
+
+          if (Object.keys(combination).length > 0) {
+            // Only add active variants to stocks
+            if (v.active !== false && !stocksMap.has(key)) {
+              stocksMap.set(key, {
+                combination,
+                quantity: 0,
+                is_out_of_stock: v.is_out_of_stock ?? false,
+              });
+            }
+
+            // Add all variants (active and inactive) to explicit variants array
+            if (!variantsMap.has(key)) {
+              variantsMap.set(key, {
+                combination,
+                is_active: v.active !== false
+              });
+            }
+          }
         });
+
+        productPayload.stocks = Array.from(stocksMap.values());
+        productPayload.variants = Array.from(variantsMap.values());
       }
 
       // ========== MEDIA ==========

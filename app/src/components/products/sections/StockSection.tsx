@@ -341,15 +341,15 @@ export const StockSection: React.FC<StockSectionProps> = ({
         onChange(updated);
     };
 
-    // const handleToggleActive = (variantId: string, checked: boolean) => {
-    //     const updated = variants.map((v) => {
-    //         if (v.id === variantId) {
-    //             return { ...v, active: checked };
-    //         }
-    //         return v;
-    //     });
-    //     onChange(updated);
-    // };
+    const handleToggleInactive = (variantId: string, checked: boolean) => {
+        const updated = variants.map((v) => {
+            if (v.id === variantId) {
+                return { ...v, active: !checked };
+            }
+            return v;
+        });
+        onChange(updated);
+    };
 
     const filteredCombinations = variants.filter((combo) => {
         const label = getVariantLabel(combo).toLowerCase();
@@ -357,7 +357,7 @@ export const StockSection: React.FC<StockSectionProps> = ({
     });
 
     const outOfStockCount = variants.filter((v) => v.is_out_of_stock === true).length;
-    // const showDeleteAction = variants.length > 1;
+    const inactiveCount = variants.filter((v) => v.active === false).length;
 
     return (
         <Card>
@@ -371,9 +371,10 @@ export const StockSection: React.FC<StockSectionProps> = ({
             </div>
 
             {/* Summary Stats */}
-            <div className="grid grid-cols-2 gap-5">
+            <div className="grid grid-cols-3 gap-5">
                 <StatCard label="Total Variants" value={variants.length} />
                 <StatCard label="Out of Stock" value={outOfStockCount} valueClassName="text-danger" />
+                <StatCard label="Inactive" value={inactiveCount} valueClassName="text-warning" />
             </div>
 
             {/* Search */}
@@ -390,17 +391,15 @@ export const StockSection: React.FC<StockSectionProps> = ({
             <Table noPagination={true} key={filteredCombinations.length > 0 ? 'has-data' : 'no-data'}>
                 <TableHeader>
                     <TableRow isHeader>
-                        <TableHead width="50%">
+                        <TableHead width="40%">
                             Variant
                         </TableHead>
-                        <TableHead width="50%">
+                        <TableHead width="30%">
                             Out of Stock
                         </TableHead>
-                        {/* {showDeleteAction && (
-                            <TableHead width="33%">
-                                Active
-                            </TableHead>
-                        )} */}
+                        <TableHead width="30%">
+                            Inactive
+                        </TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -409,7 +408,7 @@ export const StockSection: React.FC<StockSectionProps> = ({
 
                         return (
                             <TableRow key={variant.id}>
-                                <TableCell className="font-medium">
+                                <TableCell className={`font-medium ${variant.active === false ? 'text-red-500' : ''}`}>
                                     {label}
                                 </TableCell>
                                 <TableCell>
@@ -418,14 +417,12 @@ export const StockSection: React.FC<StockSectionProps> = ({
                                         onChange={(checked) => handleIsOutOfStockChange(variant.id, checked)}
                                     />
                                 </TableCell>
-                                {/* {showDeleteAction && (
-                                    <TableCell>
-                                        <Checkbox
-                                            checked={variant.active ?? true}
-                                            onChange={(checked) => handleToggleActive(variant.id, checked)}
-                                        />
-                                    </TableCell>
-                                )} */}
+                                <TableCell>
+                                    <Checkbox
+                                        checked={variant.active === false}
+                                        onChange={(checked) => handleToggleInactive(variant.id, checked)}
+                                    />
+                                </TableCell>
                             </TableRow>
                         );
                     })}

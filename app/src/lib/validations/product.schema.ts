@@ -13,6 +13,7 @@ const ARABIC_PATTERN = /^[\u0600-\u06FF0-9\s\p{P}]+$/u;
 // Basic Information Schema
 // ============================================
 export const basicInformationSchema = z.object({
+  slug: z.string().optional(),
   nameEn: z
     .string()
     .min(1, "Required")
@@ -145,6 +146,7 @@ export const createProductSchema = (config: ProductFormConfig) => {
   // Base schema with required fields
   let schema = z.object({
     // Basic Information - always required
+    slug: z.string().optional(),
     nameEn: z.string().min(1, "Required"),
     nameAr: z.string().min(1, "Required"),
     categoryIds: z.array(z.string()).min(1, "At least one category is required"),

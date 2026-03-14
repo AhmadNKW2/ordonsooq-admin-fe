@@ -390,9 +390,11 @@ export interface WeightGroupInput {
 
 // Variant Input (for variant products - stock per variant)
 export interface VariantInput {
-  attribute_value_ids: number[];
+  attribute_value_ids?: number[];
+  combination?: Record<string, number>;
+  is_active?: boolean;
   sku_suffix?: string;
-  stock_quantity: number;
+  stock_quantity?: number;
 }
 
 // ==================== CREATE/UPDATE SHARED TYPES ====================
@@ -556,6 +558,8 @@ export interface UpdateProductDto {
 
   // Attributes (for variant products)
   attributes?: ProductAttributeInput[];
+
+  variants?: VariantInput[];
 
   // NEW format: prices, weights, stocks, media arrays (same as create)
   prices?: PriceInput[];

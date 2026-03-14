@@ -113,6 +113,30 @@ export function transformFormDataToDto(
   } else if (data.variants && data.variants.length > 0) {
     // Variant stocks - with combinations
     dto.stocks = buildStocks(data);
+    
+    // Explicit standalone variants array to support active/inactive states natively
+    const variantsMap = new Map<string, any>();
+    data.variants.filter((v: any) => v.id !== 'single').forEach((variant: any) => {
+      const combination: Record<string, number> = {};
+      for (const [attrId, valueId] of Object.entries(variant.attributeValues)) {
+        if (valueId && valueId !== '') {
+          combination[attrId] = parseInt(valueId as string, 10);
+        }
+      }
+      
+      const key = Object.entries(combination)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([k, v]) => `${k}:${v}`)
+        .join('|');
+        
+      if (!variantsMap.has(key) && Object.keys(combination).length > 0) {
+        variantsMap.set(key, {
+          combination,
+          is_active: variant.active !== false
+        });
+      }
+    });
+    dto.variants = Array.from(variantsMap.values());
   }
 
   // Extract media data for separate upload
@@ -260,13 +284,13 @@ function buildWeights(data: ProductFormData): WeightItem[] {
     .filter(attr => attr.controlsWeightDimensions)
     .map(attr => attr.id);
 
-  const weights: WeightItem[] = [];
+  const weightMap = new Map<string, WeightItem>();
 
   for (const weight of data.variantWeightDimensions) {
     // Build combination object with only weight-controlling attributes
     // Format: { "attr_id": value_id }
     const combination: Record<string, number> = {};
-    
+
     for (const attrId of weightControllingAttrIds) {
       const valueId = weight.attributeValues[attrId];
       if (valueId && valueId !== '') {
@@ -274,8 +298,13 @@ function buildWeights(data: ProductFormData): WeightItem[] {
       }
     }
 
-    if (Object.keys(combination).length > 0 && weight.weight) {
-      weights.push({
+    const key = Object.entries(combination)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([k, v]) => `${k}:${v}`)
+      .join('|');
+
+    if (!weightMap.has(key) && Object.keys(combination).length > 0 && weight.weight) {
+      weightMap.set(key, {
         combination,
         weight: weight.weight,
         length: weight.length,
@@ -285,7 +314,7 @@ function buildWeights(data: ProductFormData): WeightItem[] {
     }
   }
 
-  return weights;
+  return Array.from(weightMap.values());
 }
 
 /**
@@ -297,20 +326,26 @@ function buildStocks(data: ProductFormData): StockItem[] {
     return [];
   }
 
-  const stocks: StockItem[] = [];
+  const stockMap = new Map<string, StockItem>();
 
   for (const variant of data.variants) {
+    if (variant.active === false) continue; // Only send stock for active variants
     // Build combination from all attribute values
     const combination: Record<string, number> = {};
-    
+
     for (const [attrId, valueId] of Object.entries(variant.attributeValues)) {
       if (valueId && valueId !== '') {
         combination[attrId] = parseInt(valueId, 10);
       }
     }
 
-    if (Object.keys(combination).length > 0) {
-      stocks.push({
+    const key = Object.entries(combination)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([k, v]) => `${k}:${v}`)
+      .join('|');
+
+    if (!stockMap.has(key) && Object.keys(combination).length > 0) {
+      stockMap.set(key, {
         combination,
         quantity: 0,
         is_out_of_stock: variant.is_out_of_stock ?? false,
@@ -318,6 +353,6 @@ function buildStocks(data: ProductFormData): StockItem[] {
     }
   }
 
-  return stocks;
+  return Array.from(stockMap.values());
 }
 

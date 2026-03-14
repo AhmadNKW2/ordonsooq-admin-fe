@@ -277,7 +277,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
       variantWeightDimensions: filteredVariantWeight,
       singleMedia: formData.singleMedia,
       variantMedia: filteredVariantMedia,
-      variants: (formData.variants || []).filter(v => v.active !== false),
+      variants: formData.variants || [],
     };
 
     // -----------------------------------------------------
@@ -613,6 +613,19 @@ export const ProductForm: React.FC<ProductFormProps> = ({
         icon={<Package />}
         title={isEditMode ? "Edit Product" : "Create New Product"}
         description={isEditMode ? "Update product information and variants" : "Fill in the details to create a new product"}
+        extraActions={
+          isEditMode && formData.slug ? (
+            <Button
+              variant="outline"
+              disabled={isSubmitting}
+              onClick={() => {
+                window.open(`https://ordonsooq.com/products/${formData.slug}`, '_blank');
+              }}
+            >
+              Preview Product
+            </Button>
+          ) : undefined
+        }
         cancelAction={{
           label: "Cancel",
           onClick: () => { clearDraft(); router.push('/products'); },
@@ -662,6 +675,34 @@ export const ProductForm: React.FC<ProductFormProps> = ({
               isMediaVariantBased: hasAttributes ? hasMedia : false,
             };
 
+            const prevAttributes = prev.attributes || [];
+            let shouldClearMedia = false;
+            let shouldClearPricing = false;
+            let shouldClearWeight = false;
+
+            prevAttributes.forEach(pa => {
+              const na = attributes.find(a => a.id === pa.id);
+              if (!na) {
+                // Attribute removed
+                if (pa.values.length > 1) {
+                  if (pa.controlsMedia) shouldClearMedia = true;
+                  if (pa.controlsPricing) shouldClearPricing = true;
+                  if (pa.controlsWeightDimensions) shouldClearWeight = true;
+                }
+              } else {
+                // Attribute control toggled off
+                if (pa.values.length > 1) {
+                  if (pa.controlsMedia && !na.controlsMedia) shouldClearMedia = true;
+                  if (pa.controlsPricing && !na.controlsPricing) shouldClearPricing = true;
+                  if (pa.controlsWeightDimensions && !na.controlsWeightDimensions) shouldClearWeight = true;
+                }
+              }
+            });
+
+            if (shouldClearMedia) updates.variantMedia = [];
+            if (shouldClearPricing) updates.variantPricing = [];
+            if (shouldClearWeight) updates.variantWeightDimensions = [];
+
             // If switching to single (no attributes), reset all variant data
             if (!hasAttributes) {
               updates.variantPricing = [];
@@ -673,29 +714,9 @@ export const ProductForm: React.FC<ProductFormProps> = ({
               updates.singleMedia = prev.singleMedia || [];
             }
 
-            // Reset ALL variant data when an attribute is removed
-            // because existing combinations become invalid
-            if (resetType === 'all') {
-              updates.variantPricing = [];
-              updates.singleWeightDimensions = undefined;
-              updates.variantWeightDimensions = [];
-              updates.singleMedia = [];
-              updates.variantMedia = [];
-              updates.variants = [];
-            } else if (resetType === 'pricing') {
-              // Reset data when control changes (both toggling ON and OFF)
-              // This ensures variant combinations are recalculated with fresh data
-              updates.variantPricing = [];
-            } else if (resetType === 'weight') {
-              updates.singleWeightDimensions = undefined;
-              updates.variantWeightDimensions = [];
-            } else if (resetType === 'media') {
-              updates.singleMedia = [];
-              updates.variantMedia = [];
-            } else if (resetType === 'stock') {
-              // Reset stock/variants when attributes or their values change
-              updates.variants = [];
-            }
+            // Let StockSection and other sections automatically reconcile 
+            // the data with the updated attributes via their internal logic 
+            // and the `getVariantData` fallback logic, preserving existing valid entries.
 
             return updates as ProductFormData;
           });
