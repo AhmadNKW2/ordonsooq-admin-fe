@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import {
     Attribute,
     MediaItem,
@@ -12,6 +12,16 @@ import {
     getVariantData,
 } from "../../../services/products/utils/variant-combinations";
 import { ImageUpload, ImageUploadItem } from "../../ui/image-upload";
+import {
+    DndContext,
+    closestCenter,
+    KeyboardSensor,
+    PointerSensor,
+    useSensor,
+    useSensors,
+    DragEndEvent,
+} from "@dnd-kit/core";
+import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 
 interface MediaSectionProps {
     attributes: Attribute[];
@@ -38,6 +48,13 @@ export const MediaSection: React.FC<MediaSectionProps> = ({
     hasAttributeControllingMedia,
     errors = {},
 }) => {
+    const sensors = useSensors(
+        useSensor(PointerSensor),
+        useSensor(KeyboardSensor, {
+            coordinateGetter: sortableKeyboardCoordinates,
+        })
+    );
+
     // Filter attributes that control media AND have values
     const mediaAttributes = getControllingAttributes(attributes, 'controlsMedia');
 
@@ -55,7 +72,41 @@ export const MediaSection: React.FC<MediaSectionProps> = ({
         });
     });
 
-    // Convert MediaItem[] to ImageUploadItem[] for the ImageUpload component
+    // Reconcile variantMedia subsets when combinations change to prevent losing media
+    useEffect(() => {
+        if (!hasAttributeControllingMedia) return;
+        
+        let shouldUpdate = false;
+        const newVariantMedia: VariantMedia[] = [];
+
+        for (const combo of combinations) {
+            const existingData = getVariantData(combo.key, variantMedia, combo.attributeValues);
+            if (existingData && existingData.media && existingData.media.length > 0) {
+                newVariantMedia.push({
+                    key: combo.key,
+                    attributeValues: combo.attributeValues,
+                    media: existingData.media
+                });
+            }
+        }
+        
+        // Check if any keys or counts changed
+        if (newVariantMedia.length !== variantMedia.length) {
+            shouldUpdate = true;
+        } else {
+            for (let i = 0; i < newVariantMedia.length; i++) {
+                if (newVariantMedia[i].key !== variantMedia[i].key) {
+                    shouldUpdate = true;
+                    break;
+                }
+            }
+        }
+
+        if (shouldUpdate) {
+            onChangeVariant(newVariantMedia);
+        }
+    }, [combinations, variantMedia, onChangeVariant, hasAttributeControllingMedia]);
+
     const toImageUploadItems = (media: MediaItem[]): ImageUploadItem[] => {
         return media.map((m) => ({
             id: m.id,
@@ -68,7 +119,6 @@ export const MediaSection: React.FC<MediaSectionProps> = ({
         }));
     };
 
-    // Convert ImageUploadItem[] back to MediaItem[]
     const toMediaItems = (items: ImageUploadItem[]): MediaItem[] => {
         return items.map((item) => ({
             id: item.id,
@@ -92,11 +142,9 @@ export const MediaSection: React.FC<MediaSectionProps> = ({
         }));
     };
 
-    // Handle single media change: enforce single product-level primary
     const handleSingleMediaChange = (items: ImageUploadItem[]) => {
         const mediaItems = toMediaItems(items);
 
-        // If single media now has a primary, clear primaries from all variant groups
         if (mediaItems.some((m) => m.isPrimary) && variantMedia.length > 0) {
             onChangeVariant(
                 variantMedia.map((vm) => ({
@@ -109,7 +157,6 @@ export const MediaSection: React.FC<MediaSectionProps> = ({
         onChangeSingle(mediaItems);
     };
 
-    // Handle variant media change: enforce single product-level primary, allow multiple group primaries (one per group)
     const handleVariantMediaChange = (key: string, items: ImageUploadItem[]) => {
         const combo = combinations.find((c) => c.key === key);
         if (!combo) return;
@@ -117,7 +164,6 @@ export const MediaSection: React.FC<MediaSectionProps> = ({
         const mediaItems = toMediaItems(items);
         let updatedVariantMedia = variantMedia.filter((vm) => vm.key !== key);
 
-        // If this group sets the product primary, clear primary from single media and all other variant groups.
         if (mediaItems.some((m) => m.isPrimary)) {
             if (singleMedia.some((m) => m.isPrimary)) {
                 onChangeSingle(singleMedia.map((m) => ({ ...m, isPrimary: false })));
@@ -141,42 +187,148 @@ export const MediaSection: React.FC<MediaSectionProps> = ({
         }
     };
 
-    // Get variant media using shared utility
     const getMedia = (key: string, attributeValues?: { [attrId: string]: string }): MediaItem[] => {
         const match = getVariantData(key, variantMedia, attributeValues);
         return ensureGroupHasGroupPrimary(match?.media || []);
     };
 
-    // Single mode (not variant-based)
+    // Advanced drag and drop support across combinations list
+    const handleDragOver = (event: DragEndEvent) => {
+        const { active, over } = event;
+        if (!over) return;
+
+        const sourceId = active.data.current?.sortable?.containerId;
+        const targetId = over.data.current?.sortable?.containerId || over.id;
+
+        if (!sourceId || !targetId || sourceId === targetId) return;
+
+        let newVariantMedia = [...variantMedia];
+
+        const getContainerMedia = (id: string): MediaItem[] => {
+            if (id === "singleMedia") return singleMedia;
+            const combo = combinations.find(c => c.key === id);
+            return getMedia(id, combo?.attributeValues);
+        };
+
+        const sourceMedia = [...getContainerMedia(String(sourceId))];
+        const targetMedia = [...getContainerMedia(String(targetId))];
+
+        const oldIndex = sourceMedia.findIndex(m => m.id === active.id);
+        if (oldIndex === -1) return;
+        
+        const itemToMove = {...sourceMedia[oldIndex]};
+        sourceMedia.splice(oldIndex, 1);
+        
+        // Ensure new array maintains the item exactly as it was, including its primary flag.
+        let newIndex = targetMedia.findIndex(m => m.id === over.id);
+        if (newIndex === -1) {
+             newIndex = targetMedia.length;
+        } else {
+             const isBelowOverItem = over && active.rect.current.translated && active.rect.current.translated.top > over.rect.top;
+             if (isBelowOverItem) {
+                 newIndex = newIndex + 1;
+             }
+        }
+        
+        targetMedia.splice(newIndex, 0, itemToMove);
+
+        const updatedSource = sourceMedia.map((m, i) => ({ ...m, order: i }));
+        const updatedTarget = targetMedia.map((m, i) => ({ ...m, order: i }));
+
+        if (sourceId === "singleMedia") {
+            onChangeSingle(updatedSource);
+        } else {
+            newVariantMedia = newVariantMedia.filter(vm => vm.key !== sourceId);
+            const sourceCombo = combinations.find(c => c.key === sourceId);
+            if (sourceCombo) {
+                newVariantMedia.push({ key: String(sourceId), attributeValues: sourceCombo.attributeValues, media: updatedSource });
+            }
+        }
+
+        if (targetId === "singleMedia") {
+            onChangeSingle(updatedTarget);
+        } else {
+            newVariantMedia = newVariantMedia.filter(vm => vm.key !== targetId);
+            const targetCombo = combinations.find(c => c.key === targetId);
+            if (targetCombo) {
+                newVariantMedia.push({ key: String(targetId), attributeValues: targetCombo.attributeValues, media: updatedTarget });
+            }
+        }
+
+        if (sourceId !== "singleMedia" || targetId !== "singleMedia") {
+            onChangeVariant(newVariantMedia);
+        }
+    };
+
+    const handleDragEnd = (event: DragEndEvent) => {
+        const { active, over } = event;
+        if (!over) return;
+
+        const sourceId = active.data.current?.sortable?.containerId;
+        const targetId = over.data.current?.sortable?.containerId || over.id;
+
+        if (!sourceId || !targetId) return;
+
+        // If cross container, it was already handled by handleDragOver
+        if (sourceId !== targetId) return;
+
+        const getContainerMedia = (id: string): MediaItem[] => {
+            if (id === "singleMedia") return singleMedia;
+            const combo = combinations.find(c => c.key === id);
+            return getMedia(id, combo?.attributeValues);
+        };
+
+        const sourceMedia = [...getContainerMedia(String(sourceId))];
+        const oldIndex = sourceMedia.findIndex(m => m.id === active.id);
+        const newIndex = sourceMedia.findIndex(m => m.id === over.id);
+        
+        if (oldIndex === -1 || newIndex === -1 || oldIndex === newIndex) return;
+
+        const itemToMove = sourceMedia[oldIndex];
+        sourceMedia.splice(oldIndex, 1);
+        sourceMedia.splice(newIndex, 0, itemToMove);
+
+        const updated = sourceMedia.map((m, i) => ({ ...m, order: i }));
+
+        if (sourceId === "singleMedia") {
+            onChangeSingle(updated);
+        } else {
+            handleVariantMediaChange(String(sourceId), toImageUploadItems(updated));
+        }
+    };
+
     if (!isMediaVariantBased && !hasAttributeControllingMedia) {
         return (
             <Card className={errors['singleMedia'] ? "border-danger" : ""}>
-                <div className="flex flex-col gap-2" id="singleMedia">
-                    <div className="flex items-center justify-between">
-                        <h2 className="text-xl font-semibold">
-                            Media Management
-                        </h2>
+                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
+                    <div className="flex flex-col gap-2" id="singleMedia">
+                        <div className="flex items-center justify-between">
+                            <h2 className="text-xl font-semibold">
+                                Media Management
+                            </h2>
+                        </div>
+                        {hasAttributeControllingMedia && mediaAttributes.length === 0 && (
+                            <p className="text-sm">
+                                No attributes are controlling media. These images apply to all variants.
+                            </p>
+                        )}
                     </div>
-                    {hasAttributeControllingMedia && mediaAttributes.length === 0 && (
-                        <p className="text-sm">
-                            No attributes are controlling media. These images apply to all variants.
-                        </p>
-                    )}
-                </div>
 
-                <ImageUpload
-                    value={toImageUploadItems(singleMedia)}
-                    onChange={handleSingleMediaChange}
-                    isMulti={true}
-                    hasPrimary={true}
-                    autoSetPrimaryOnFirstAdd={true}
-                    error={errors['singleMedia'] ? String(errors['singleMedia']) : undefined}
-                />
+                    <ImageUpload
+                        value={toImageUploadItems(singleMedia)}
+                        onChange={handleSingleMediaChange}
+                        isMulti={true}
+                        hasPrimary={true}
+                        autoSetPrimaryOnFirstAdd={true}
+                        error={errors['singleMedia'] ? String(errors['singleMedia']) : undefined}
+                        disableInternalDnd={true}
+                        sortableContextId="singleMedia"
+                    />
+                </DndContext>
             </Card>
         );
     }
 
-    // Variant-based mode
     if (combinations.length === 0) {
         return (
             <Card>
@@ -207,31 +359,35 @@ export const MediaSection: React.FC<MediaSectionProps> = ({
                 <strong>{mediaAttributes.map((a) => a.name).join(", ")}</strong>
             </p>
 
-            {combinations.map((combo) => {
-                const media = getMedia(combo.key, combo.attributeValues);
-                const variantIndex = variantMedia.findIndex(vm => vm.key === combo.key);
-                const errorKey = variantIndex >= 0 ? `variantMedia.${variantIndex}.media` : undefined;
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
+                {combinations.map((combo) => {
+                    const media = getMedia(combo.key, combo.attributeValues);
+                    const variantIndex = variantMedia.findIndex(vm => vm.key === combo.key);
+                    const errorKey = variantIndex >= 0 ? `variantMedia.${variantIndex}.media` : undefined;
 
-                return (
-                    <Card
-                        key={combo.key}
-                        variant="nested"
-                    >
-                        <h4 className="font-medium">{combo.label}</h4>
+                    return (
+                        <Card
+                            key={combo.key}
+                            variant="nested"
+                        >
+                            <h4 className="font-medium">{combo.label}</h4>
 
-                        <ImageUpload
-                            id={errorKey}
-                            value={toImageUploadItems(media)}
-                            onChange={(items) => handleVariantMediaChange(combo.key, items)}
-                            isMulti={true}
-                            hasPrimary={true}
-                            hasGroupPrimary={true}
-                            autoSetPrimaryOnFirstAdd={false}
-                            error={errorKey ? (errors[errorKey] as string) : undefined}
-                        />
-                    </Card>
-                );
-            })}
+                            <ImageUpload
+                                id={errorKey}
+                                value={toImageUploadItems(media)}
+                                onChange={(items) => handleVariantMediaChange(combo.key, items)}
+                                isMulti={true}
+                                hasPrimary={true}
+                                hasGroupPrimary={true}
+                                autoSetPrimaryOnFirstAdd={false}
+                                error={errorKey ? (errors[errorKey] as string) : undefined}
+                                disableInternalDnd={true}
+                                sortableContextId={combo.key}
+                            />
+                        </Card>
+                    );
+                })}
+            </DndContext>
         </Card>
     );
 };

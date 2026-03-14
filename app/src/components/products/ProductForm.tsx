@@ -40,6 +40,7 @@ import {
 } from "../../services/products/utils/variant-combinations";
 
 interface ProductFormProps {
+  productId?: string;
   initialData?: Partial<ProductFormData>;
   isEditMode?: boolean;
   onSubmit: (data: ProductFormData) => Promise<void>;
@@ -51,6 +52,7 @@ interface ProductFormProps {
 }
 
 export const ProductForm: React.FC<ProductFormProps> = ({
+  productId,
   initialData = {},
   isEditMode = false,
   onSubmit,
@@ -611,7 +613,12 @@ export const ProductForm: React.FC<ProductFormProps> = ({
     <div className="mx-auto p-5 flex flex-col gap-5">
       <PageHeader
         icon={<Package />}
-        title={isEditMode ? "Edit Product" : "Create New Product"}
+        title={isEditMode ? (
+          <span className="flex items-center gap-2">
+            Edit Product
+            {productId && <span className="text-primary">#{productId}</span>}
+          </span>
+        ) : "Create New Product"}
         description={isEditMode ? "Update product information and variants" : "Fill in the details to create a new product"}
         extraActions={
           isEditMode && formData.slug ? (

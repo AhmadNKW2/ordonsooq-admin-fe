@@ -10,7 +10,7 @@ import { useRouter } from "@/hooks/use-loading-router";
 import { useSessionStoragePage } from "@/hooks/use-session-storage-page";
 import { useLoading } from "../src/providers/loading-provider";
 import Image from "next/image";
-import { useProducts, useDeleteProduct, useProduct } from "../src/services/products/hooks/use-products";
+import { useProducts, useDeleteProduct, useProduct, useToggleProductStatus } from "../src/services/products/hooks/use-products";
 import { Package, AlertCircle, Star } from "lucide-react";
 import { Card } from "../src/components/ui/card";
 import { Button } from "../src/components/ui/button";
@@ -95,10 +95,24 @@ export default function ProductsPage() {
   const [viewProductId, setViewProductId] = useState<number | null>(null);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
+  const [highlightedProductId, setHighlightedProductId] = useState<string | null>(null);
 
   const { data, isLoading, isError, error, refetch } =
     useProducts(queryParams);
   const deleteProduct = useDeleteProduct();
+  const toggleProductStatus = useToggleProductStatus();
+
+  const handleToggleVisibility = async (e: React.MouseEvent, product: Product) => {
+    e.stopPropagation();
+    try {
+      await toggleProductStatus.mutateAsync({
+        id: product.id,
+        visible: !(product.visible ?? product.is_active)
+      });
+    } catch (err) {
+      console.error('Failed to update visibility', err);
+    }
+  };
 
   // Dropdown data for filters
   const { data: vendorsData } = useVendors();
@@ -123,10 +137,31 @@ export default function ProductsPage() {
     label: [a.firstName, a.lastName].filter(Boolean).join(' ') || a.email || String(a.id),
   }));
 
+  const products = data?.data.data || [];
+
   // Show loading overlay while data is loading
   useEffect(() => {
     setShowOverlay(isLoading);
   }, [isLoading, setShowOverlay]);
+
+  // Handle highlighting and scrolling to last viewed product
+  useEffect(() => {
+    if (!isLoading && products.length > 0) {
+      const id = sessionStorage.getItem('highlighted_product_id');
+      if (id) {
+        setHighlightedProductId(id);
+        
+        // Wait a small moment for the DOM to fully render the table rows
+        setTimeout(() => {
+          const element = document.getElementById(`product-row-${id}`);
+          if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            sessionStorage.removeItem('highlighted_product_id'); // Clear it to prevent re-highlighting on next visits
+          }
+        }, 300);
+      }
+    }
+  }, [isLoading, products.length]);
 
   // Fetch product details when viewing
   const { data: viewProductData, isLoading: isLoadingViewProduct } = useProduct(
@@ -233,6 +268,22 @@ export default function ProductsPage() {
     handleFilterChange({ created_by: v.length > 0 ? v.join(",") : undefined });
   };
 
+  const handleStockChange = (value: string | string[]) => {
+    const val = Array.isArray(value) ? value[0] : value;
+    let in_stock = undefined;
+    if (val === 'true') in_stock = true;
+    else if (val === 'false') in_stock = false;
+    handleFilterChange({ in_stock });
+  };
+
+  const handleVisibilityChange = (value: string | string[]) => {
+    const val = Array.isArray(value) ? value[0] : value;
+    let visible = undefined;
+    if (val === 'true') visible = true;
+    else if (val === 'false') visible = false;
+    handleFilterChange({ visible });
+  };
+
   const handleClearAllFilters = () => {
     setSearchTerm("");
     setStartDate("");
@@ -310,8 +361,6 @@ export default function ProductsPage() {
       time: parsedDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
     };
   };
-
-  const products = data?.data.data || [];
 
   if (isError) {
     return (
@@ -451,6 +500,37 @@ export default function ProductsPage() {
                 </div>
               )}
             </div>
+
+            <div className="flex items-center gap-4">
+              <div className="relative w-1/3 shrink-0">
+                <Select
+                  label="Stock"
+                  value={queryParams.in_stock === true ? "true" : queryParams.in_stock === false ? "false" : ""}
+                  onChange={handleStockChange}
+                  options={[
+                    { value: "true", label: "In Stock" },
+                    { value: "false", label: "Out of Stock" }
+                  ]}
+                  onClear={() => handleStockChange("")}
+                  multiple={false}
+                  placeholder="All Stock Status"
+                />
+              </div>
+              <div className="relative w-1/3 flex-1">
+                <Select
+                  label="Visibility"
+                  value={queryParams.visible === true ? "true" : queryParams.visible === false ? "false" : ""}
+                  onChange={handleVisibilityChange}
+                  options={[
+                    { value: "true", label: "Visible" },
+                    { value: "false", label: "Hidden" }
+                  ]}
+                  onClear={() => handleVisibilityChange("")}
+                  multiple={false}
+                  placeholder="All Visibility"
+                />
+              </div>
+            </div>
           </div>
         </Card>
       )}
@@ -534,7 +614,11 @@ export default function ProductsPage() {
                   // 4. Fallback to legacy fields if any
 
                return (
-              <TableRow key={product.id}>
+              <TableRow 
+                key={product.id} 
+                id={`product-row-${product.id}`}
+                className={highlightedProductId === product.id.toString() ? "bg-secondary/10 transition-colors duration-500" : ""}
+              >
                 <TableCell className="font-mono text-sm">
                   {product.id}
                 </TableCell>
@@ -698,13 +782,19 @@ export default function ProductsPage() {
                   )}
                 </TableCell>
                 <TableCell>
-                  <Badge
-                    variant={getVisibilityVariant(
-                      product.visible ?? product.is_active
-                    )}
+                  <div 
+                    onClick={(e) => handleToggleVisibility(e, product)}
+                    className="cursor-pointer inline-block transition-opacity hover:opacity-80"
+                    title="Click to toggle visibility"
                   >
-                    {getVisibilityLabel(product.visible ?? product.is_active)}
-                  </Badge>
+                    <Badge
+                      variant={getVisibilityVariant(
+                        product.visible ?? product.is_active
+                      )}
+                    >
+                      {getVisibilityLabel(product.visible ?? product.is_active)}
+                    </Badge>
+                  </div>
                 </TableCell>
                 <TableCell>
                   <div className="flex gap-1">
@@ -723,6 +813,7 @@ export default function ProductsPage() {
                       href={`/products/${product.id}`}
                       onClick={(e) => {
                         e.stopPropagation();
+                        sessionStorage.setItem('highlighted_product_id', product.id.toString());
                       }}
                       title="Edit product"
                     />
@@ -751,6 +842,7 @@ export default function ProductsPage() {
         onEdit={() => {
           handleCloseViewModal();
           if (viewProductId) {
+            sessionStorage.setItem('highlighted_product_id', viewProductId.toString());
             router.push(`/products/${viewProductId}`);
           }
         }}

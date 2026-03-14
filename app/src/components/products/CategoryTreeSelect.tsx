@@ -309,7 +309,7 @@ export const CategoryTreeSelect: React.FC<CategoryTreeSelectProps> = ({
                 <X className="h-4 w-4" />
               </div>
             )}
-            <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform duration-200", isOpen && "rotate-180")} />
+            <ChevronDown className={cn("h-4 w-4 text-primary/60 transition-transform duration-300", isOpen && "rotate-180")} />
           </div>
         </div>
 

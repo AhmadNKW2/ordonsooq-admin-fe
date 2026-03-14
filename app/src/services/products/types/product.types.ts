@@ -311,6 +311,8 @@ export interface ProductFilters {
   is_featured?: boolean;
   start_date?: string;
   end_date?: string;
+  visible?: boolean | string;
+  in_stock?: boolean | string;
 }
 
 // ==================== DTOs ====================

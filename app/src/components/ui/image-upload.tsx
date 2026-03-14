@@ -176,6 +176,10 @@ export interface ImageUploadProps {
     label?: string;
     /** Preview size for single image mode */
     previewSize?: "sm" | "md" | "lg";
+    /** Disable internal DndContext (useful when wrapping multiple ImageUploads in a single DndContext) */
+    disableInternalDnd?: boolean;
+    /** Custom SortableContext ID (only useful if disableInternalDnd is true) */
+    sortableContextId?: string;
 }
 
 export const ImageUpload: React.FC<ImageUploadProps> = ({
@@ -193,6 +197,8 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
     error,
     label,
     previewSize = "md",
+    disableInternalDnd = false,
+    sortableContextId,
 }) => {
     const [dragOver, setDragOver] = useState(false);
     const [previewImage, setPreviewImage] = useState<string | null>(null);
@@ -284,20 +290,46 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
     const handleSetPrimary = (mediaId: string) => {
         if (!hasPrimary || !onChange) return;
 
-        const updated = currentValue.map((m) => ({
+        let updated = currentValue.map((m) => ({
             ...m,
             isPrimary: m.id === mediaId,
         }));
+
+        if (hasGroupPrimary) {
+            updated = updated.map((m) => ({
+                ...m,
+                isGroupPrimary: m.id === mediaId,
+            }));
+        }
+
+        const targetIndex = updated.findIndex((m) => m.id === mediaId);
+        if (targetIndex > 0) {
+            const [movedItem] = updated.splice(targetIndex, 1);
+            updated.unshift(movedItem);
+            updated = updated.map((m, idx) => ({ ...m, order: idx }));
+        }
+
         onChange(updated);
     };
 
     const handleSetGroupPrimary = (mediaId: string) => {
         if (!hasGroupPrimary || !onChange) return;
 
-        const updated = currentValue.map((m) => ({
+        const hasProductPrimary = currentValue.some(m => m.isPrimary);
+
+        let updated = currentValue.map((m) => ({
             ...m,
             isGroupPrimary: m.id === mediaId,
+            ...(hasProductPrimary ? { isPrimary: m.id === mediaId } : {})
         }));
+
+        const targetIndex = updated.findIndex((m) => m.id === mediaId);
+        if (targetIndex > 0) {
+            const [movedItem] = updated.splice(targetIndex, 1);
+            updated.unshift(movedItem);
+            updated = updated.map((m, idx) => ({ ...m, order: idx }));
+        }
+
         onChange(updated);
     };
 
@@ -434,7 +466,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
                     className={`border-2 border-dashed rounded-r1 p-8 text-center transition-colors ${dragOver
                         ? "border-primary bg-primary/10"
                         : "border-primary/20 hover:border-primary hover:bg-primary/10 hover:cursor-pointer"
-                        } ${error ? "border-danger" : ""}`}
+                        } ${error ? "border-danger" : ""} ${disableInternalDnd && isMulti ? "hidden" : ""}`}
                     onClick={() => fileInputRef.current?.click()}
                 >
                     <input
@@ -464,17 +496,41 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
             )}
 
             {/* Media Grid - Only for multi mode */}
-            {isMulti && currentValue.length > 0 && (
-                <DndContext
-                    sensors={sensors}
-                    collisionDetection={closestCenter}
-                    onDragEnd={handleDragEnd}
-                >
+            {isMulti && (
+                disableInternalDnd ? (
                     <SortableContext
+                        id={sortableContextId}
                         items={currentValue.map((m) => m.id)}
                         strategy={rectSortingStrategy}
                     >
-                        <div className="flex flex-wrap gap-5">
+                        <div className="flex flex-wrap gap-5 min-h-[160px] p-2 border border-dashed border-transparent hover:border-gray-200"
+                            onDragOver={(e) => {
+                                e.preventDefault();
+                                setDragOver(true);
+                            }}
+                            onDragLeave={() => setDragOver(false)}
+                            onDrop={(e) => {
+                                handleDrop(e);
+                                setDragOver(false);
+                            }}
+                        >
+                            {/* Simple add media button inside the grid so the group isn't completely empty and can receive drops/clicks */}
+                            <div
+                                onClick={() => fileInputRef.current?.click()}
+                                className="w-40 h-40 flex flex-col justify-center items-center border-2 border-dashed border-primary/20 hover:border-primary hover:bg-primary/10 rounded-r1 cursor-pointer transition-colors"
+                            >
+                                <input
+                                    ref={fileInputRef}
+                                    type="file"
+                                    multiple={isMulti}
+                                    accept={accept}
+                                    onChange={handleFileSelect}
+                                    className="hidden"
+                                />
+                                <Upload className="mb-2 w-8 h-8 text-primary/50" />
+                                <span className="text-sm text-primary font-medium text-center px-2">Add or Drop Media</span>
+                            </div>
+
                             {currentValue.map((item) => (
                                 <SortableImageItem
                                     key={item.id}
@@ -489,7 +545,33 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
                             ))}
                         </div>
                     </SortableContext>
-                </DndContext>
+                ) : currentValue.length > 0 ? (
+                    <DndContext
+                        sensors={sensors}
+                        collisionDetection={closestCenter}
+                        onDragEnd={handleDragEnd}
+                    >
+                        <SortableContext
+                            items={currentValue.map((m) => m.id)}
+                            strategy={rectSortingStrategy}
+                        >
+                            <div className="flex flex-wrap gap-5">
+                                {currentValue.map((item) => (
+                                    <SortableImageItem
+                                        key={item.id}
+                                        item={item}
+                                        onRemove={handleRemove}
+                                        onSetPrimary={hasPrimary ? handleSetPrimary : undefined}
+                                        onSetGroupPrimary={hasGroupPrimary ? handleSetGroupPrimary : undefined}
+                                        onPreview={showPreview ? setPreviewImage : undefined}
+                                        hasPrimary={hasPrimary}
+                                        hasGroupPrimary={hasGroupPrimary}
+                                    />
+                                ))}
+                            </div>
+                        </SortableContext>
+                    </DndContext>
+                ) : null
             )}
 
             {/* Preview Modal */}

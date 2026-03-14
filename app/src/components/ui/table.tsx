@@ -107,14 +107,16 @@ interface TableRowProps {
   onClick?: () => void;
   style?: React.CSSProperties;
   isHeader?: boolean;
+  id?: string;
 }
 
 export const TableRow = React.forwardRef<HTMLTableRowElement, TableRowProps>(
-  ({ children, className = '', onClick, style, isHeader = false }, ref) => {
+  ({ children, className = '', onClick, style, isHeader = false, id }, ref) => {
     const height = isHeader ? '50px' : '69px';
     return (
       <tr
         ref={ref}
+        id={id}
         className={`transition-all duaration-300 border-b border-secondary last:border-b-0 ${onClick ? 'cursor-pointer' : ''} ${className}`}
         onClick={onClick}
         style={{ height, ...style }}

@@ -1487,8 +1487,9 @@ const transformVariantMedia = (stockVariants: any[], attrs: any[]) => {
 
   return (
     <ProductForm
-      isEditMode={true}
-      initialData={initialData}
+        productId={typeof params?.id === 'string' ? params.id : undefined}
+        isEditMode={true}
+        initialData={initialData}
       onSubmit={handleSubmit}
       onSaveDraft={handleSaveDraft}
       categories={categories}
