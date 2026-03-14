@@ -113,6 +113,26 @@ export const BasicInformationSection: React.FC<BasicInformationSectionProps> = (
         return [...priority, ...rest];
     }, [brands, formData.brandId]);
 
+    const recentCategoriesList = useMemo(() => {
+        const recentIds = getRecentIds(RECENT_CATEGORY_KEY);
+        if (!recentIds.length) return [];
+        
+        const foundCategories: Category[] = [];
+        const findInTree = (cats: Category[], id: string) => {
+            for (const cat of cats) {
+                if (cat.id.toString() === id) {
+                    foundCategories.push(cat);
+                    return true;
+                }
+                if (cat.children && findInTree(cat.children, id)) return true;
+            }
+            return false;
+        };
+        
+        recentIds.forEach(id => findInTree(categories, id));
+        return foundCategories;
+    }, [categories]);
+
     const sortedCategories = useMemo(() => {
         const recentIds = getRecentIds(RECENT_CATEGORY_KEY);
         // Include both current selection and recent choices
@@ -129,6 +149,28 @@ export const BasicInformationSection: React.FC<BasicInformationSectionProps> = (
         const sortTree = (cats: Category[]): Category[] => {
             const priority = cats.filter(isPriorityNode);
             const rest = cats.filter(c => !isPriorityNode(c));
+            
+            // Sort priority nodes to match the order of recentIds, with current selection first
+            priority.sort((a, b) => {
+                const aId = a.id.toString();
+                const bId = b.id.toString();
+                
+                // If one is currently selected and the other isn't, prioritize selected
+                const aSelected = formData.categoryIds?.includes(aId);
+                const bSelected = formData.categoryIds?.includes(bId);
+                if (aSelected && !bSelected) return -1;
+                if (!aSelected && bSelected) return 1;
+                
+                // If neither or both are selected, sort by recent usage
+                const aIndex = recentIds.indexOf(aId);
+                const bIndex = recentIds.indexOf(bId);
+                
+                if (aIndex !== -1 && bIndex !== -1) return aIndex - bIndex;
+                if (aIndex !== -1) return -1;
+                if (bIndex !== -1) return 1;
+                
+                return 0; // Maintain original order if neither is recent (e.g. they only have priority children)
+            });
             
             return [
                 ...priority.map(c => ({
@@ -223,6 +265,7 @@ export const BasicInformationSection: React.FC<BasicInformationSectionProps> = (
                     id="categoryIds"
                     label="Categories"
                     categories={sortedCategories}
+                    recentCategories={recentCategoriesList}
                     selectedIds={formData.categoryIds || []}
                     onChange={(ids) => onChange("categoryIds", ids)}
                     error={errors.categoryIds}

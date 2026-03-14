@@ -11,6 +11,7 @@ import { ChevronDown, Search, X } from "lucide-react";
 interface CategoryTreeSelectProps {
   id?: string;
   categories: Category[];
+  recentCategories?: Category[];
   selectedIds: string[];
   onChange: (ids: string[]) => void;
   singleSelect?: boolean;
@@ -191,6 +192,7 @@ const findCategoryInTree = (
 export const CategoryTreeSelect: React.FC<CategoryTreeSelectProps> = ({
   id,
   categories,
+  recentCategories,
   selectedIds,
   onChange,
   singleSelect = false,
@@ -335,16 +337,42 @@ export const CategoryTreeSelect: React.FC<CategoryTreeSelectProps> = ({
                   No categories found
                 </div>
               ) : (
-                categories.map((category) => (
-                  <CategoryTreeNode
-                    key={category.id}
-                    category={category}
-                    selectedIds={selectedIds}
-                    onChange={onChange}
-                    singleSelect={singleSelect}
-                    searchTerm={searchTerm}
-                  />
-                ))
+                <>
+                  {!searchTerm && recentCategories && recentCategories.length > 0 && (
+                    <div className="mb-4">
+                      <div className="text-xs font-semibold text-muted-foreground mb-2 px-1 uppercase tracking-wider">
+                        Recently Used
+                      </div>
+                      {recentCategories.map((recentCategory) => (
+                        <CategoryTreeNode
+                          key={`recent-${recentCategory.id}`}
+                          category={{...recentCategory, children: undefined}} // Flat list for recents
+                          selectedIds={selectedIds}
+                          onChange={onChange}
+                          singleSelect={singleSelect}
+                          searchTerm={searchTerm}
+                        />
+                      ))}
+                    </div>
+                  )}
+                  <div>
+                    {!searchTerm && recentCategories && recentCategories.length > 0 && (
+                      <div className="text-xs font-semibold text-muted-foreground mb-2 px-1 uppercase tracking-wider">
+                        All Categories
+                      </div>
+                    )}
+                    {categories.map((category) => (
+                      <CategoryTreeNode
+                        key={category.id}
+                        category={category}
+                        selectedIds={selectedIds}
+                        onChange={onChange}
+                        singleSelect={singleSelect}
+                        searchTerm={searchTerm}
+                      />
+                    ))}
+                  </div>
+                </>
               )}
               {searchTerm && categories.every(c => {
                  // Simple check if everything is filtered out at top level
