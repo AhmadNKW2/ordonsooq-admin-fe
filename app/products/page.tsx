@@ -669,17 +669,19 @@ export default function ProductsPage() {
                   <div className="flex gap-1">
                     <IconButton
                       variant="view"
+                      href={`/products/${product.id}/view`}
                       onClick={(e) => {
                         e.stopPropagation();
+                        // handleView(product); // Just use href for right click if possible, actually handleView probably opens modal
                         handleView(product);
                       }}
                       title="View product"
                     />
                     <IconButton
                       variant="edit"
+                      href={`/products/${product.id}`}
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleEdit(product);
                       }}
                       title="Edit product"
                     />

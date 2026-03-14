@@ -141,7 +141,8 @@ const SortableRow: React.FC<{
                 <div className="flex justify-end gap-2">
                     <IconButton
                         variant="edit"
-                        onClick={() => onEdit(banner)}
+                        href={`/banners/${banner.id}`}
+                        onClick={(e) => e.stopPropagation()}
                         title="Edit"
                     />
                     <IconButton

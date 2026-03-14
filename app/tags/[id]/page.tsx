@@ -192,7 +192,7 @@ export default function TagDetailPage() {
                         <IconButton
                           variant="view"
                           title="View concept"
-                          onClick={() => router.push(`/search-concepts/${concept.id}`)}
+                          href={`/search-concepts/${concept.id}`}
                         />
                         <IconButton
                           variant="delete"

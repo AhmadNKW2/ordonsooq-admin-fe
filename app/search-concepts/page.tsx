@@ -208,7 +208,7 @@ export default function SearchConceptsPage() {
                     <IconButton
                       variant="view"
                       title="View concept"
-                      onClick={() => router.push(`/search-concepts/${concept.id}`)}
+                      href={`/search-concepts/${concept.id}`}
                     />
                     {concept.status === "pending" && (
                       <>

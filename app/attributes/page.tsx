@@ -127,9 +127,9 @@ const SortableRow: React.FC<{
           />
           <IconButton
             variant="edit"
+            href={`/attributes/${attribute.id}`}
             onClick={(e) => {
               e.stopPropagation();
-              onEdit(attribute);
             }}
             title="Edit attribute"
           />

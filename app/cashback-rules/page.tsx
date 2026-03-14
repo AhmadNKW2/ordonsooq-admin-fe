@@ -151,7 +151,10 @@ export default function CashbackRulesPage() {
                     <div className="flex gap-2">
                       <Button
                         variant="outline"
-                        onClick={() => router.push(`/cashback-rules/${rule.id}`)}
+                        href={`/cashback-rules/${rule.id}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                        }}
                         color="var(--color-primary)"
                         className="px-2"
                       >

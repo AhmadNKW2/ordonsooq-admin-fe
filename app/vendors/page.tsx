@@ -153,9 +153,9 @@ const SortableVendorRow: React.FC<SortableVendorRowProps> = ({
           />
           <IconButton
             variant="edit"
+            href={`/vendors/${vendor.id}`}
             onClick={(e) => {
               e.stopPropagation();
-              onEdit(vendor);
             }}
             title="Edit vendor"
           />

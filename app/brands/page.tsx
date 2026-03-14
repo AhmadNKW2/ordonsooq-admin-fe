@@ -148,9 +148,9 @@ const SortableBrandRow: React.FC<SortableBrandRowProps> = ({
           />
           <IconButton
             variant="edit"
+            href={`/brands/${brand.id}`}
             onClick={(e) => {
               e.stopPropagation();
-              onEdit(brand);
             }}
             title="Edit brand"
           />

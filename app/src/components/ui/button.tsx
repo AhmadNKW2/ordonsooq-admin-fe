@@ -1,18 +1,20 @@
 import React from 'react';
+import Link from 'next/link';
 
 interface ButtonProps {
   children: React.ReactNode;
   // Accept native mouse event so consumers can access the event (e.g. stopPropagation)
-  onClick?: React.MouseEventHandler<HTMLButtonElement>;
+  onClick?: React.MouseEventHandler<HTMLButtonElement | HTMLAnchorElement>;
   variant?: 'outline' | 'solid';
   color?: string;
   disabled?: boolean;
   className?: string;
   type?: 'button' | 'submit' | 'reset';
   isSquare?: boolean;
+  href?: string;
 }
 
-export const Button: React.FC<ButtonProps> = ({ children, onClick, variant = 'solid', color, disabled = false, className = '', type = 'button', isSquare = false }) => {
+export const Button: React.FC<ButtonProps> = ({ children, onClick, variant = 'solid', color, disabled = false, className = '', type = 'button', isSquare = false, href }) => {
 
   const defaultVariantClasses = {
     // solid: 'bg-amber-100 border border-amber-300 active:bg-secondary/75 hover:bg-amber-200 hover:text-yellow-600 text-amber-600',
@@ -32,12 +34,27 @@ export const Button: React.FC<ButtonProps> = ({ children, onClick, variant = 'so
 
   const sizeClasses = isSquare ? 'w-11 h-11 p-0 flex items-center justify-center' : 'px-5 h-13';
 
+  const baseClasses = `text-nowrap ${sizeClasses} rounded-r1 font-medium text-[16px] transition-all duaration-300 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${variantClasses[variant]} ${className}`;
+
+  if (href && !disabled) {
+    return (
+      <Link 
+        href={href}
+        className={baseClasses}
+        style={buttonStyle}
+        onClick={onClick as React.MouseEventHandler<HTMLAnchorElement>}
+      >
+        {children}
+      </Link>
+    );
+  }
+
   return (
     <button
       type={type}
-      onClick={onClick}
+      onClick={onClick as React.MouseEventHandler<HTMLButtonElement>}
       disabled={disabled}
-      className={`text-nowrap ${sizeClasses} rounded-r1 font-medium text-[16px] transition-all duaration-300 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${variantClasses[variant]} ${className}`}
+      className={baseClasses}
       style={buttonStyle}
     >
       {children}

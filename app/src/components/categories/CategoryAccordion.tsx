@@ -169,10 +169,9 @@ const SortableParentCategory: React.FC<SortableParentCategoryProps> = ({
               />
               <IconButton
                 variant="edit"
-                asDiv
+                href={`/categories/${category.id}`}
                 onClick={(e) => {
                   e.stopPropagation();
-                  onEdit(category);
                 }}
                 title="Edit category"
               />
@@ -413,9 +412,9 @@ const SortableSubcategory: React.FC<SortableSubcategoryProps> = ({
           />
           <IconButton
             variant="edit"
+            href={`/categories/${subcategory.id}`}
             onClick={(e) => {
               e.stopPropagation();
-              onEdit(subcategory);
             }}
             title="Edit subcategory"
           />

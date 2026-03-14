@@ -268,9 +268,9 @@ export const UserListPage: React.FC<UserListPageProps> = ({ userType }) => {
                       />
                       <IconButton
                         variant="edit"
+                        href={`${basePath}/${user.id}`}
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleEdit(user);
                         }}
                         title={`Edit ${label.toLowerCase()}`}
                       />

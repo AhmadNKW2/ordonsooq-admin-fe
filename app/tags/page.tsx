@@ -160,7 +160,8 @@ export default function TagsPage() {
                       <IconButton
                         variant="view"
                         title="View tag"
-                        onClick={(e) => { e?.stopPropagation(); router.push(`/tags/${tag.id}`); }}
+                        href={`/tags/${tag.id}`}
+                        onClick={(e) => e?.stopPropagation()}
                       />
                       <IconButton
                         variant="delete"

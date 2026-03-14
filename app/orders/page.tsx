@@ -210,7 +210,7 @@ export default function OrdersPage() {
                         <TableCell>{getOrderDate(order.created_at || order.createdAt)}</TableCell>
                         <TableCell>
                             <IconButton 
-                                onClick={() => router.push(`/orders/${order.id}`)}
+                                href={`/orders/${order.id}`}
                                 variant="view"
                                 title="View Details"
                             />
