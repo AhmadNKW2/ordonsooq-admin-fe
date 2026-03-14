@@ -676,7 +676,7 @@ export const AttributeForm: React.FC<AttributeFormProps> = ({
       />
 
       {/* Attribute Details Form */}
-      <Card className="w-full">
+        <Card className="w-full relative z-10">
         <h2 className="text-lg font-semibold">Attribute Details</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           <Input
