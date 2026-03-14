@@ -850,7 +850,7 @@ export const AttributeForm: React.FC<AttributeFormProps> = ({
               </Button>
             </div>
           ) : (
-            <div className="rounded-xl overflow-hidden shadow-sm bg-white">
+            <div className="rounded-xl overflow-hidden shadow-sm bg-white isolate transform-gpu relative z-0">
               <DndContext
                 sensors={sensors}
                 collisionDetection={closestCenter}
