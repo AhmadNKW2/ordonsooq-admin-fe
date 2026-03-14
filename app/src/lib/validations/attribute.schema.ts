@@ -83,6 +83,8 @@ export const attributeSchema = z.object({
     }),
   is_color: z.boolean(),
   is_active: z.boolean(),
+  attribute_type: z.enum(["spec_attribute", "variant_attribute"]).optional().nullable(),
+  list_separately: z.boolean().optional(),
 });
 
 // Type inference

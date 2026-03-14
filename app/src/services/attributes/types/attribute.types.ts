@@ -24,6 +24,8 @@ export interface Attribute {
   name_ar: string;
   type: string;
   is_color: boolean;
+  attribute_type?: string | null;
+  list_separately?: boolean;
   unit_en?: string | null;
   unit_ar?: string | null;
   parent_id?: number | null;
@@ -48,6 +50,8 @@ export interface CreateAttributeDto {
   parent_value_id?: number | null;
   is_color?: boolean;
   is_active?: boolean;
+  attribute_type?: string | null;
+  list_separately?: boolean;
   values?: CreateAttributeValueDto[];
 }
 
@@ -81,6 +85,8 @@ export interface UpdateAttributeDto {
   parent_value_id?: number | null;
   is_color?: boolean;
   is_active?: boolean;
+  attribute_type?: string | null;
+  list_separately?: boolean;
   sort_order?: number;
   values?: UpdateAttributeValueInDto[];
 }

@@ -44,6 +44,8 @@ export default function AttributeEditPage() {
       parent_value_id: null,
       is_color: false,
       is_active: true,
+      attribute_type: "spec_attribute",
+      list_separately: false,
     },
     mode: "onSubmit",
   });
@@ -59,6 +61,8 @@ export default function AttributeEditPage() {
   const parentValueId = watch("parent_value_id");
   const isColor = watch("is_color");
   const isActive = watch("is_active");
+  const attributeType = watch("attribute_type");
+  const listSeparately = watch("list_separately");
 
   // Local state for values (managed locally, sent with save)
   const [localValues, setLocalValues] = useState<AttributeValue[]>([]);
@@ -90,6 +94,8 @@ export default function AttributeEditPage() {
         parent_value_id: attribute.parent_value_id,
         is_color: attribute.is_color ?? false,
         is_active: attribute.is_active,
+        attribute_type: attribute.attribute_type ?? "spec_attribute",
+        list_separately: attribute.list_separately ?? false,
       });
       const sortedValues = [...(attribute.values || [])].sort((a, b) => a.sort_order - b.sort_order);
       setLocalValues(sortedValues);
@@ -142,6 +148,8 @@ export default function AttributeEditPage() {
           parent_value_id: data.parent_value_id,
           is_color: data.is_color,
           is_active: data.is_active,
+          attribute_type: data.attribute_type,
+          list_separately: data.list_separately,
           values: valuesPayload,
         },
       });
@@ -234,6 +242,10 @@ export default function AttributeEditPage() {
         onParentValueIdChange={(val) => setValue("parent_value_id", val ? Number(val) : null)}
         onIsColorChange={(value) => setValue("is_color", value)}
         onIsActiveChange={(value) => setValue("is_active", value)}
+        attributeType={attributeType}
+        listSeparately={listSeparately}
+        onAttributeTypeChange={(value) => setValue("attribute_type", value)}
+        onListSeparatelyChange={(value) => setValue("list_separately", value)}
         formErrors={{
           name_en: errors.name_en?.message,
           name_ar: errors.name_ar?.message,

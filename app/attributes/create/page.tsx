@@ -29,6 +29,8 @@ export default function CreateAttributePage() {
       parent_value_id: null,
       is_color: false,
       is_active: true,
+      attribute_type: "spec_attribute",
+      list_separately: false,
     },
     mode: "onSubmit",
   });
@@ -44,6 +46,8 @@ export default function CreateAttributePage() {
   const parentValueId = watch("parent_value_id");
   const isColor = watch("is_color");
   const isActive = watch("is_active");
+  const attributeType = watch("attribute_type");
+  const listSeparately = watch("list_separately");
 
   // Local values state (using AttributeValue with temporary negative IDs for new values)
   const [localValues, setLocalValues] = useState<AttributeValue[]>([]);
@@ -89,6 +93,8 @@ export default function CreateAttributePage() {
         parent_value_id: data.parent_value_id,
         is_color: data.is_color,
         is_active: data.is_active,
+        attribute_type: data.attribute_type,
+        list_separately: data.list_separately,
         values: validValues.length > 0 ? validValues : undefined,
       });
       router.push("/attributes");
@@ -120,6 +126,10 @@ export default function CreateAttributePage() {
       onParentValueIdChange={(val) => setValue("parent_value_id", val)}
       onIsColorChange={(value) => setValue("is_color", value)}
       onIsActiveChange={(value) => setValue("is_active", value)}
+      attributeType={attributeType}
+      listSeparately={listSeparately}
+      onAttributeTypeChange={(value) => setValue("attribute_type", value)}
+      onListSeparatelyChange={(value) => setValue("list_separately", value)}
       formErrors={{
         name_en: errors.name_en?.message,
         name_ar: errors.name_ar?.message,
