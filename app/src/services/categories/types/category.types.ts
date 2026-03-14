@@ -156,5 +156,5 @@ export interface CategoryRestoreResult {
 // Permanent Delete Category DTO
 export interface PermanentDeleteCategoryDto {
   deleteProducts?: boolean;
-  moveProductsToCategoryId?: number;
+  move_products_to_category_id?: number;
 }

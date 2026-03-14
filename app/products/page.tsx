@@ -47,7 +47,7 @@ export default function ProductsPage() {
     limit: storedLimit,
     setLimit: setStoredLimit,
   } = useSessionStoragePage("products");
-  
+
   const [queryParams, setQueryParams] = useState<ProductFilters>(() => {
     if (typeof window !== "undefined") {
       const stored = sessionStorage.getItem("products_filters");
@@ -86,6 +86,8 @@ export default function ProductsPage() {
   }, [queryParams]);
 
   const [searchTerm, setSearchTerm] = useState(queryParams.search || "");
+  const [minPrice, setMinPrice] = useState(queryParams.minPrice?.toString() || "");
+  const [maxPrice, setMaxPrice] = useState(queryParams.maxPrice?.toString() || "");
   const [startDate, setStartDate] = useState(queryParams.start_date || "");
   const [endDate, setEndDate] = useState(queryParams.end_date || "");
   const [selectedVendorIds, setSelectedVendorIds] = useState<string[]>(queryParams.vendor_ids?.split(",") || []);
@@ -150,7 +152,7 @@ export default function ProductsPage() {
       const id = sessionStorage.getItem('highlighted_product_id');
       if (id) {
         setHighlightedProductId(id);
-        
+
         // Wait a small moment for the DOM to fully render the table rows
         setTimeout(() => {
           const element = document.getElementById(`product-row-${id}`);
@@ -239,6 +241,25 @@ export default function ProductsPage() {
     return () => clearTimeout(debounce);
   }, [searchTerm, queryParams.search]);
 
+  // Debounce price changes
+  useEffect(() => {
+    const debounce = setTimeout(() => {
+      const numMin = minPrice ? Number(minPrice) : undefined;
+      const numMax = maxPrice ? Number(maxPrice) : undefined;
+
+      if (numMin !== queryParams.minPrice || numMax !== queryParams.maxPrice) {
+        setQueryParams((prev) => ({
+          ...prev,
+          minPrice: numMin,
+          maxPrice: numMax,
+          page: 1,
+        }));
+      }
+    }, 500);
+
+    return () => clearTimeout(debounce);
+  }, [minPrice, maxPrice, queryParams.minPrice, queryParams.maxPrice]);
+
   const handleDateChange = (field: 'start_date' | 'end_date', value: string) => {
     if (field === 'start_date') setStartDate(value);
     else setEndDate(value);
@@ -286,6 +307,8 @@ export default function ProductsPage() {
 
   const handleClearAllFilters = () => {
     setSearchTerm("");
+    setMinPrice("");
+    setMaxPrice("");
     setStartDate("");
     setEndDate("");
     setSelectedVendorIds([]);
@@ -414,20 +437,61 @@ export default function ProductsPage() {
             )}
           </div>
           <div className="flex flex-col gap-4">
-            <div className="flex items-center gap-4">
-              <div className="relative w-1/3 shrink-0">
-                <Input
-                  value={searchTerm}
-                  onChange={(e) => handleSearchChange(e.target.value)}
-                  label="Search"
-                  variant="search"
-                  maxLength={150}
-                />
-              </div>
+            <Input
+              value={searchTerm}
+              onChange={(e) => handleSearchChange(e.target.value)}
+              label="Search"
+              variant="search"
+              maxLength={150}
+            />
 
+            <div className="flex items-center gap-4">
+              {categoryOptions.length > 0 && (
+                <div className="relative flex-1 z-50">
+                  <CategoryTreeSelect
+                    categories={categoriesData.data ?? []}
+                    selectedIds={selectedCategoryIds}
+                    onChange={handleCategoryChange}
+                    singleSelect={false}
+                    label="Category"
+                  />
+                </div>
+              )}
+
+              {vendorOptions.length > 0 && (
+                <div className="relative flex-1">
+                  <Select
+                    label="Vendor"
+                    value={selectedVendorIds}
+                    onChange={handleVendorChange}
+                    options={vendorOptions}
+                    search={vendorOptions.length > 6}
+                    multiple={true}
+                    placeholder="All Vendors"
+                  />
+                </div>
+              )}
+
+              {brandOptions.length > 0 && (
+                <div className="relative flex-1">
+                  <Select
+                    label="Brand"
+                    value={selectedBrandIds}
+                    onChange={handleBrandChange}
+                    options={brandOptions}
+                    search={brandOptions.length > 6}
+                    multiple={true}
+                    placeholder="All Brands"
+                  />
+                </div>
+              )}
+            </div>
+
+
+            <div className="flex items-center gap-4">
               <div className="relative flex-1">
                 <DatePicker
-                  label="Start Date"
+                  label="Create Start Date"
                   value={startDate}
                   onChange={(v) => handleDateChange('start_date', v)}
                   max={endDate || todayStr}
@@ -436,7 +500,7 @@ export default function ProductsPage() {
 
               <div className="relative flex-1">
                 <DatePicker
-                  label="End Date"
+                  label="Create End Date"
                   value={endDate}
                   onChange={(v) => handleDateChange('end_date', v)}
                   min={startDate || undefined}
@@ -460,49 +524,7 @@ export default function ProductsPage() {
             </div>
 
             <div className="flex items-center gap-4">
-              {categoryOptions.length > 0 && (
-                <div className="relative w-1/3 shrink-0 z-50">
-                  <CategoryTreeSelect
-                    categories={categoriesData.data ?? []}
-                    selectedIds={selectedCategoryIds}
-                    onChange={handleCategoryChange}
-                    singleSelect={false}
-                    label="Category"
-                  />
-                </div>
-              )}
-
-              {vendorOptions.length > 0 && (
-                <div className="relative w-1/3">
-                  <Select
-                    label="Vendor"
-                    value={selectedVendorIds}
-                    onChange={handleVendorChange}
-                    options={vendorOptions}
-                    search={vendorOptions.length > 6}
-                    multiple={true}
-                    placeholder="All Vendors"
-                  />
-                </div>
-              )}
-
-              {brandOptions.length > 0 && (
-                <div className="relative w-1/3">
-                  <Select
-                    label="Brand"
-                    value={selectedBrandIds}
-                    onChange={handleBrandChange}
-                    options={brandOptions}
-                    search={brandOptions.length > 6}
-                    multiple={true}
-                    placeholder="All Brands"
-                  />
-                </div>
-              )}
-            </div>
-
-            <div className="flex items-center gap-4">
-              <div className="relative w-1/3 shrink-0">
+              <div className="relative flex-1">
                 <Select
                   label="Stock"
                   value={queryParams.in_stock === true ? "true" : queryParams.in_stock === false ? "false" : ""}
@@ -516,7 +538,7 @@ export default function ProductsPage() {
                   placeholder="All Stock Status"
                 />
               </div>
-              <div className="relative w-1/3 flex-1">
+              <div className="relative flex-1">
                 <Select
                   label="Visibility"
                   value={queryParams.visible === true ? "true" : queryParams.visible === false ? "false" : ""}
@@ -530,7 +552,29 @@ export default function ProductsPage() {
                   placeholder="All Visibility"
                 />
               </div>
+              <div className="relative flex-1">
+                <Input
+                  label="Min Price"
+                  type="number"
+                  value={minPrice}
+                  onChange={(e) => setMinPrice(e.target.value)}
+                  placeholder="0.00"
+                  min={0}
+                />
+              </div>
+              <div className="relative flex-1">
+                <Input
+                  label="Max Price"
+                  type="number"
+                  value={maxPrice}
+                  onChange={(e) => setMaxPrice(e.target.value)}
+                  placeholder="0.00"
+                  min={0}
+                />
+              </div>
             </div>
+
+
           </div>
         </Card>
       )}
@@ -574,113 +618,113 @@ export default function ProductsPage() {
           </TableHeader>
           <TableBody>
             {products.map((product) => {
-               // Helper to find image
-               let imageUrl = null;
-               
-                 // 1. Try to find explicitly primary image across all media groups
-                 if (product.media_groups) {
-                   for (const key in product.media_groups) {
-                     const group = product.media_groups[key];
-                     if (group?.media?.length) {
-                       const primaryMedia = group.media.find((m: any) => m.is_primary);
-                       if (primaryMedia) {
-                         imageUrl = primaryMedia.url;
-                         break;
-                       }
-                     }
-                   }
-                 }
+              // Helper to find image
+              let imageUrl = null;
 
-                 // 2. Try variants first if no primary found
-                  if (!imageUrl && product.variants?.length && product.media_groups) {
-                    const firstVariant = product.variants[0];
-                    // Ensure media_groups exists and has the key
-                    if (product.media_groups[firstVariant.media_group_id]?.media?.length) {
-                       imageUrl = product.media_groups[firstVariant.media_group_id].media[0].url;
+              // 1. Try to find explicitly primary image across all media groups
+              if (product.media_groups) {
+                for (const key in product.media_groups) {
+                  const group = product.media_groups[key];
+                  if (group?.media?.length) {
+                    const primaryMedia = group.media.find((m: any) => m.is_primary);
+                    if (primaryMedia) {
+                      imageUrl = primaryMedia.url;
+                      break;
                     }
                   }
+                }
+              }
 
-                  // 3. Fallback to simple product media groups
-                  if (!imageUrl && product.media_groups) {
-                    const groupKeys = Object.keys(product.media_groups);
-                    if (groupKeys.length > 0) {
-                      const firstGroup = product.media_groups[groupKeys[0]];
-                      if (firstGroup?.media?.length) {
-                         imageUrl = firstGroup.media[0].url;
-                      }
-                    }
+              // 2. Try variants first if no primary found
+              if (!imageUrl && product.variants?.length && product.media_groups) {
+                const firstVariant = product.variants[0];
+                // Ensure media_groups exists and has the key
+                if (product.media_groups[firstVariant.media_group_id]?.media?.length) {
+                  imageUrl = product.media_groups[firstVariant.media_group_id].media[0].url;
+                }
+              }
+
+              // 3. Fallback to simple product media groups
+              if (!imageUrl && product.media_groups) {
+                const groupKeys = Object.keys(product.media_groups);
+                if (groupKeys.length > 0) {
+                  const firstGroup = product.media_groups[groupKeys[0]];
+                  if (firstGroup?.media?.length) {
+                    imageUrl = firstGroup.media[0].url;
                   }
+                }
+              }
 
-                  // 4. Fallback to legacy fields if any
+              // 4. Fallback to legacy fields if any
 
-               return (
-              <TableRow 
-                key={product.id} 
-                id={`product-row-${product.id}`}
-                className={highlightedProductId === product.id.toString() ? "bg-secondary/10 transition-colors duration-500" : ""}
-              >
-                <TableCell className="font-mono text-sm">
-                  {product.id}
-                </TableCell>
-                <TableCell>
-                  <div className="w-20 h-20 relative rounded-lg overflow-hidden bg-primary/10 border border-primary/20">
-                    {imageUrl ? (
-                      <Image
-                        src={imageUrl}
-                        alt={product.name_en || ""}
-                        fill
-                        className="object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <Package className="h-5 w-5 text-primary" />
-                      </div>
-                    )}
-                  </div>
-                </TableCell>
-                <TableCell className="max-w-xs">
-                  <div className="flex flex-col">
-                    <span className="truncate" title={product.name_en}>{product.name_en}</span>
-                    <span className="text-sm text-gray-500 truncate" title={product.name_ar}>{product.name_ar}</span>
-                  </div>
-                </TableCell>
-                <TableCell>
+              return (
+                <TableRow
+                  key={product.id}
+                  id={`product-row-${product.id}`}
+                  className={highlightedProductId === product.id.toString() ? "bg-secondary/10 transition-colors duration-500" : ""}
+                >
+                  <TableCell className="font-mono text-sm">
+                    {product.id}
+                  </TableCell>
+                  <TableCell>
+                    <div className="w-20 h-20 relative rounded-lg overflow-hidden bg-primary/10 border border-primary/20">
+                      {imageUrl ? (
+                        <Image
+                          src={imageUrl}
+                          alt={product.name_en || ""}
+                          fill
+                          className="object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center">
+                          <Package className="h-5 w-5 text-primary" />
+                        </div>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell className="max-w-xs">
+                    <div className="flex flex-col">
+                      <span className="truncate" title={product.name_en}>{product.name_en}</span>
+                      <span className="text-sm text-gray-500 truncate" title={product.name_ar}>{product.name_ar}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell>
                     {product.categories && product.categories.length > 0 ? (
-                       <span title={product.categories[0].name_en} className="block max-w-[90px]">
-                         <Badge variant="default2" className="w-full whitespace-nowrap overflow-hidden text-ellipsis block">
-                           {formatCategoryName(product.categories[0].name_en)}
-                         </Badge>
-                       </span>
+                      <span title={product.categories[0].name_en} className="block max-w-[90px]">
+                        <Badge variant="default2" className="w-full whitespace-nowrap overflow-hidden text-ellipsis block">
+                          {formatCategoryName(product.categories[0].name_en)}
+                        </Badge>
+                      </span>
                     ) : (
                       <span className="text-gray-400">—</span>
                     )}
-                </TableCell>
-                <TableCell>
-                   {(product.brand?.name_en || product.brand?.logo) ? (
+                  </TableCell>
+                  <TableCell>
+                    {(product.brand?.name_en || product.brand?.logo) ? (
                       <div className="flex items-center gap-2">
-                         {product.brand.logo && (
-                            <div className="w-15 h-15 relative overflow-hidden border border-primary/20 rounded-lg">
-                              <Image src={product.brand.logo} alt={product.brand.name_en || ""} fill className="object-contain" />
-                            </div>
-                         )}
-                         <span className="text-sm">{product.brand.name_en || <span className="text-gray-400">—</span>}</span>
+                        {product.brand.logo && (
+                          <div className="w-15 h-15 relative overflow-hidden border border-primary/20 rounded-lg">
+                            <Image src={product.brand.logo} alt={product.brand.name_en || ""} fill className="object-contain" />
+                          </div>
+                        )}
+                        <span className="text-sm">{product.brand.name_en || <span className="text-gray-400">—</span>}</span>
                       </div>
-                   ) : (
+                    ) : (
                       <span className="text-gray-400">—</span>
-                   )}
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-2">
-                    {product.vendor?.logo && (
-                       <div className="w-15 h-15 relative overflow-hidden border border-primary/20 rounded-lg">
-                         <Image src={product.vendor.logo} alt={product.vendor.name_en || ""} fill className="object-contain" />
-                       </div>
                     )}
-                    <span className="text-sm">{product.vendor?.name_en || product.vendor?.name || <span className="text-gray-400">—</span>}</span>
-                  </div>
-                </TableCell>
-                <TableCell>
-                   {(() => {
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      {product.vendor?.logo && (
+                        <div className="w-15 h-15 relative overflow-hidden border border-primary/20 rounded-lg">
+                          <Image src={product.vendor.logo} alt={product.vendor.name_en || ""} fill className="object-contain" />
+                        </div>
+                      )}
+                      <span className="text-sm">{product.vendor?.name_en || product.vendor?.name || <span className="text-gray-400">—</span>}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    {(() => {
                       let price = null;
                       let salePrice = null;
 
@@ -697,16 +741,16 @@ export default function ProductsPage() {
                       else if (product.price_groups) {
                         const groupKeys = Object.keys(product.price_groups);
                         if (groupKeys.length > 0) {
-                           const priceGroup = product.price_groups[groupKeys[0]];
-                           price = priceGroup.price;
-                           salePrice = priceGroup.sale_price;
+                          const priceGroup = product.price_groups[groupKeys[0]];
+                          price = priceGroup.price;
+                          salePrice = priceGroup.sale_price;
                         }
                       }
                       // Legacy
                       else if (product.price) {
-                         const p = product.price as any;
-                         price = typeof p === 'object' ? p.price : p;
-                         salePrice = typeof p === 'object' ? p.sale_price : product.sale_price;
+                        const p = product.price as any;
+                        price = typeof p === 'object' ? p.price : p;
+                        salePrice = typeof p === 'object' ? p.sale_price : product.sale_price;
                       }
 
                       if (!price) return <span className="text-gray-400">—</span>;
@@ -719,117 +763,117 @@ export default function ProductsPage() {
                               <span className="text-xs text-gray-500 line-through">{price}</span>
                             </>
                           ) : (
-                             <span className="font-semibold">{price}</span>
+                            <span className="font-semibold">{price}</span>
                           )}
                         </div>
                       )
-                   })()}
-                </TableCell>
-                <TableCell>
-                  {(() => {
-                    const isOutOfStock = product.variants?.length
-                      ? product.variants.every((v: any) => v.is_out_of_stock === true)
-                      : (product.is_out_of_stock === true);
+                    })()}
+                  </TableCell>
+                  <TableCell>
+                    {(() => {
+                      const isOutOfStock = product.variants?.length
+                        ? product.variants.every((v: any) => v.is_out_of_stock === true)
+                        : (product.is_out_of_stock === true);
 
-                    return (
+                      return (
                         <Badge variant={isOutOfStock ? "danger" : "success"}>
-                            {isOutOfStock ? "Out of Stock" : "In Stock"}
+                          {isOutOfStock ? "Out of Stock" : "In Stock"}
                         </Badge>
-                    )
-                  })()}
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center justify-start gap-1">
-                    <Star className="h-4 w-4 text-yellow-400 fill-yellow-400" />
-                    <span className="font-semibold">{formatRating(product.average_rating)}</span>
-                    {product.total_ratings ? (
-                      <span className="text-xs text-gray-500">({product.total_ratings})</span>
-                    ) : null}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  {(() => {
-                    const createdAtParts = getCreatedAtParts(
-                      product.created_at || (product as any).createdAt
-                    );
-
-                    if (!createdAtParts) {
-                      return <span className="text-gray-400">—</span>;
-                    }
-
-                    return (
-                      <div className="flex flex-col leading-tight">
-                        <span>{createdAtParts.date}</span>
-                        <span className="text-xs text-gray-500">{createdAtParts.time}</span>
-                      </div>
-                    );
-                  })()}
-                </TableCell>
-                <TableCell>
-                  {product.created_by ? (
-                    <div className="flex flex-col text-sm">
-                      <span className="font-medium">
-                        {[product.created_by.firstName, product.created_by.lastName].filter(Boolean).join(" ") || "Unknown Creator"}
-                      </span>
-                      {product.created_by.email && (
-                        <span className="text-xs text-gray-500 truncate" title={product.created_by.email}>
-                          {product.created_by.email}
-                        </span>
-                      )}
+                      )
+                    })()}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center justify-start gap-1">
+                      <Star className="h-4 w-4 text-yellow-400 fill-yellow-400" />
+                      <span className="font-semibold">{formatRating(product.average_rating)}</span>
+                      {product.total_ratings ? (
+                        <span className="text-xs text-gray-500">({product.total_ratings})</span>
+                      ) : null}
                     </div>
-                  ) : (
-                    <span className="text-gray-400">—</span>
-                  )}
-                </TableCell>
-                <TableCell>
-                  <div 
-                    onClick={(e) => handleToggleVisibility(e, product)}
-                    className="cursor-pointer inline-block transition-opacity hover:opacity-80"
-                    title="Click to toggle visibility"
-                  >
-                    <Badge
-                      variant={getVisibilityVariant(
-                        product.visible ?? product.is_active
-                      )}
+                  </TableCell>
+                  <TableCell>
+                    {(() => {
+                      const createdAtParts = getCreatedAtParts(
+                        product.created_at || (product as any).createdAt
+                      );
+
+                      if (!createdAtParts) {
+                        return <span className="text-gray-400">—</span>;
+                      }
+
+                      return (
+                        <div className="flex flex-col leading-tight">
+                          <span>{createdAtParts.date}</span>
+                          <span className="text-xs text-gray-500">{createdAtParts.time}</span>
+                        </div>
+                      );
+                    })()}
+                  </TableCell>
+                  <TableCell>
+                    {product.created_by ? (
+                      <div className="flex flex-col text-sm">
+                        <span className="font-medium">
+                          {[product.created_by.firstName, product.created_by.lastName].filter(Boolean).join(" ") || "Unknown Creator"}
+                        </span>
+                        {product.created_by.email && (
+                          <span className="text-xs text-gray-500 truncate" title={product.created_by.email}>
+                            {product.created_by.email}
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-gray-400">—</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <div
+                      onClick={(e) => handleToggleVisibility(e, product)}
+                      className="cursor-pointer inline-block transition-opacity hover:opacity-80"
+                      title="Click to toggle visibility"
                     >
-                      {getVisibilityLabel(product.visible ?? product.is_active)}
-                    </Badge>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div className="flex gap-1">
-                    <IconButton
-                      variant="view"
-                      href={`/products/${product.id}/view`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        // handleView(product); // Just use href for right click if possible, actually handleView probably opens modal
-                        handleView(product);
-                      }}
-                      title="View product"
-                    />
-                    <IconButton
-                      variant="edit"
-                      href={`/products/${product.id}`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        sessionStorage.setItem('highlighted_product_id', product.id.toString());
-                      }}
-                      title="Edit product"
-                    />
-                    <IconButton
-                      variant="delete"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteClick(product);
-                      }}
-                      title="Delete product"
-                    />
-                  </div>
-                </TableCell>
-              </TableRow>
-            );
-          })}
+                      <Badge
+                        variant={getVisibilityVariant(
+                          product.visible ?? product.is_active
+                        )}
+                      >
+                        {getVisibilityLabel(product.visible ?? product.is_active)}
+                      </Badge>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex gap-1">
+                      <IconButton
+                        variant="view"
+                        href={`/products/${product.id}/view`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          // handleView(product); // Just use href for right click if possible, actually handleView probably opens modal
+                          handleView(product);
+                        }}
+                        title="View product"
+                      />
+                      <IconButton
+                        variant="edit"
+                        href={`/products/${product.id}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          sessionStorage.setItem('highlighted_product_id', product.id.toString());
+                        }}
+                        title="Edit product"
+                      />
+                      <IconButton
+                        variant="delete"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteClick(product);
+                        }}
+                        title="Delete product"
+                      />
+                    </div>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
           </TableBody>
         </Table>
       )}
@@ -861,3 +905,4 @@ export default function ProductsPage() {
     </div>
   );
 }
+

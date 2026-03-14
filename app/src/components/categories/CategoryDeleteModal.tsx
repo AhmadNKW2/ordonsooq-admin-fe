@@ -104,7 +104,7 @@ export const CategoryDeleteModal: React.FC<CategoryDeleteModalProps> = ({
       if (productOption === "delete") {
         data.deleteProducts = true;
       } else if (productOption === "move" && targetCategoryId) {
-        data.moveProductsToCategoryId = parseInt(targetCategoryId);
+        data.move_products_to_category_id = parseInt(targetCategoryId);
       }
     }
     onConfirm(data);

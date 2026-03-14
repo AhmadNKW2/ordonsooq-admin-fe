@@ -186,7 +186,7 @@ class CategoryService {
    * Permanently delete a category
    */
   async permanentDeleteCategory(id: number, data?: PermanentDeleteCategoryDto): Promise<ApiResponse<void>> {
-    return httpClient.delete<ApiResponse<void>>(`${this.endpoint}/${id}/permanent`);
+    return httpClient.delete<ApiResponse<void>>(`${this.endpoint}/${id}/permanent`, data);
   }
 
   /**

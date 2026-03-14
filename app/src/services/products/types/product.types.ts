@@ -304,8 +304,8 @@ export interface ProductFilters {
   vendor_ids?: string;
   brand_ids?: string;
   created_by?: string;
-  min_price?: number;
-  max_price?: number;
+  minPrice?: number;
+  maxPrice?: number;
   search?: string;
   is_active?: boolean;
   is_featured?: boolean;
