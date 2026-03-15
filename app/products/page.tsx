@@ -446,20 +446,16 @@ export default function ProductsPage() {
             />
 
             <div className="flex items-center gap-4">
-              {categoryOptions.length > 0 && (
-                <div className="relative flex-1 z-50">
+              <div className="relative flex-1 z-50">
                   <CategoryTreeSelect
                     categories={categoriesData.data ?? []}
                     selectedIds={selectedCategoryIds}
                     onChange={handleCategoryChange}
                     singleSelect={false}
-                    label="Category"
-                  />
+                    label="Category" disabled={categoryOptions.length === 0} />
                 </div>
-              )}
 
-              {vendorOptions.length > 0 && (
-                <div className="relative flex-1">
+              <div className="relative flex-1">
                   <Select
                     label="Vendor"
                     value={selectedVendorIds}
@@ -467,13 +463,10 @@ export default function ProductsPage() {
                     options={vendorOptions}
                     search={vendorOptions.length > 6}
                     multiple={true}
-                    placeholder="All Vendors"
-                  />
+                    placeholder="All Vendors" disabled={vendorOptions.length === 0} />
                 </div>
-              )}
 
-              {brandOptions.length > 0 && (
-                <div className="relative flex-1">
+              <div className="relative flex-1">
                   <Select
                     label="Brand"
                     value={selectedBrandIds}
@@ -481,10 +474,8 @@ export default function ProductsPage() {
                     options={brandOptions}
                     search={brandOptions.length > 6}
                     multiple={true}
-                    placeholder="All Brands"
-                  />
+                    placeholder="All Brands" disabled={brandOptions.length === 0} />
                 </div>
-              )}
             </div>
 
 
@@ -508,8 +499,7 @@ export default function ProductsPage() {
                 />
               </div>
 
-              {adminOptions.length > 0 && (
-                <div className="relative flex-1">
+              <div className="relative flex-1">
                   <Select
                     label="Created By"
                     value={selectedCreatedByIds}
@@ -517,10 +507,8 @@ export default function ProductsPage() {
                     options={adminOptions}
                     search={adminOptions.length > 6}
                     multiple={true}
-                    placeholder="All Admins"
-                  />
+                    placeholder="All Admins" disabled={adminOptions.length === 0} />
                 </div>
-              )}
             </div>
 
             <div className="flex items-center gap-4">
@@ -905,4 +893,8 @@ export default function ProductsPage() {
     </div>
   );
 }
+
+
+
+
 

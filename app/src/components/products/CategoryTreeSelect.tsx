@@ -17,6 +17,7 @@ interface CategoryTreeSelectProps {
   label?: string;
   error?: string | boolean;
   placeholder?: string;
+  disabled?: boolean;
 }
 
 interface CategoryTreeNodeProps {
@@ -197,6 +198,7 @@ export const CategoryTreeSelect: React.FC<CategoryTreeSelectProps> = ({
   label,
   error,
   placeholder = "",
+  disabled = false,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
@@ -259,21 +261,24 @@ export const CategoryTreeSelect: React.FC<CategoryTreeSelectProps> = ({
       >
         <div
           className={cn(
-            getFieldClasses(error, hasValue),
-            "h-13 cursor-pointer flex items-center justify-between min-h-[42px] py-1 px-3 bg-white transition-all duration-200",
-            isOpen && " border-secondary shadow-s2"
-          )}
-          onClick={() => {
-            setIsOpen(!isOpen);
-            setIsFocused(!isOpen);
-          }}
-          tabIndex={0}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
+              getFieldClasses(error, hasValue),
+              "h-13 cursor-pointer flex items-center justify-between min-h-[42px] py-1 px-3 bg-white transition-all duration-200",
+              isOpen && " border-secondary shadow-s2",
+              disabled && "opacity-50 cursor-not-allowed bg-gray-50"
+            )}
+            onClick={() => {
+              if (disabled) return;
               setIsOpen(!isOpen);
               setIsFocused(!isOpen);
-            }
-          }}
+            }}
+            tabIndex={disabled ? -1 : 0}
+            onKeyDown={(e) => {
+              if (disabled) return;
+              if (e.key === 'Enter' || e.key === ' ') {
+                setIsOpen(!isOpen);
+                setIsFocused(!isOpen);
+              }
+            }}
         >
           <div className="flex flex-wrap gap-1.5 flex-1 overflow-hidden">
             {selectedCategories.length > 0 ? (
@@ -368,3 +373,6 @@ export const CategoryTreeSelect: React.FC<CategoryTreeSelectProps> = ({
     </div>
   );
 };
+
+
+

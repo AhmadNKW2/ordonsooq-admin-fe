@@ -22,7 +22,8 @@ const nextConfig: NextConfig = {
     ],
     // Allow loading images from localhost (for development)
     dangerouslyAllowSVG: true,
-    unoptimized: process.env.NODE_ENV === 'development',
+    unoptimized: false,
+    // unoptimized: process.env.NODE_ENV === 'development',
   },
 };
 
