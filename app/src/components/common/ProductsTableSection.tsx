@@ -1,15 +1,8 @@
-/**
- * Products Table Section Component
- * Reusable component for displaying products in a table with edit functionality
- * Uses ProductSelectionModal for adding/removing products
- * Used in CategoryForm, VendorForm, and CustomerForm
- */
-
 "use client";
 
 import React, { useState, useMemo } from "react";
 import Image from "next/image";
-import { Package, Pencil } from "lucide-react";
+import { Package, Pencil, Eye, Edit } from "lucide-react";
 import { Button } from "../ui/button";
 import {
   Table,
@@ -19,7 +12,14 @@ import {
   TableHead,
   TableCell,
 } from "../ui/table";
+import { Pagination } from "../ui/pagination";
 import { ProductSelectionModal } from "./ProductSelectionModal";
+import { ProductViewModal } from "../products/ProductViewModal";
+import { IconButton } from "../ui/icon-button";
+import { Badge } from "../ui/badge";
+import { useProduct } from "../../services/products/hooks/use-products";
+// We no longer need import { useRouter } if we just use window.location or next/navigation
+import { useRouter } from "next/navigation";
 
 export interface ProductItem {
   id: number;
@@ -30,6 +30,7 @@ export interface ProductItem {
   price?: string | null;
   category?: { name?: string; name_en?: string } | null;
   vendor?: { name?: string; name_en?: string } | null;
+  visible?: boolean;
 }
 
 interface ProductsTableSectionProps {
@@ -40,9 +41,7 @@ interface ProductsTableSectionProps {
   emptyMessage?: string;
   editButtonText?: string;
   modalTitle?: string;
-  /** @deprecated No longer used - modal fetches products directly */
   allProducts?: ProductItem[];
-  /** @deprecated Use editButtonText instead */
   addButtonText?: string;
 }
 
@@ -52,21 +51,27 @@ export const ProductsTableSection: React.FC<ProductsTableSectionProps> = ({
   onProductsChange,
   isLoading = false,
   emptyMessage = "No products assigned",
-  editButtonText = "Edit Products",
-  modalTitle = "Manage Products",
+  editButtonText = "Manage Products",
+  modalTitle = "Select Products",
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [viewProductId, setViewProductId] = useState<number | null>(null);
+  const router = useRouter();
 
-  // Get current product IDs
+  const { data: viewProductData } = useProduct(viewProductId!, { enabled: !!viewProductId });
+
+  // Local pagination
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
+
   const currentProductIds = useMemo(() => products.map((p) => p.id), [products]);
 
-  const handleOpenModal = () => {
-    setIsModalOpen(true);
-  };
+  const paginatedProducts = useMemo(() => {
+    const startIndex = (page - 1) * pageSize;
+    return products.slice(startIndex, startIndex + pageSize);
+  }, [products, page, pageSize]);
 
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-  };
+  const totalPages = Math.ceil(products.length / pageSize) || 1;
 
   const handleSelectionChange = (productIds: number[]) => {
     onProductsChange(productIds);
@@ -76,79 +81,131 @@ export const ProductsTableSection: React.FC<ProductsTableSectionProps> = ({
     <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold">{title} ({products.length})</h3>
-        <Button variant="outline" onClick={handleOpenModal} disabled={isLoading}>
+        <h3 className="text-lg font-semibold">{title} <Badge variant="secondary" className="ml-2">{products.length}</Badge></h3>
+        <Button variant="solid" onClick={() => setIsModalOpen(true)} disabled={isLoading}>
           {editButtonText}
         </Button>
       </div>
 
       {/* Products Table */}
       {products.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
-          <Package className="h-10 w-10 text-gray-400 mb-2" />
-          <p className="text-gray-500">{emptyMessage}</p>
+        <div className="flex flex-col items-center justify-center py-10 bg-gray-50/50 rounded-xl border-2 border-dashed border-gray-200">
+          <div className="bg-white p-4 rounded-full shadow-sm mb-3">
+            <Package className="h-8 w-8 text-gray-400" />
+          </div>
+          <p className="text-gray-600 font-medium">{emptyMessage}</p>
+          <Button onClick={() => setIsModalOpen(true)} className="mt-2 text-primary hover:underline">
+            Add your first product
+          </Button>
         </div>
       ) : (
-        <Table noPagination={true}>
-          <TableHeader>
-            <TableRow isHeader>
-              <TableHead>Image</TableHead>
-              <TableHead>Product Name</TableHead>
-              <TableHead>SKU</TableHead>
-              <TableHead>Price</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {products.map((product) => (
-              <TableRow key={product.id}>
-                <TableCell>
-                  <div className="w-10 h-10 relative rounded-lg overflow-hidden bg-gray-100 border border-gray-200">
-                    {product.primary_image?.url ? (
-                      <Image
-                        src={product.primary_image.url}
-                        alt={product.primary_image.alt_text || product.name_en}
-                        fill
-                        className="object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <Package className="h-4 w-4 text-gray-400" />
-                      </div>
-                    )}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div className="flex flex-col">
-                    <span className="font-medium truncate max-w-xs">{product.name_en}</span>
-                    <span className="text-sm text-gray-500 truncate max-w-xs">
-                      {product.name_ar}
-                    </span>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <span className="font-mono text-sm text-gray-600">
-                    {product.sku || "—"}
-                  </span>
-                </TableCell>
-                <TableCell>
-                  <span className="font-medium">
-                    {product.price ? `$${product.price}` : "—"}
-                  </span>
-                </TableCell>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+          <Table noPagination={true}>
+            <TableHeader>
+              <TableRow isHeader>
+                <TableHead>Product</TableHead>
+                <TableHead>SKU</TableHead>
+                <TableHead>Price</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {paginatedProducts.map((product) => (
+                <TableRow key={product.id} className="hover:bg-gray-50/50 transition-colors">
+                  <TableCell>
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 relative rounded-lg overflow-hidden bg-gray-100 border border-gray-200 flex-shrink-0">
+                        {product.primary_image?.url ? (
+                          <Image
+                            src={product.primary_image.url}
+                            alt={product.primary_image.alt_text || product.name_en}
+                            fill
+                            className="object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <Package className="h-5 w-5 text-gray-400" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="font-semibold text-sm line-clamp-1">{product.name_en}</span>
+                        <span className="text-xs text-gray-500 line-clamp-1 mt-0.5">{product.name_ar}</span>
+                      </div>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    {product.sku ? (
+                       <Badge variant="default" className="font-mono text-xs text-gray-600 bg-gray-50">{product.sku}</Badge>
+                    ) : (
+                       <span className="text-gray-400 text-sm">—</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <span className="font-semibold text-sm">
+                      {product.price ? `$${parseFloat(product.price).toFixed(2)}` : "—"}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center justify-end gap-2">
+                       <IconButton 
+
+                          title="View / Edit" 
+                          variant="view" 
+                          onClick={() => setViewProductId(product.id)}
+                       />
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+          
+          {totalPages > 1 && (
+            <div className="border-t border-gray-100">
+                             <Pagination
+                 pagination={{
+                   currentPage: page,
+                   totalPages: totalPages,
+                   pageSize: pageSize,
+                   totalItems: products.length,
+                   hasNextPage: page < totalPages,
+                   hasPreviousPage: page > 1
+                 }}
+                 onPageChange={setPage}
+               />
+            </div>
+          )}
+        </div>
       )}
 
       {/* Product Selection Modal */}
       <ProductSelectionModal
         isOpen={isModalOpen}
-        onClose={handleCloseModal}
+        onClose={() => setIsModalOpen(false)}
         selectedProductIds={currentProductIds}
         onSelectionChange={handleSelectionChange}
         title={modalTitle}
       />
+
+      {/* Product View/Edit Modal */}
+      {viewProductId && (
+        <ProductViewModal
+          isOpen={!!viewProductId}
+          onClose={() => setViewProductId(null)}
+          product={viewProductData?.data || null}
+          onEdit={() => {
+            setViewProductId(null);
+                        router.push(`/products/${viewProductId}`);
+          }}
+        />
+      )}
     </div>
   );
 };
+
+
+
+
+
+

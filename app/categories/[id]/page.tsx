@@ -14,6 +14,7 @@ import {
   useCategories,
 } from "../../src/services/categories/hooks/use-categories";
 import { CategoryForm } from "../../src/components/categories/CategoryForm";
+import { productService } from "../../src/services/products/api/product.service";
 import { Card } from "../../src/components/ui/card";
 import { Button } from "../../src/components/ui/button";
 import { ImageUploadItem } from "../../src/components/ui/image-upload";
@@ -43,6 +44,7 @@ export default function EditCategoryPage() {
     description_ar?: string;
     image?: string;
   }>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Get the specific category
   const {
@@ -126,24 +128,45 @@ export default function EditCategoryPage() {
     }
 
     try {
-      await updateCategory.mutateAsync({
-        id: categoryId,
-        data: {
-          name_en: nameEn,
-          name_ar: nameAr,
-          description_en: descriptionEn || undefined,
-          description_ar: descriptionAr || undefined,
-          visible: visible,
-          parent_id: parentId,
-          // Only send new file if one was uploaded
-          image: image?.file || undefined,
-          product_ids: product_ids,
-        },
-      });
+      setIsSubmitting(true);
+      const apiCalls: Promise<any>[] = [];
+
+      apiCalls.push(
+        updateCategory.mutateAsync({
+          id: categoryId,
+          data: {
+            name_en: nameEn,
+            name_ar: nameAr,
+            description_en: descriptionEn || undefined,
+            description_ar: descriptionAr || undefined,
+            visible: visible,
+            parent_id: parentId,
+            // Only send new file if one was uploaded
+            image: image?.file || undefined,
+          },
+        })
+      );
+
+      const originalProductIds: number[] = ((category as any)?.products || []).map((p: any) => p.id);
       
+      const productsToAdd = product_ids.filter(id => !originalProductIds.includes(id));
+      const productsToRemove = originalProductIds.filter(id => !product_ids.includes(id));
+
+      if (productsToAdd.length > 0) {
+        apiCalls.push(productService.assignToCategory(categoryId, productsToAdd));
+      }
+
+      if (productsToRemove.length > 0) {
+         apiCalls.push(productService.removeFromCategory(categoryId, productsToRemove));
+      }
+
+      await Promise.all(apiCalls);
+
       router.push("/categories");
     } catch (error) {
       console.error("Failed to update category:", error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -252,7 +275,7 @@ export default function EditCategoryPage() {
       parentCategories={allCategories || []}
       assignedProducts={assignedProducts}
       onSubmit={handleSubmit}
-      isSubmitting={updateCategory.isPending}
+      isSubmitting={isSubmitting || updateCategory.isPending}
       submitButtonText="Save Changes"
       currentCategoryId={categoryId}
     />

@@ -93,8 +93,9 @@ class CategoryService {
       formData.append("image", data.image);
     }
 
-    // Always send product_ids, even when empty
-    formData.append("product_ids", JSON.stringify(data.product_ids ?? []));
+    if (data.product_ids !== undefined) {
+        formData.append("product_ids", JSON.stringify(data.product_ids));
+      }
 
     return httpClient.postFormData<ApiResponse<Category>>(
       this.endpoint,
@@ -144,8 +145,9 @@ class CategoryService {
       formData.append("image", data.image);
     }
 
-    // Always send product_ids, even when empty
-    formData.append("product_ids", JSON.stringify(data.product_ids ?? []));
+    if (data.product_ids !== undefined) {
+        formData.append("product_ids", JSON.stringify(data.product_ids));
+      }
 
     return httpClient.patchFormData<ApiResponse<Category>>(
       `${this.endpoint}/${id}`,
@@ -225,3 +227,4 @@ class CategoryService {
 }
 
 export const categoryService = new CategoryService();
+
