@@ -10,7 +10,7 @@ import { useRouter } from "@/hooks/use-loading-router";
 import { useSessionStoragePage } from "@/hooks/use-session-storage-page";
 import { useLoading } from "../src/providers/loading-provider";
 import Image from "next/image";
-import { useProducts, useDeleteProduct, useProduct, useToggleProductStatus } from "../src/services/products/hooks/use-products";
+import { useProducts, useDeleteProduct, useToggleProductStatus } from "../src/services/products/hooks/use-products";
 import { Package, AlertCircle, Star } from "lucide-react";
 import { Card } from "../src/components/ui/card";
 import { Button } from "../src/components/ui/button";
@@ -28,7 +28,6 @@ import {
   TableRow,
 } from "../src/components/ui/table";
 import { ProductFilters, Product } from "../src/services/products/types/product.types";
-import { ProductViewModal } from "../src/components/products/ProductViewModal";
 import { DeleteConfirmationModal } from "../src/components/common/DeleteConfirmationModal";
 import { DatePicker } from "../src/components/ui/date-picker";
 import { CategoryTreeSelect } from "../src/components/products/CategoryTreeSelect";
@@ -37,6 +36,7 @@ import { useVendors } from "../src/services/vendors/hooks/use-vendors";
 import { useBrands } from "../src/services/brands/hooks/use-brands";
 import { useCategories } from "../src/services/categories/hooks/use-categories";
 import { useCustomers } from "../src/services/customers/hooks/use-customers";
+import { STOREFRONT_CONFIG } from "../src/lib/constants";
 
 export default function ProductsPage() {
   const router = useRouter();
@@ -94,7 +94,6 @@ export default function ProductsPage() {
   const [selectedBrandIds, setSelectedBrandIds] = useState<string[]>(queryParams.brand_ids?.split(",") || []);
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>(queryParams.category_ids?.split(",") || []);
   const [selectedCreatedByIds, setSelectedCreatedByIds] = useState<string[]>(queryParams.created_by?.split(",") || []);
-  const [viewProductId, setViewProductId] = useState<number | null>(null);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
   const [highlightedProductId, setHighlightedProductId] = useState<string | null>(null);
@@ -165,12 +164,6 @@ export default function ProductsPage() {
     }
   }, [isLoading, products.length]);
 
-  // Fetch product details when viewing
-  const { data: viewProductData, isLoading: isLoadingViewProduct } = useProduct(
-    viewProductId || 0,
-    { enabled: !!viewProductId }
-  );
-
   const handleFilterChange = (filters: ProductFilters) => {
     setQueryParams((prev) => ({
       ...prev,
@@ -208,12 +201,14 @@ export default function ProductsPage() {
     }
   };
 
-  const handleView = (product: Product) => {
-    setViewProductId(product.id);
-  };
+  const handlePreview = (slug?: string | null) => {
+    if (!slug) return;
 
-  const handleCloseViewModal = () => {
-    setViewProductId(null);
+    window.open(
+      `${STOREFRONT_CONFIG.baseUrl}/products/${slug}`,
+      "_blank",
+      "noopener,noreferrer"
+    );
   };
 
   const handleCreateNew = () => {
@@ -832,13 +827,12 @@ export default function ProductsPage() {
                     <div className="flex gap-1">
                       <IconButton
                         variant="view"
-                        href={`/products/${product.id}/view`}
+                        disabled={!product.slug}
                         onClick={(e) => {
                           e.stopPropagation();
-                          // handleView(product); // Just use href for right click if possible, actually handleView probably opens modal
-                          handleView(product);
+                          handlePreview(product.slug);
                         }}
-                        title="View product"
+                        title={product.slug ? "Preview product" : "Preview unavailable"}
                       />
                       <IconButton
                         variant="edit"
@@ -865,20 +859,6 @@ export default function ProductsPage() {
           </TableBody>
         </Table>
       )}
-
-      {/* Product View Modal */}
-      <ProductViewModal
-        isOpen={!!viewProductId}
-        onClose={handleCloseViewModal}
-        product={viewProductData?.data || null}
-        onEdit={() => {
-          handleCloseViewModal();
-          if (viewProductId) {
-            sessionStorage.setItem('highlighted_product_id', viewProductId.toString());
-            router.push(`/products/${viewProductId}`);
-          }
-        }}
-      />
 
       {/* Delete Confirmation Modal */}
       <DeleteConfirmationModal

@@ -10,6 +10,7 @@ import React, { useState, useMemo, useEffect } from "react";
 import { useRouter } from "@/hooks/use-loading-router";
 import { useProductFormDraft } from "../../hooks/use-product-form-draft";
 import { useEnterToSubmit } from "../../hooks/use-enter-to-submit";
+import { STOREFRONT_CONFIG } from "../../lib/constants";
 import { Button } from "../ui/button";
 import { PageHeader } from "../common/PageHeader";
 import {
@@ -626,7 +627,11 @@ export const ProductForm: React.FC<ProductFormProps> = ({
               variant="outline"
               disabled={isSubmitting}
               onClick={() => {
-                window.open(`https://ordonsooq.com/products/${formData.slug}`, '_blank');
+                window.open(
+                  `${STOREFRONT_CONFIG.baseUrl}/products/${formData.slug}`,
+                  "_blank",
+                  "noopener,noreferrer"
+                );
               }}
             >
               Preview Product

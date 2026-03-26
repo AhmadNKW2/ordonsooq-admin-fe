@@ -48,6 +48,7 @@ export default function CreateCategoryPage() {
       name_en: p.name_en,
       name_ar: p.name_ar,
       sku: p.sku,
+      slug: p.slug,
       primary_image: p.primary_image,
       price: p.price,
       category: p.category ? { name: p.category.name } : null,

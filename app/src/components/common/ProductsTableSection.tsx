@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from "react";
 import Image from "next/image";
-import { Package, Pencil, Eye, Edit } from "lucide-react";
+import { Package } from "lucide-react";
 import { Button } from "../ui/button";
 import {
   Table,
@@ -14,18 +14,16 @@ import {
 } from "../ui/table";
 import { Pagination } from "../ui/pagination";
 import { ProductSelectionModal } from "./ProductSelectionModal";
-import { ProductViewModal } from "../products/ProductViewModal";
 import { IconButton } from "../ui/icon-button";
 import { Badge } from "../ui/badge";
-import { useProduct } from "../../services/products/hooks/use-products";
-// We no longer need import { useRouter } if we just use window.location or next/navigation
-import { useRouter } from "next/navigation";
+import { STOREFRONT_CONFIG } from "../../lib/constants";
 
 export interface ProductItem {
   id: number;
   name_en: string;
   name_ar: string;
   sku?: string;
+  slug?: string | null;
   primary_image?: { url: string; alt_text?: string | null } | null;
   price?: string | null;
   category?: { name?: string; name_en?: string } | null;
@@ -55,10 +53,6 @@ export const ProductsTableSection: React.FC<ProductsTableSectionProps> = ({
   modalTitle = "Select Products",
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [viewProductId, setViewProductId] = useState<number | null>(null);
-  const router = useRouter();
-
-  const { data: viewProductData } = useProduct(viewProductId!, { enabled: !!viewProductId });
 
   // Local pagination
   const [page, setPage] = useState(1);
@@ -75,6 +69,16 @@ export const ProductsTableSection: React.FC<ProductsTableSectionProps> = ({
 
   const handleSelectionChange = (productIds: number[]) => {
     onProductsChange(productIds);
+  };
+
+  const handlePreview = (slug?: string | null) => {
+    if (!slug) return;
+
+    window.open(
+      `${STOREFRONT_CONFIG.baseUrl}/products/${slug}`,
+      "_blank",
+      "noopener,noreferrer"
+    );
   };
 
   return (
@@ -114,7 +118,7 @@ export const ProductsTableSection: React.FC<ProductsTableSectionProps> = ({
                 <TableRow key={product.id} className="hover:bg-gray-50/50 transition-colors">
                   <TableCell>
                     <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 relative rounded-lg overflow-hidden bg-gray-100 border border-gray-200 flex-shrink-0">
+                      <div className="w-12 h-12 relative rounded-lg overflow-hidden bg-gray-100 border border-gray-200 shrink-0">
                         {product.primary_image?.url ? (
                           <Image
                             src={product.primary_image.url}
@@ -149,10 +153,10 @@ export const ProductsTableSection: React.FC<ProductsTableSectionProps> = ({
                   <TableCell>
                     <div className="flex items-center justify-end gap-2">
                        <IconButton 
-
-                          title="View / Edit" 
+                          title={product.slug ? "Preview product" : "Preview unavailable"}
                           variant="view" 
-                          onClick={() => setViewProductId(product.id)}
+                          disabled={!product.slug}
+                          onClick={() => handlePreview(product.slug)}
                        />
                     </div>
                   </TableCell>
@@ -187,22 +191,13 @@ export const ProductsTableSection: React.FC<ProductsTableSectionProps> = ({
         onSelectionChange={handleSelectionChange}
         title={modalTitle}
       />
-
-      {/* Product View/Edit Modal */}
-      {viewProductId && (
-        <ProductViewModal
-          isOpen={!!viewProductId}
-          onClose={() => setViewProductId(null)}
-          product={viewProductData?.data || null}
-          onEdit={() => {
-            setViewProductId(null);
-                        router.push(`/products/${viewProductId}`);
-          }}
-        />
-      )}
     </div>
   );
 };
+
+
+
+
 
 
 
