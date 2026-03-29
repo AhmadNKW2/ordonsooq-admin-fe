@@ -144,4 +144,15 @@ export const queryKeys = {
     detail: (id: string) =>
       [...queryKeys.concepts.details(), id] as const,
   },
+
+  // Notes
+  notes: {
+    all: ["notes"] as const,
+    lists: () => [...queryKeys.notes.all, "list"] as const,
+    list: (params?: Record<string, any>) =>
+      [...queryKeys.notes.lists(), params] as const,
+    details: () => [...queryKeys.notes.all, "detail"] as const,
+    detail: (id: string | number) =>
+      [...queryKeys.notes.details(), id] as const,
+  },
 } as const;
