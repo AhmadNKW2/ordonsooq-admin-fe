@@ -40,20 +40,31 @@ export interface UploadedMediaReference {
 export function transformFormDataToDto(
   data: ProductFormData
 ): { dto: CreateProductDto; mediaFiles: MediaUploadData } {
+  const specificationValueIds = Array.from(
+    new Set(
+      (data.specifications || []).flatMap((specification) =>
+        specification.values.map((value) => parseInt(value.id, 10)).filter((value) => !Number.isNaN(value))
+      )
+    )
+  );
+
   const dto: CreateProductDto = {
     name_en: data.nameEn,
     name_ar: data.nameAr,
+    status: data.status,
     short_description_en: data.shortDescriptionEn || '',
     short_description_ar: data.shortDescriptionAr || '',
     long_description_en: data.longDescriptionEn || '',
     long_description_ar: data.longDescriptionAr || '',
     category_ids: (data.categoryIds || []).map(id => parseInt(id)), // Changed to category_ids array
+    reference_link: data.referenceLink?.trim() || null,
     visible: data.visible,
   };
 
   // Optional fields
   if (data.vendorId) dto.vendor_id = parseInt(data.vendorId);
   if (data.brandId) dto.brand_id = parseInt(data.brandId);
+  if (specificationValueIds.length > 0) dto.specification_value_ids = specificationValueIds;
 
   // Attributes
   if (data.attributes && data.attributes.length > 0) {

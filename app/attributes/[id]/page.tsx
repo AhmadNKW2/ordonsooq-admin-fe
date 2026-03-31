@@ -61,7 +61,6 @@ export default function AttributeEditPage() {
   const parentValueId = watch("parent_value_id");
   const isColor = watch("is_color");
   const isActive = watch("is_active");
-  const attributeType = watch("attribute_type");
   const listSeparately = watch("list_separately");
 
   // Local state for values (managed locally, sent with save)
@@ -242,9 +241,7 @@ export default function AttributeEditPage() {
         onParentValueIdChange={(val) => setValue("parent_value_id", val ? Number(val) : null)}
         onIsColorChange={(value) => setValue("is_color", value)}
         onIsActiveChange={(value) => setValue("is_active", value)}
-        attributeType={attributeType}
         listSeparately={listSeparately}
-        onAttributeTypeChange={(value) => setValue("attribute_type", value)}
         onListSeparatelyChange={(value) => setValue("list_separately", value)}
         formErrors={{
           name_en: errors.name_en?.message,

@@ -42,9 +42,7 @@ export default function SpecificationEditPage() {
       unit_ar: "",
       parent_id: null,
       parent_value_id: null,
-      
       is_active: true,
-      specification__specification",
       list_separately: false,
     },
     mode: "onSubmit",
@@ -60,7 +58,6 @@ export default function SpecificationEditPage() {
   const parentId = watch("parent_id");
   const parentValueId = watch("parent_value_id");
   const isActive = watch("is_active");
-  const specificationType = watch("specification_type");
   const listSeparately = watch("list_separately");
 
   // Local state for values (managed locally, sent with save)
@@ -92,7 +89,6 @@ export default function SpecificationEditPage() {
         parent_id: specification.parent_id,
         parent_value_id: specification.parent_value_id,
         is_active: specification.is_active,
-        specification_.specification_type ?? "spec_specification",
         list_separately: specification.list_separately ?? false,
       });
       const sortedValues = [...(specification.values || [])].sort((a, b) => a.sort_order - b.sort_order);
@@ -130,7 +126,6 @@ export default function SpecificationEditPage() {
         value_en: v.value_en,
         value_ar: v.value_ar,
         parent_value_id: v.parent_value_id,
-        color_code: v.color_code,
         sort_order: index,
         is_active: v.is_active,
       }));
@@ -145,7 +140,6 @@ export default function SpecificationEditPage() {
           parent_id: data.parent_id,
           parent_value_id: data.parent_value_id,
           is_active: data.is_active,
-          specification_.specification_type,
           list_separately: data.list_separately,
           values: valuesPayload,
         },
@@ -229,8 +223,7 @@ export default function SpecificationEditPage() {
         unitAr={unitAr || ""}
         parentId={parentId?.toString() || ""}
         parentValueId={parentValueId?.toString() || ""}
-        isColor={isColor}
-        isActive={isActive}
+        isActive={!!isActive}
         onNameEnChange={handleNameEnChange}
         onNameArChange={handleNameArChange}
         onUnitEnChange={(val) => setValue("unit_en", val)}
@@ -238,9 +231,7 @@ export default function SpecificationEditPage() {
         onParentIdChange={(val) => setValue("parent_id", val ? Number(val) : null)}
         onParentValueIdChange={(val) => setValue("parent_value_id", val ? Number(val) : null)}
         onIsActiveChange={(value) => setValue("is_active", value)}
-        specificationType={specificationType}
         listSeparately={listSeparately}
-        onSpecificationTypeChange={(value) => setValue("specification_type", value)}
         onListSeparatelyChange={(value) => setValue("list_separately", value)}
         formErrors={{
           name_en: errors.name_en?.message,

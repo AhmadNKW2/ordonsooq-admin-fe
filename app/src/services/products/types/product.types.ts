@@ -3,6 +3,11 @@
  */
 
 import { z } from "zod";
+import type {
+  ProductSpecificationValue as ProductSpecificationValueEntity,
+} from "../../specifications/types/specification.types";
+
+export type ProductStatus = "active" | "archived" | "updated" | "review";
 
 // Category Schema (matches backend)
 export const categorySchema = z.object({
@@ -118,6 +123,7 @@ export const productSchema = z.object({
   brand_id: z.number().optional().nullable(),
   brand: z.any().optional().nullable(),
   slug: z.string().optional().nullable(),
+  reference_link: z.string().optional().nullable(),
   sku: z.string(),
   is_active: z.boolean().optional(),
   average_rating: z.union([z.number(), z.string()]).optional().nullable(),
@@ -131,7 +137,8 @@ export const productSchema = z.object({
   is_out_of_stock: z.boolean().optional().nullable(),
   variants: z.array(z.any()).optional().nullable(),
   media: z.array(z.any()).optional().nullable(),
-  status: z.enum(["active", "archived"]).optional(),
+  specifications: z.union([z.array(z.any()), z.record(z.string(), z.any())]).optional(),
+  status: z.enum(["active", "archived", "updated", "review"]).optional(),
   visible: z.boolean().optional(),
   archived_at: z.string().or(z.date()).optional().nullable(),
   archived_by: z.number().optional().nullable(),
@@ -187,6 +194,20 @@ export interface ProductAttribute {
   values: Record<string, ProductAttributeValue>;
 }
 
+export interface ProductSpecificationValueItem {
+  name_en: string;
+  name_ar: string;
+}
+
+export interface ProductSpecification {
+  name_en: string;
+  name_ar: string;
+  unit_en?: string | null;
+  unit_ar?: string | null;
+  list_separately?: boolean;
+  values: Record<string, ProductSpecificationValueItem>;
+}
+
 export interface ProductVariant {
   id: number;
   is_active: boolean;
@@ -203,6 +224,7 @@ export type Product = z.infer<typeof productSchema> & {
   price_groups?: Record<string, ProductPriceGroup>;
   weight_groups?: Record<string, ProductWeightGroup>;
   attributes?: Record<string, ProductAttribute>;
+  specifications?: Record<string, ProductSpecification> | ProductSpecificationValueEntity[];
   variants?: ProductVariant[];
 };
 
@@ -440,6 +462,7 @@ export interface CreateProductDto {
   name_en: string;
   name_ar: string;
   sku?: string;
+  status?: ProductStatus;
   short_description_en: string;
   short_description_ar: string;
   long_description_en: string;
@@ -447,6 +470,8 @@ export interface CreateProductDto {
   category_ids: number[]; // Changed from category_id to category_ids array
   vendor_id?: number;
   brand_id?: number;
+  reference_link?: string | null;
+  specification_value_ids?: number[];
   visible?: boolean;
 
   // Attributes (for variant products)
@@ -549,6 +574,7 @@ export interface UpdateProductDto {
   name_en?: string;
   name_ar?: string;
   sku?: string;
+  status?: ProductStatus;
   short_description_en?: string;
   short_description_ar?: string;
   long_description_en?: string;
@@ -556,6 +582,8 @@ export interface UpdateProductDto {
   category_ids?: number[]; // Changed from category_id to category_ids array
   vendor_id?: number;
   brand_id?: number;
+  reference_link?: string | null;
+  specification_value_ids?: number[];
   visible?: boolean;
 
   // Attributes (for variant products)

@@ -21,6 +21,19 @@ export interface Attribute {
   controlsMedia: boolean;
 }
 
+export interface ProductSpecificationSelectionValue {
+  id: string;
+  label: string;
+  order: number;
+}
+
+export interface ProductSpecificationSelection {
+  id: string;
+  name: string;
+  values: ProductSpecificationSelectionValue[];
+  order: number;
+}
+
 // Variant Combination
 export interface VariantCombination {
   id: string;
@@ -88,9 +101,11 @@ export const productFormSchema = z.object({
   slug: z.string().optional(),
   nameEn: z.string().min(1, "English name is required"),
   nameAr: z.string().min(1, "Arabic name is required"),
+  status: z.enum(["active", "archived", "updated", "review"]).default("active"),
   categoryIds: z.array(z.string()).min(1, "At least one category is required"), // Changed from categoryId to categoryIds
   vendorId: z.string().optional(),
   brandId: z.string().optional(),
+  referenceLink: z.string().optional(),
   shortDescriptionEn: z.string().optional(),
   shortDescriptionAr: z.string().optional(),
   longDescriptionEn: z.string().optional(),
@@ -113,6 +128,21 @@ export const productFormSchema = z.object({
       controlsPricing: z.boolean(),
       controlsWeightDimensions: z.boolean(),
       controlsMedia: z.boolean(),
+    })
+  ).optional(),
+
+  specifications: z.array(
+    z.object({
+      id: z.string(),
+      name: z.string(),
+      values: z.array(
+        z.object({
+          id: z.string(),
+          label: z.string(),
+          order: z.number(),
+        })
+      ),
+      order: z.number(),
     })
   ).optional(),
 

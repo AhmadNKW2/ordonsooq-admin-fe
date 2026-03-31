@@ -8,6 +8,13 @@ import { z } from "zod";
 // Regex patterns for language validation
 const ENGLISH_PATTERN = /^[a-zA-Z0-9\s\p{P}]+$/u;
 const ARABIC_PATTERN = /^[\u0600-\u06FF0-9\s\p{P}]+$/u;
+const isValidUrl = (value?: string) => {
+  if (!value) {
+    return true;
+  }
+
+  return z.string().url().safeParse(value).success;
+};
 
 // ============================================
 // Basic Information Schema
@@ -21,9 +28,11 @@ export const basicInformationSchema = z.object({
   nameAr: z
     .string()
     .min(1, "Required"),
+  status: z.enum(["active", "archived", "updated", "review"]).default("active"),
   categoryIds: z.array(z.string()).min(1, "At least one category is required"),
   vendorId: z.string().min(1, "Required"),
   brandId: z.string().optional().default("").pipe(z.string().min(1, "Required")),
+  referenceLink: z.string().optional().refine(isValidUrl, "Must be a valid URL"),
   shortDescriptionEn: z
     .string()
     .min(1, "Required")
@@ -58,6 +67,19 @@ export const productAttributeSchema = z.object({
   controlsPricing: z.boolean(),
   controlsWeightDimensions: z.boolean(),
   controlsMedia: z.boolean(),
+});
+
+export const productSpecificationSelectionValueSchema = z.object({
+  id: z.string(),
+  label: z.string(),
+  order: z.number(),
+});
+
+export const productSpecificationSelectionSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  values: z.array(productSpecificationSelectionValueSchema),
+  order: z.number(),
 });
 
 // ============================================
@@ -149,9 +171,11 @@ export const createProductSchema = (config: ProductFormConfig) => {
     slug: z.string().optional(),
     nameEn: z.string().min(1, "Required"),
     nameAr: z.string().min(1, "Required"),
+    status: z.enum(["active", "archived", "updated", "review"]).default("active"),
     categoryIds: z.array(z.string()).min(1, "At least one category is required"),
     vendorId: z.string().min(1, "Required"),
     brandId: z.string().optional().default("").pipe(z.string().min(1, "Required")),
+    referenceLink: z.string().optional().refine(isValidUrl, "Must be a valid URL"),
     shortDescriptionEn: z.string().min(1, "Required"),
     shortDescriptionAr: z.string().min(1, "Required"),
     longDescriptionEn: z.string().min(1, "Required"),
@@ -160,6 +184,7 @@ export const createProductSchema = (config: ProductFormConfig) => {
 
     // Attributes - optional
     attributes: z.array(productAttributeSchema).optional(),
+    specifications: z.array(productSpecificationSelectionSchema).optional(),
 
     // Flags
     isWeightVariantBased: z.boolean().default(false),

@@ -4,7 +4,6 @@
  */
 
 import { httpClient } from "../../../lib/api/http-client";
-import { ApiResponse } from "../../../types/common.types";
 import {
   Specification,
   SpecificationValue,

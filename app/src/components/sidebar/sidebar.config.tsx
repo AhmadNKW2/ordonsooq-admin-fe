@@ -116,6 +116,21 @@ export const sidebarConfig = {
           ),
         },
         {
+          href: '/specifications',
+          label: 'Specifications',
+          roles: ['admin', 'catalog_manager'] as SidebarRole[],
+          icon: (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"
+              />
+            </svg>
+          ),
+        },
+        {
           href: '/categories',
           label: 'Categories',
           roles: ['admin', 'catalog_manager'] as SidebarRole[],

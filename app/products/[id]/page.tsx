@@ -10,11 +10,17 @@ import { useParams } from "next/navigation";
 import { useRouter } from "@/hooks/use-loading-router";
 import { ProductForm } from "../../src/components/products/ProductForm";
 import { ProductFormData } from "../../src/services/products/types/product-form.types";
-import { ProductDetail, MediaInputDto, UpdateProductDto } from "../../src/services/products/types/product.types";
+import {
+  ProductDetail,
+  MediaInputDto,
+  ProductSpecification as ProductSpecificationMap,
+  UpdateProductDto,
+} from "../../src/services/products/types/product.types";
 import { useCategories } from "../../src/services/categories/hooks/use-categories";
 import { useVendors } from "../../src/services/vendors/hooks/use-vendors";
 import { useBrands } from "../../src/services/brands/hooks/use-brands";
 import { useAttributes } from "../../src/services/attributes/hooks/use-attributes";
+import { useSpecifications } from "../../src/services/specifications/hooks/use-specifications";
 import { useProduct } from "../../src/services/products/hooks/use-products";
 import { productService } from "../../src/services/products/api/product.service";
 import { mediaService } from "../../src/services/media/api/media.service";
@@ -22,7 +28,128 @@ import { Card } from "../../src/components/ui/card";
 import { AlertCircle, RefreshCw, Loader2 } from "lucide-react";
 import { Button } from "../../src/components/ui/button";
 import { Attribute, AttributeValue } from "../../src/services/attributes/types/attribute.types";
+import { Specification, SpecificationValue } from "../../src/services/specifications/types/specification.types";
 import { finishToastError, finishToastSuccess, showLoadingToast, updateLoadingToast } from "../../src/lib/toast";
+
+type NormalizedProductSpecification = {
+  specification_value_id: number;
+  specification_value: SpecificationValue;
+};
+
+const normalizeProductSpecificationEntry = (
+  entry: unknown,
+  fallbackSpecificationId?: number,
+  fallbackSortOrder = 0
+): NormalizedProductSpecification | null => {
+  if (!entry || typeof entry !== "object") {
+    return null;
+  }
+
+  const candidate = entry as Record<string, unknown>;
+  const rawValue =
+    "specification_value" in candidate &&
+    candidate.specification_value &&
+    typeof candidate.specification_value === "object"
+      ? (candidate.specification_value as Record<string, unknown>)
+      : candidate;
+
+  const specificationValueId = Number(candidate.specification_value_id ?? rawValue.id);
+  const specificationId = Number(rawValue.specification_id ?? fallbackSpecificationId);
+
+  if (Number.isNaN(specificationValueId) || Number.isNaN(specificationId)) {
+    return null;
+  }
+
+  return {
+    specification_value_id: specificationValueId,
+    specification_value: {
+      id: specificationValueId,
+      specification_id: specificationId,
+      value_en: String(rawValue.value_en ?? rawValue.name_en ?? ""),
+      value_ar: String(rawValue.value_ar ?? rawValue.name_ar ?? ""),
+      parent_value_id:
+        rawValue.parent_value_id === undefined || rawValue.parent_value_id === null
+          ? null
+          : Number(rawValue.parent_value_id),
+      sort_order:
+        typeof rawValue.sort_order === "number" ? rawValue.sort_order : fallbackSortOrder,
+      is_active: rawValue.is_active === undefined ? true : Boolean(rawValue.is_active),
+    },
+  };
+};
+
+const normalizeProductSpecifications = (
+  rawSpecifications: unknown
+): NormalizedProductSpecification[] => {
+  if (!rawSpecifications) {
+    return [];
+  }
+
+  if (Array.isArray(rawSpecifications)) {
+    return rawSpecifications.flatMap((entry, index) => {
+      const normalized = normalizeProductSpecificationEntry(entry, undefined, index);
+      return normalized ? [normalized] : [];
+    });
+  }
+
+  if (typeof rawSpecifications !== "object") {
+    return [];
+  }
+
+  return Object.entries(rawSpecifications as Record<string, unknown>).flatMap(
+    ([specificationKey, specificationEntry], index) => {
+      const fallbackSpecificationId = Number(specificationKey);
+      const normalizedFallbackSpecificationId = Number.isNaN(fallbackSpecificationId)
+        ? undefined
+        : fallbackSpecificationId;
+
+      if (Array.isArray(specificationEntry)) {
+        return specificationEntry.flatMap((entry, itemIndex) => {
+          const normalized = normalizeProductSpecificationEntry(
+            entry,
+            normalizedFallbackSpecificationId,
+            itemIndex
+          );
+          return normalized ? [normalized] : [];
+        });
+      }
+
+      const directEntry = normalizeProductSpecificationEntry(
+        specificationEntry,
+        normalizedFallbackSpecificationId,
+        index
+      );
+      if (directEntry) {
+        return [directEntry];
+      }
+
+      if (!specificationEntry || typeof specificationEntry !== "object") {
+        return [];
+      }
+
+      const rawValues = (specificationEntry as Record<string, unknown>).values;
+      if (!rawValues || typeof rawValues !== "object") {
+        return [];
+      }
+
+      return Object.entries(rawValues as Record<string, unknown>).flatMap(
+        ([valueKey, entry], itemIndex) => {
+          const normalizedEntry =
+            entry && typeof entry === "object"
+              ? { ...(entry as Record<string, unknown>), id: Number(valueKey) }
+              : entry;
+
+        const normalized = normalizeProductSpecificationEntry(
+          normalizedEntry,
+          normalizedFallbackSpecificationId,
+          itemIndex
+        );
+          return normalized ? [normalized] : [];
+        }
+      );
+    }
+  );
+};
 
 export default function EditProductPage() {
   const router = useRouter();
@@ -39,6 +166,7 @@ export default function EditProductPage() {
   const { data: vendorsData, isLoading: vendorsLoading } = useVendors();
   const { data: brandsData, isLoading: brandsLoading } = useBrands();
   const { data: attributesData, isLoading: attributesLoading } = useAttributes();
+  const { data: specificationsData, isLoading: specificationsLoading } = useSpecifications();
 
 
   // Transform backend data to frontend format
@@ -76,8 +204,26 @@ export default function EditProductPage() {
     }) || [],
   })) || [];
 
+  const specifications = specificationsData?.map((specification: Specification) => ({
+    id: specification.id.toString(),
+    parentId: specification.parent_id?.toString(),
+    parentValueId: specification.parent_value_id?.toString(),
+    name: specification.name_en,
+    displayName: specification.name_ar,
+    values: specification.values.map((value: SpecificationValue) => ({
+      id: value.id.toString(),
+      parentId: value.parent_value_id?.toString(),
+      value: value.value_en,
+      displayValue: value.value_ar,
+    })),
+  })) || [];
+
   // Transform product data to form initial data
   const product: ProductDetail | undefined = productData?.data as ProductDetail | undefined;
+  const normalizedProductSpecifications = React.useMemo(
+    () => normalizeProductSpecifications(product?.specifications),
+    [product?.specifications]
+  );
   
   // Helper function to build attributeValues map from variant combinations
   const buildAttributeValuesMap = (combinations: any[]): { [attrId: string]: string } => {
@@ -128,6 +274,183 @@ export default function EditProductPage() {
   // Helper function to generate variant key from attributeValues
   const generateVariantKey = (attributeValues: { [attrId: string]: string }): string => {
     return Object.values(attributeValues).sort().join('-');
+  };
+
+  const transformProductSpecifications = () => {
+    if (
+      product?.specifications &&
+      !Array.isArray(product.specifications) &&
+      Object.keys(product.specifications).length > 0
+    ) {
+      const backendSpecifications = Object.entries(
+        product.specifications as Record<string, ProductSpecificationMap>
+      ).map(([specificationId, specificationData], index) => ({
+        id: specificationId,
+        name: specificationData.name_en,
+        values: specificationData.values
+          ? Object.entries(specificationData.values).map(([valueId, valueData], valueIndex) => ({
+              id: valueId,
+              label: valueData.name_en,
+              order: valueIndex,
+            }))
+          : [],
+        order: index,
+      }));
+
+      const getAllDescendantSpecificationIds = (parentId: string): string[] => {
+        const children =
+          specificationsData?.filter(
+            (specification: Specification) => String(specification.parent_id) === String(parentId)
+          ) || [];
+        const childIds = children.map((specification: Specification) => String(specification.id));
+        return [
+          ...childIds,
+          ...childIds.flatMap((childId: string) => getAllDescendantSpecificationIds(childId)),
+        ];
+      };
+
+      const buildSpecificationValuePath = (valueId: string, fallbackLabel: string) => {
+        let currentId = valueId;
+        const pathParts: string[] = [];
+        let depth = 0;
+
+        while (currentId && depth < 10) {
+          let found = false;
+
+          for (const specification of specificationsData || []) {
+            const value = specification.values?.find(
+              (specificationValue: SpecificationValue) =>
+                String(specificationValue.id) === String(currentId)
+            );
+
+            if (value) {
+              pathParts.unshift(value.value_en);
+              currentId = value.parent_value_id ? String(value.parent_value_id) : "";
+              found = true;
+              break;
+            }
+          }
+
+          if (!found) {
+            break;
+          }
+
+          depth += 1;
+        }
+
+        return pathParts.length > 0 ? pathParts.join(" > ") : fallbackLabel;
+      };
+
+      const rootSpecifications = backendSpecifications.filter((specification) => {
+        const systemSpecification = specificationsData?.find(
+          (item: Specification) => String(item.id) === String(specification.id)
+        );
+        return !systemSpecification?.parent_id;
+      });
+
+      return rootSpecifications
+        .map((rootSpecification) => {
+          const descendantIds = getAllDescendantSpecificationIds(rootSpecification.id);
+          const relatedSpecificationIds = [rootSpecification.id, ...descendantIds];
+          const familySpecifications = backendSpecifications.filter((specification) =>
+            relatedSpecificationIds.includes(specification.id)
+          );
+
+          const allSelectedValues = familySpecifications.flatMap(
+            (specification) => specification.values
+          );
+          const selectedValueIds = new Set(allSelectedValues.map((value) => String(value.id)));
+          const parentValueIds = new Set<string>();
+
+          specificationsData?.forEach((specification: Specification) => {
+            specification.values?.forEach((value: SpecificationValue) => {
+              if (value.parent_value_id && selectedValueIds.has(String(value.id))) {
+                parentValueIds.add(String(value.parent_value_id));
+              }
+            });
+          });
+
+          const leafValues = allSelectedValues.filter(
+            (value) => !parentValueIds.has(String(value.id))
+          );
+
+          return {
+            id: rootSpecification.id,
+            name: rootSpecification.name,
+            order: rootSpecification.order,
+            values: leafValues.map((value, index) => ({
+              id: value.id,
+              label: buildSpecificationValuePath(value.id, value.label),
+              order: index,
+            })),
+          };
+        })
+        .filter((specification) => specification.values.length > 0);
+    }
+
+    if (normalizedProductSpecifications.length === 0) {
+      return undefined;
+    }
+
+    const getSpecificationById = (id: number | string) => {
+      return specificationsData?.find((specification: Specification) => String(specification.id) === String(id));
+    };
+
+    const getRootSpecification = (specificationId: number) => {
+      let currentSpecification = getSpecificationById(specificationId);
+
+      while (currentSpecification?.parent_id) {
+        currentSpecification = getSpecificationById(currentSpecification.parent_id);
+      }
+
+      return currentSpecification;
+    };
+
+    const groupedSelections = new Map<string, {
+      id: string;
+      name: string;
+      values: Array<{ id: string; label: string; order: number }>;
+      order: number;
+    }>();
+
+    normalizedProductSpecifications.forEach((productSpecification) => {
+      const selectedValue = productSpecification.specification_value;
+      if (!selectedValue) {
+        return;
+      }
+
+      const directSpecification = getSpecificationById(selectedValue.specification_id);
+      const rootSpecification = directSpecification ? getRootSpecification(directSpecification.id) || directSpecification : undefined;
+      if (!rootSpecification) {
+        return;
+      }
+
+      const rootSpecificationId = rootSpecification.id.toString();
+      if (!groupedSelections.has(rootSpecificationId)) {
+        groupedSelections.set(rootSpecificationId, {
+          id: rootSpecificationId,
+          name: rootSpecification.name_en,
+          values: [],
+          order: groupedSelections.size,
+        });
+      }
+
+      const selection = groupedSelections.get(rootSpecificationId);
+      if (!selection) {
+        return;
+      }
+
+      const selectedValueId = selectedValue.id.toString();
+      if (!selection.values.some((value) => value.id === selectedValueId)) {
+        selection.values.push({
+          id: selectedValueId,
+          label: selectedValue.value_en,
+          order: selection.values.length,
+        });
+      }
+    });
+
+    return Array.from(groupedSelections.values());
   };
 
   // Transform attributes from product data
@@ -923,6 +1246,7 @@ const transformVariantMedia = (stockVariants: any[], attrs: any[]) => {
       slug: (product as any).slug,
       nameEn: product.name_en,
       nameAr: product.name_ar,
+      status: product.status || 'active',
       categoryIds: (product.categories && product.categories.length > 0)
         ? product.categories.map((c: any) => c.id.toString())
         : (product.category_ids?.map(id => id.toString()) || 
@@ -930,6 +1254,7 @@ const transformVariantMedia = (stockVariants: any[], attrs: any[]) => {
            (product.category_id ? [product.category_id.toString()] : []))),
       vendorId: product.vendor?.id?.toString() || product.vendor_id?.toString(),
       brandId: product.brand?.id?.toString() || product.brand_id?.toString(),
+      referenceLink: product.reference_link || "",
       shortDescriptionEn: product.short_description_en || "",
       shortDescriptionAr: product.short_description_ar || "",
     longDescriptionEn: product.long_description_en || "",
@@ -938,6 +1263,7 @@ const transformVariantMedia = (stockVariants: any[], attrs: any[]) => {
     
     // Attributes (for variant products)
     attributes: attrs,
+    specifications: transformProductSpecifications(),
     
     // Pricing
     singlePricing: !hasPricingAttributes ? transformSinglePricing() : undefined,
@@ -956,7 +1282,7 @@ const transformVariantMedia = (stockVariants: any[], attrs: any[]) => {
     // Stock/Variants
     variants: stockVariants,
   };
-  }, [product, attributesData]);
+  }, [product, attributesData, specificationsData]);
 
   const handleSubmit = async (data: ProductFormData) => {
     const toastId = showLoadingToast("Updating product...");
@@ -1042,6 +1368,18 @@ const transformVariantMedia = (stockVariants: any[], attrs: any[]) => {
       const shouldClearPrices = attributeRemoved || (originalPricingControlled !== newPricingControlled);
       const shouldClearWeights = attributeRemoved || (originalWeightControlled !== newWeightControlled);
       const shouldClearMedia = attributeRemoved || (originalMediaControlled !== newMediaControlled);
+      const nextSpecificationValueIds = Array.from(
+        new Set(
+          (data.specifications || []).flatMap((specification) =>
+            specification.values
+              .map((value) => parseInt(value.id, 10))
+              .filter((value) => !Number.isNaN(value))
+          )
+        )
+      );
+      const originalSpecificationValueIds = new Set(
+        normalizedProductSpecifications.map((specification) => specification.specification_value_id)
+      );
       
       console.log('=== DEBUG: Attribute Change Detection ===');
       console.log('originalAttrIds:', [...originalAttrIds]);
@@ -1059,6 +1397,7 @@ const transformVariantMedia = (stockVariants: any[], attrs: any[]) => {
         // ========== BASIC INFORMATION ==========
         name_en: data.nameEn,
         name_ar: data.nameAr,
+        status: data.status,
         short_description_en: data.shortDescriptionEn || '',
         short_description_ar: data.shortDescriptionAr || '',
         long_description_en: data.longDescriptionEn || '',
@@ -1066,8 +1405,15 @@ const transformVariantMedia = (stockVariants: any[], attrs: any[]) => {
         category_ids: (data.categoryIds || []).map(id => parseInt(id)),
         vendor_id: data.vendorId ? parseInt(data.vendorId) : undefined,
         brand_id: data.brandId ? parseInt(data.brandId) : undefined,
+        reference_link: data.referenceLink?.trim() || null,
         visible: data.visible,
       };
+
+      if (nextSpecificationValueIds.length > 0) {
+        productPayload.specification_value_ids = nextSpecificationValueIds;
+      } else if (originalSpecificationValueIds.size > 0) {
+        productPayload.specification_value_ids = [];
+      }
 
 
       console.log('=== DEBUG: Basic Information Payload ===');
@@ -1427,7 +1773,7 @@ const transformVariantMedia = (stockVariants: any[], attrs: any[]) => {
     }
   };
 
-  const isLoading = productLoading || attributesLoading || categoriesLoading || vendorsLoading || brandsLoading;
+  const isLoading = productLoading || attributesLoading || specificationsLoading || categoriesLoading || vendorsLoading || brandsLoading;
 
   if (isLoading) {
     return (
@@ -1496,6 +1842,7 @@ const transformVariantMedia = (stockVariants: any[], attrs: any[]) => {
       vendors={vendors}
       brands={brands}
       attributes={attributes}
+      specifications={specifications}
     />
   );
 }

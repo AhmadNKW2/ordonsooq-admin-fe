@@ -16,6 +16,7 @@ import { PageHeader } from "../common/PageHeader";
 import {
   ProductFormData,
   Attribute,
+  ProductSpecificationSelection,
   SinglePricing,
   VariantPricing,
   WeightDimensions,
@@ -26,6 +27,7 @@ import {
 } from "../../services/products/types/product-form.types";
 import { BasicInformationSection } from "./sections/BasicInformationSection";
 import { AttributesSection } from "./sections/AttributesSection";
+import { SpecificationsSection } from "./sections/SpecificationsSection";
 import { PricingSection } from "./sections/PricingSection";
 import { WeightDimensionsSection } from "./sections/WeightDimensionsSection";
 import { MediaSection } from "./sections/MediaSection";
@@ -50,6 +52,7 @@ interface ProductFormProps {
   vendors?: Array<{ id: string; name: string; nameEn?: string; nameAr?: string }>;
   brands?: Array<{ id: string; name: string; nameEn?: string; nameAr?: string }>;
   attributes?: Array<{ id: string; name: string; displayName: string; values: Array<{ id: string; value: string; displayValue: string }> }>;
+  specifications?: Array<{ id: string; name: string; displayName: string; parentId?: string; parentValueId?: string; values: Array<{ id: string; value: string; displayValue: string; parentId?: string }> }>;
 }
 
 export const ProductForm: React.FC<ProductFormProps> = ({
@@ -62,6 +65,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
   vendors = [],
   brands = [],
   attributes = [],
+  specifications = [],
 }) => {
   const router = useRouter();
 
@@ -73,15 +77,18 @@ export const ProductForm: React.FC<ProductFormProps> = ({
   const [formData, setFormData] = useState<Partial<ProductFormData>>({
     nameEn: "",
     nameAr: "",
+    status: "active",
     categoryIds: [],
     vendorId: "",
     brandId: "",
+    referenceLink: "",
     shortDescriptionEn: "",
     shortDescriptionAr: "",
     longDescriptionEn: "",
     longDescriptionAr: "",
     visible: true,
     attributes: [],
+    specifications: [],
     singlePricing: undefined,
     variantPricing: [],
     isWeightVariantBased: false,
@@ -117,14 +124,18 @@ export const ProductForm: React.FC<ProductFormProps> = ({
       setFormData({
         nameEn: "",
         nameAr: "",
+        status: "active",
         categoryIds: [],
         vendorId: "",
+        brandId: "",
+        referenceLink: "",
         shortDescriptionEn: "",
         shortDescriptionAr: "",
         longDescriptionEn: "",
         longDescriptionAr: "",
         visible: true,
         attributes: [],
+        specifications: [],
         singlePricing: undefined,
         variantPricing: [],
         isWeightVariantBased: false,
@@ -263,9 +274,11 @@ export const ProductForm: React.FC<ProductFormProps> = ({
     let dataToValidate: ProductFormData = {
       nameEn: formData.nameEn || '',
       nameAr: formData.nameAr || '',
+      status: formData.status || 'active',
       categoryIds: formData.categoryIds || [],
       vendorId: formData.vendorId || '',
       brandId: formData.brandId || '',
+      referenceLink: formData.referenceLink || '',
       shortDescriptionEn: formData.shortDescriptionEn || '',
       shortDescriptionAr: formData.shortDescriptionAr || '',
       longDescriptionEn: formData.longDescriptionEn || '',
@@ -274,6 +287,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
       isWeightVariantBased: formData.isWeightVariantBased ?? false,
       isMediaVariantBased: formData.isMediaVariantBased ?? false,
       attributes: formData.attributes,
+      specifications: formData.specifications,
       singlePricing: formData.singlePricing,
       variantPricing: filteredVariantPricing,
       singleWeightDimensions: formData.singleWeightDimensions,
@@ -654,9 +668,11 @@ export const ProductForm: React.FC<ProductFormProps> = ({
         formData={{
           nameEn: formData.nameEn,
           nameAr: formData.nameAr,
+          status: formData.status,
           categoryIds: formData.categoryIds,
           vendorId: formData.vendorId,
           brandId: formData.brandId,
+          referenceLink: formData.referenceLink,
           shortDescriptionEn: formData.shortDescriptionEn,
           shortDescriptionAr: formData.shortDescriptionAr,
           longDescriptionEn: formData.longDescriptionEn,
@@ -735,6 +751,18 @@ export const ProductForm: React.FC<ProductFormProps> = ({
           // Clear attribute errors when changed
           if (isSubmitted) {
             clearFieldError("attributes");
+          }
+        }}
+        errors={errors}
+      />
+
+      <SpecificationsSection
+        specifications={formData.specifications || []}
+        availableSpecifications={specifications}
+        onChange={(nextSpecifications: ProductSpecificationSelection[]) => {
+          handleFieldChange("specifications", nextSpecifications);
+          if (isSubmitted) {
+            clearFieldError("specifications");
           }
         }}
         errors={errors}

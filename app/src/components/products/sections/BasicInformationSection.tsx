@@ -2,11 +2,11 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Input } from "../../ui/input";
 import { RichTextEditor } from "../../ui/rich-text-editor";
 import { Select } from "../../ui/select";
-import { Checkbox } from "../../ui/checkbox";
 import { Card } from "@/components/ui";
 import { Toggle } from "@/components/ui/toggle";
 import { Category } from "../../../services/categories/types/category.types";
 import { CategoryTreeSelect } from "../CategoryTreeSelect";
+import type { ProductStatus } from "../../../services/products/types/product.types";
 
 const RECENT_VENDOR_KEY = 'recent_vendor_ids';
 const RECENT_BRAND_KEY = 'recent_brand_ids';
@@ -39,9 +39,11 @@ interface BasicInformationSectionProps {
     formData: {
         nameEn?: string;
         nameAr?: string;
+        status?: ProductStatus;
         categoryIds?: string[]; // Changed from categoryId to categoryIds
         vendorId?: string;
         brandId?: string;
+        referenceLink?: string;
         shortDescriptionEn?: string;
         shortDescriptionAr?: string;
         longDescriptionEn?: string;
@@ -303,6 +305,31 @@ export const BasicInformationSection: React.FC<BasicInformationSectionProps> = (
                     ]}
                     search={true}
                     error={errors.brandId}
+                />
+
+                <Select
+                    id="status"
+                    label="Status"
+                    value={formData.status || "active"}
+                    onChange={(value) => onChange("status", value as ProductStatus)}
+                    options={[
+                        { value: "active", label: "Active" },
+                        { value: "archived", label: "Archived" },
+                        { value: "updated", label: "Updated" },
+                        { value: "review", label: "Review" },
+                    ]}
+                    error={errors.status}
+                />
+
+                <Input
+                    id="referenceLink"
+                    label="Reference Link"
+                    value={formData.referenceLink || ""}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                        onChange("referenceLink", e.target.value)
+                    }
+                    placeholder="https://example.com/reference"
+                    error={errors.referenceLink}
                 />
 
                 {/* Visibility Status */}

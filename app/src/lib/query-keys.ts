@@ -101,6 +101,17 @@ export const queryKeys = {
       [...queryKeys.attributes.details(), id] as const,
   },
 
+  // Specifications
+  specifications: {
+    all: ["specifications"] as const,
+    lists: () => [...queryKeys.specifications.all, "list"] as const,
+    list: (params?: Record<string, any>) =>
+      [...queryKeys.specifications.lists(), params] as const,
+    details: () => [...queryKeys.specifications.all, "detail"] as const,
+    detail: (id: string | number) =>
+      [...queryKeys.specifications.details(), id] as const,
+  },
+
   // Wishlists
   wishlists: {
     all: ["wishlists"] as const,

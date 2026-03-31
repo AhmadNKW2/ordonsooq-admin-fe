@@ -14,12 +14,14 @@ import { useCategories } from "../../src/services/categories/hooks/use-categorie
 import { useVendors } from "../../src/services/vendors/hooks/use-vendors";
 import { useBrands } from "../../src/services/brands/hooks/use-brands";
 import { useAttributes } from "../../src/services/attributes/hooks/use-attributes";
+import { useSpecifications } from "../../src/services/specifications/hooks/use-specifications";
 import { productService } from "../../src/services/products/api/product.service";
 import { mediaService } from "../../src/services/media/api/media.service";
 import { transformFormDataToDto, UploadedMediaReference } from "../../src/services/products/form/transform";
 import { queryKeys } from "../../src/lib/query-keys";
 import { MediaInputDto } from "../../src/services/products/types/product.types";
 import { Attribute, AttributeValue } from "../../src/services/attributes/types/attribute.types";
+import { Specification, SpecificationValue } from "../../src/services/specifications/types/specification.types";
 import { finishToastError, finishToastSuccess, showLoadingToast, updateLoadingToast } from "../../src/lib/toast";
 
 export default function CreateProductPage() {
@@ -29,6 +31,7 @@ export default function CreateProductPage() {
   const { data: vendorsData, isLoading: vendorsLoading } = useVendors();
   const { data: brandsData, isLoading: brandsLoading } = useBrands();
   const { data: attributesData, isLoading: attributesLoading } = useAttributes();
+  const { data: specificationsData, isLoading: specificationsLoading } = useSpecifications();
 
   // Transform backend data to frontend format
   const categories = categoriesData || [];
@@ -59,6 +62,20 @@ export default function CreateProductPage() {
       value: val.value_en,
       displayValue: val.value_ar,
     })) || [],
+  })) || [];
+
+  const specifications = specificationsData?.map((specification: Specification) => ({
+    id: specification.id.toString(),
+    parentId: specification.parent_id?.toString(),
+    parentValueId: specification.parent_value_id?.toString(),
+    name: specification.name_en,
+    displayName: specification.name_ar,
+    values: specification.values.map((value: SpecificationValue) => ({
+      id: value.id.toString(),
+      parentId: value.parent_value_id?.toString(),
+      value: value.value_en,
+      displayValue: value.value_ar,
+    })),
   })) || [];
 
   const handleSubmit = async (data: ProductFormData) => {
@@ -203,6 +220,7 @@ export default function CreateProductPage() {
       vendors={vendors}
       brands={brands}
       attributes={attributes}
+      specifications={specifications}
     />
   );
 }

@@ -12,7 +12,7 @@ import {
   useSpecifications,
   useDeleteSpecification,
   useReorderSpecifications,
-} from "../src/services/specifications/hooks/useSpecifications";
+} from "../src/services/specifications/hooks/use-specifications";
 import { Tag, RefreshCw, AlertCircle, X, GripVertical } from "lucide-react";
 import { Card } from "../src/components/ui/card";
 import { Button } from "../src/components/ui/button";
@@ -62,7 +62,7 @@ const SortableRow: React.FC<{
   onDelete: (specification: Specification) => void;
 }> = ({ specification, displayIndex, onView, onEdit, onDelete }) => {
   const {
-    specifications: dndSpecifications,
+    attributes: dndAttributes,
     listeners,
     setNodeRef,
     transform,
@@ -91,7 +91,7 @@ const SortableRow: React.FC<{
               ? 'bg-primary/20 shadow-sm' 
               : 'hover:bg-primary/10 hover:shadow-sm'
           }`}
-          {...dndSpecifications}
+          {...dndAttributes}
           {...listeners}
         >
           <GripVertical className={`h-5 w-5 transition-colors duration-200 ${

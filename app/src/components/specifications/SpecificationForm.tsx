@@ -1,23 +1,33 @@
 "use client";
 
-/**
- * Shared Specification Form Component
- * Uses React Hook Form + Zod for validation
- */
-
-import React, { useState, useMemo } from "react";
-import { useRouter } from "@/hooks/use-loading-router";
+import React, { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Tag, Palette, GripVertical, Layers, ListFilter } from "lucide-react";
+import { useRouter } from "@/hooks/use-loading-router";
+import { GripVertical, Layers, ListFilter, Tag } from "lucide-react";
+import {
+  DndContext,
+  DragEndEvent,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import { CSS } from "@dnd-kit/utilities";
+import {
+  SortableContext,
+  arrayMove,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
 import { Card } from "../ui/card";
 import { Button } from "../ui/button";
-import { Input } from "../ui/input";
-import { Select } from "../ui/select";
-import { Toggle } from "../ui/toggle";
 import { IconButton } from "../ui/icon-button";
+import { Input } from "../ui/input";
 import { PageHeader } from "../common/PageHeader";
-import { cn } from "../../lib/utils";
+import { Select } from "../ui/select";
 import {
   Table,
   TableBody,
@@ -26,85 +36,23 @@ import {
   TableHeader,
   TableRow,
 } from "../ui/table";
-import { Specification, SpecificationValue } from "../../services/specifications/types/specification.types";
+import { Toggle } from "../ui/toggle";
+import { cn } from "../../lib/utils";
+import { useEnterToSubmit } from "../../hooks/use-enter-to-submit";
 import {
   createSpecificationValueSchema,
   type SpecificationValueFormData,
   type SpecificationValueFormOutput,
 } from "../../lib/validations/specification.schema";
-
-// DnD Kit imports
 import {
-  DndContext,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  DragEndEvent,
-} from "@dnd-kit/core";
-import {
-  arrayMove,
-  SortableContext,
-  sortableKeyboardCoordinates,
-  useSortable,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
-import { useEnterToSubmit } from "../../hooks/use-enter-to-submit";
+  Specification,
+  SpecificationValue,
+} from "../../services/specifications/types/specification.types";
 
-// Value type for display (using SpecificationValue for both modes)
 type ValueItem = SpecificationValue;
 
-// ============================================
-// Color Input Component (Hex input + Color picker)
-// ============================================
-interface ColorInputProps {
-  id?: string;
-  value: string;
-  onChange: (value: string) => void;
-  error?: string | boolean;
-}
-
-const ColorInput: React.FC<ColorInputProps> = ({ id, value, onChange, error }) => {
-  const colorInputRef = React.useRef<HTMLInputElement>(null);
-
-  return (
-    <div className="flex items-center gap-2">
-      <Input
-        id={id}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder="#000000"
-        size="sm"
-        className="w-21"
-        error={error}
-      />
-      <div className="relative">
-        <input
-          ref={colorInputRef}
-          type="color"
-          value={value || "#000000"}
-          onChange={(e) => onChange(e.target.value)}
-          className="absolute opacity-0 w-0 h-0"
-        />
-        <button
-          type="button"
-          onClick={() => colorInputRef.current?.click()}
-          className="w-6 h-6 rounded-full flex items-center justify-center hover:opacity-75 transition-all shadow-s1 border border-black/20"
-          style={{ backgroundColor: value || "#fff" }}
-        >
-      </button>
-      </div>
-    </div>
-  );
-};
-
-// ============================================
-// useValueForm Hook (for inline add/edit with RHF + Zod)
-// ============================================
-const useValueForm = (isColor: boolean) => {
-  const schema = useMemo(() => createSpecificationValueSchema(isColor), [isColor]);
+const useValueForm = () => {
+  const schema = useMemo(() => createSpecificationValueSchema(), []);
 
   return useForm<SpecificationValueFormData, any, SpecificationValueFormOutput>({
     resolver: zodResolver(schema),
@@ -112,43 +60,39 @@ const useValueForm = (isColor: boolean) => {
       value_en: "",
       value_ar: "",
       parent_value_id: null,
-      color_code: "",
     },
     mode: "onChange",
   });
 };
 
-// ============================================
-// New Value Row Component (inline add)
-// ============================================
 interface NewValueRowProps {
-  isColor: boolean;
   isAdding: boolean;
   onSave: (data: SpecificationValueFormOutput) => void;
   onCancel: () => void;
 }
 
 const NewValueRow: React.FC<NewValueRowProps> = ({
-  isColor,
   isAdding,
   onSave,
   onCancel,
 }) => {
-  const form = useValueForm(isColor);
-  const { register, handleSubmit, formState: { errors }, setValue, watch } = form;
-
-  const colorCode = watch("color_code");
+  const form = useValueForm();
+  const {
+    formState: { errors },
+    handleSubmit,
+    register,
+  } = form;
 
   const onSubmit = handleSubmit((data) => {
     onSave(data);
     form.reset();
   });
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      e.stopPropagation();
-      e.nativeEvent.stopImmediatePropagation();
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      event.stopPropagation();
+      event.nativeEvent.stopImmediatePropagation();
       onSubmit();
     }
   };
@@ -164,9 +108,9 @@ const NewValueRow: React.FC<NewValueRowProps> = ({
           id="value_en"
           {...register("value_en")}
           size="sm"
-          error={errors.value_en?.message}
-          autoFocus
           className="w-full"
+          autoFocus
+          error={errors.value_en?.message}
           onKeyDown={handleKeyDown}
         />
       </TableCell>
@@ -175,22 +119,12 @@ const NewValueRow: React.FC<NewValueRowProps> = ({
           id="value_ar"
           {...register("value_ar")}
           size="sm"
+          className="w-full"
           isRtl
           error={errors.value_ar?.message}
-          className="w-full"
           onKeyDown={handleKeyDown}
         />
       </TableCell>
-      {isColor && (
-        <TableCell>
-          <ColorInput
-            id="color_code"
-            value={colorCode || ""}
-            onChange={(val) => setValue("color_code", val, { shouldValidate: true })}
-            error={errors.color_code?.message}
-          />
-        </TableCell>
-      )}
       <TableCell>
         <div className="flex gap-1">
           <IconButton
@@ -206,27 +140,19 @@ const NewValueRow: React.FC<NewValueRowProps> = ({
   );
 };
 
-
-// ============================================
-// Sortable Value Row Component (Display Mode)
-// ============================================
 interface SortableValueRowProps {
   value: ValueItem;
-  isColor: boolean;
   onEdit: (value: ValueItem) => void;
   onDelete: (value: ValueItem) => void;
-  isCreateMode?: boolean;
 }
 
 const SortableValueRow: React.FC<SortableValueRowProps> = ({
   value,
-  isColor,
   onEdit,
   onDelete,
-  isCreateMode = false,
 }) => {
   const {
-    specifications: dndSpecifications,
+    attributes: dndAttributes,
     listeners,
     setNodeRef,
     transform,
@@ -244,8 +170,6 @@ const SortableValueRow: React.FC<SortableValueRowProps> = ({
       : undefined,
   };
 
-  const displayOrder = value.sort_order;
-
   return (
     <TableRow
       ref={setNodeRef}
@@ -254,55 +178,42 @@ const SortableValueRow: React.FC<SortableValueRowProps> = ({
     >
       <TableCell>
         <button
-          className={`cursor-grab active:cursor-grabbing p-2 rounded-lg transition-all duaration-300 ${isDragging
-            ? "bg-primary/20 shadow-sm"
-            : "hover:bg-primary/10 hover:shadow-sm"
-            }`}
-          {...dndSpecifications}
+          className={cn(
+            "cursor-grab active:cursor-grabbing p-2 rounded-lg transition-all duration-300",
+            isDragging
+              ? "bg-primary/20 shadow-sm"
+              : "hover:bg-primary/10 hover:shadow-sm"
+          )}
+          {...dndAttributes}
           {...listeners}
         >
           <GripVertical
-            className={`h-5 w-5 transition-colors duaration-300 ${isDragging ? "text-primary" : "text-primary/50 group-hover:text-gray-600"
-              }`}
+            className={cn(
+              "h-5 w-5 transition-colors duration-300",
+              isDragging ? "text-primary" : "text-primary/50 group-hover:text-gray-600"
+            )}
           />
         </button>
       </TableCell>
-      <TableCell className="font-mono text-sm">{displayOrder}</TableCell>
-      <TableCell>
-        <span>{value.value_en}</span>
-      </TableCell>
+      <TableCell className="font-mono text-sm">{value.sort_order}</TableCell>
+      <TableCell>{value.value_en}</TableCell>
       <TableCell>
         <span dir="rtl">{value.value_ar}</span>
       </TableCell>
-      {isColor && (
-        <TableCell>
-          {value.color_code ? (
-            <div className="flex items-center gap-2">
-              <div
-                className="w-6 h-6 rounded-full flex-shrink-0 shadow-s1 border border-black/20"
-                style={{ backgroundColor: value.color_code }}
-              />
-              <span className="text-sm text-gray-500">{value.color_code}</span>
-            </div>
-          ) : (
-            <span className="text-gray-400">—</span>
-          )}
-        </TableCell>
-      )}
       <TableCell>
         <div className="flex gap-1">
           <IconButton
             variant="edit"
-            onClick={(e) => {
-              e.stopPropagation();
+            onClick={(event) => {
+              event.stopPropagation();
               onEdit(value);
             }}
             title="Edit value"
           />
           <IconButton
             variant="delete"
-            onClick={(e) => {
-              e.stopPropagation();
+            onClick={(event) => {
+              event.stopPropagation();
               onDelete(value);
             }}
             title="Delete value"
@@ -313,40 +224,35 @@ const SortableValueRow: React.FC<SortableValueRowProps> = ({
   );
 };
 
-// ============================================
-// Editable Value Row Component (Edit Mode with RHF)
-// ============================================
 interface EditableValueRowProps {
   value: ValueItem;
-  isColor: boolean;
   onSave: (data: SpecificationValueFormOutput) => void;
   onCancel: () => void;
-  isCreateMode?: boolean;
 }
 
 const EditableValueRow: React.FC<EditableValueRowProps> = ({
   value,
-  isColor,
   onSave,
   onCancel,
-  isCreateMode = false,
 }) => {
-  const form = useValueForm(isColor);
-  const { register, handleSubmit, formState: { errors }, setValue, watch, reset } = form;
+  const form = useValueForm();
+  const {
+    formState: { errors },
+    handleSubmit,
+    register,
+    reset,
+  } = form;
 
-  // Initialize form with existing values
   React.useEffect(() => {
     reset({
       value_en: value.value_en,
       value_ar: value.value_ar,
-      color_code: value.color_code || "",
+      parent_value_id: value.parent_value_id ?? null,
     });
-  }, [value, reset]);
-
-  const colorCode = watch("color_code");
+  }, [reset, value]);
 
   const {
-    specifications: dndSpecifications,
+    attributes: dndAttributes,
     listeners,
     setNodeRef,
     transform,
@@ -364,17 +270,13 @@ const EditableValueRow: React.FC<EditableValueRowProps> = ({
       : undefined,
   };
 
-  const displayOrder = value.sort_order;
+  const onSubmit = handleSubmit((data) => onSave(data));
 
-  const onSubmit = handleSubmit((data) => {
-    onSave(data);
-  });
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      e.stopPropagation();
-      e.nativeEvent.stopImmediatePropagation();
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      event.stopPropagation();
+      event.nativeEvent.stopImmediatePropagation();
       onSubmit();
     }
   };
@@ -387,20 +289,24 @@ const EditableValueRow: React.FC<EditableValueRowProps> = ({
     >
       <TableCell>
         <button
-          className={`cursor-grab active:cursor-grabbing p-2 rounded-lg transition-all duaration-300 ${isDragging
-            ? "bg-primary/20 shadow-sm"
-            : "hover:bg-primary/10 hover:shadow-sm"
-            }`}
-          {...dndSpecifications}
+          className={cn(
+            "cursor-grab active:cursor-grabbing p-2 rounded-lg transition-all duration-300",
+            isDragging
+              ? "bg-primary/20 shadow-sm"
+              : "hover:bg-primary/10 hover:shadow-sm"
+          )}
+          {...dndAttributes}
           {...listeners}
         >
           <GripVertical
-            className={`h-5 w-5 transition-colors duaration-300 ${isDragging ? "text-primary" : "text-primary/50 group-hover:text-gray-600"
-              }`}
+            className={cn(
+              "h-5 w-5 transition-colors duration-300",
+              isDragging ? "text-primary" : "text-primary/50 group-hover:text-gray-600"
+            )}
           />
         </button>
       </TableCell>
-      <TableCell className="font-mono text-sm">{displayOrder}</TableCell>
+      <TableCell className="font-mono text-sm">{value.sort_order}</TableCell>
       <TableCell>
         <Input
           {...register("value_en")}
@@ -420,16 +326,6 @@ const EditableValueRow: React.FC<EditableValueRowProps> = ({
           onKeyDown={handleKeyDown}
         />
       </TableCell>
-      {isColor && (
-        <TableCell>
-          <ColorInput
-            id="edit_color_code"
-            value={colorCode || ""}
-            onChange={(val) => setValue("color_code", val, { shouldValidate: true })}
-            error={errors.color_code?.message}
-          />
-        </TableCell>
-      )}
       <TableCell>
         <div className="flex gap-1">
           <IconButton variant="check" onClick={onSubmit} title="Save" />
@@ -440,42 +336,29 @@ const EditableValueRow: React.FC<EditableValueRowProps> = ({
   );
 };
 
-// ============================================
-// Main SpecificationForm Component
-// ============================================
-
 interface SpecificationFormProps {
   mode: "create" | "edit";
-  // Specification data
   nameEn: string;
   nameAr: string;
   unitEn: string;
   unitAr: string;
   parentId?: string;
   parentValueId?: string;
-  isColor: boolean;
   isActive: boolean;
+  listSeparately?: boolean | null;
   onNameEnChange: (value: string) => void;
   onNameArChange: (value: string) => void;
   onUnitEnChange: (value: string) => void;
   onUnitArChange: (value: string) => void;
   onParentIdChange: (value: string) => void;
   onParentValueIdChange: (value: string) => void;
-  onIsColorChange: (value: boolean) => void;
   onIsActiveChange: (value: boolean) => void;
-  specificationType?: "spec_specification" | "variant_specification" | null;
-  listSeparately?: boolean | null;
-  onSpecificationTypeChange?: (value: "spec_specification" | "variant_specification") => void;
   onListSeparatelyChange?: (value: boolean) => void;
-  specifications?: Specification[]; // List of available specifications for parent selection
-  // Validation - now using React Hook Form
+  specifications?: Specification[];
   formErrors?: { name_en?: string; name_ar?: string };
-  // Values (for both create and edit modes - managed locally)
   values: SpecificationValue[];
   onValuesChange: (values: SpecificationValue[]) => void;
-  // For delete confirmation in edit mode
   onDeleteValue?: (value: SpecificationValue) => void;
-  // Submit
   onSubmit: () => void;
   isSubmitting: boolean;
   submitButtonText: string;
@@ -489,21 +372,17 @@ export const SpecificationForm: React.FC<SpecificationFormProps> = ({
   unitAr,
   parentId,
   parentValueId,
-  isColor,
   isActive,
+  listSeparately = false,
   onNameEnChange,
   onNameArChange,
   onUnitEnChange,
   onUnitArChange,
   onParentIdChange,
   onParentValueIdChange,
-  onIsColorChange,
   onIsActiveChange,
-  specificationType = "spec_specification",
-  listSeparately = false,
-  onSpecificationTypeChange,
   onListSeparatelyChange,
-  specifications = [], // Default to empty array
+  specifications = [],
   formErrors,
   values,
   onValuesChange,
@@ -515,16 +394,11 @@ export const SpecificationForm: React.FC<SpecificationFormProps> = ({
   const router = useRouter();
   useEnterToSubmit(onSubmit, isSubmitting);
 
-  // State for add/edit mode
   const [showNewValueRow, setShowNewValueRow] = useState(false);
   const [editingValueId, setEditingValueId] = useState<number | string | null>(null);
-  // Counter for generating temporary IDs for new values
   const [tempIdCounter, setTempIdCounter] = useState(1);
-  
-  // State for active parent value tab
   const [activeParentValueId, setActiveParentValueId] = useState<string | null>(null);
 
-  // DnD sensors
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
@@ -532,137 +406,137 @@ export const SpecificationForm: React.FC<SpecificationFormProps> = ({
     })
   );
 
-  // Derived state: parent specification and its values
   const parentSpecification = useMemo(() => {
-    return specifications.find(attr => attr.id.toString() === parentId);
-  }, [specifications, parentId]);
+    return specifications.find((specification) => specification.id.toString() === parentId);
+  }, [parentId, specifications]);
 
   const parentValues = useMemo(() => {
     return parentSpecification?.values || [];
   }, [parentSpecification]);
 
-  // Set default active parent value if available and not set
   React.useEffect(() => {
-    if (parentSpecification && parentValues.length > 0 && !activeParentValueId) {
-      setActiveParentValueId(parentValues[0].id.toString());
-    } else if (!parentSpecification) {
+    if (!parentSpecification) {
       setActiveParentValueId(null);
+      return;
     }
-  }, [parentSpecification, parentValues, activeParentValueId]);
 
-  // Sort values for display and filter by active parent value
+    if (parentValueId && parentValues.some((value) => value.id.toString() === parentValueId)) {
+      setActiveParentValueId(parentValueId);
+      return;
+    }
+
+    if (parentValues.length > 0) {
+      setActiveParentValueId((currentValue) => currentValue || parentValues[0].id.toString());
+      return;
+    }
+
+    setActiveParentValueId(null);
+  }, [parentSpecification, parentValueId, parentValues]);
+
   const displayValues = useMemo(() => {
     let filtered = [...values];
-    
-    // If we have a parent specification, filter by the active parent value tab
+
     if (parentSpecification && activeParentValueId) {
-      filtered = filtered.filter(v => 
-        v.parent_value_id?.toString() === activeParentValueId
+      filtered = filtered.filter(
+        (value) => value.parent_value_id?.toString() === activeParentValueId
       );
     }
-    
-    return filtered.sort((a, b) => a.sort_order - b.sort_order);
-  }, [values, parentSpecification, activeParentValueId]);
 
-  // Handle add value button click
+    return filtered.sort((left, right) => left.sort_order - right.sort_order);
+  }, [activeParentValueId, parentSpecification, values]);
+
   const handleAddValueClick = () => {
     setShowNewValueRow(true);
     setEditingValueId(null);
   };
 
-  // Handle save new value (local state update only)
   const handleSaveNewValue = (data: SpecificationValueFormOutput) => {
-    // Generate a temporary negative ID for new values (to distinguish from existing ones)
     const tempId = -tempIdCounter;
-    setTempIdCounter(prev => prev + 1);
-    
+    setTempIdCounter((previous) => previous + 1);
+
     const newValue: SpecificationValue = {
       id: tempId,
-      specification_id: 0, // Will be set by backend
+      specification_id: 0,
       value_en: data.value_en,
       value_ar: data.value_ar,
-      // Use activeParentValueId if set
       parent_value_id: activeParentValueId ? Number(activeParentValueId) : null,
-      color_code: isColor ? data.color_code || null : null,
-      image_url: null,
-      sort_order: values.length,
+      sort_order: displayValues.length,
       is_active: true,
     };
-    
+
     onValuesChange([...values, newValue]);
     setShowNewValueRow(false);
   };
 
-  // Handle cancel new value
-  const handleCancelNewValue = () => {
-    setShowNewValueRow(false);
-  };
-
-  // Handle edit value
   const handleEditValue = (value: ValueItem) => {
     setEditingValueId(value.id);
     setShowNewValueRow(false);
   };
 
-  // Handle save edit (local state update only)
   const handleSaveEdit = (valueId: number | string, data: SpecificationValueFormOutput) => {
-    const updatedValues = values.map((v) =>
-      v.id === valueId
-        ? { 
-            ...v, 
-            value_en: data.value_en, 
-            value_ar: data.value_ar, 
-            // Keep existing parent_value_id or use active one if we want to enforce current tab
-            parent_value_id: v.parent_value_id, 
-            color_code: isColor ? data.color_code || null : null 
-          }
-        : v
+    onValuesChange(
+      values.map((value) => {
+        if (value.id !== valueId) {
+          return value;
+        }
+
+        return {
+          ...value,
+          value_en: data.value_en,
+          value_ar: data.value_ar,
+        };
+      })
     );
-    onValuesChange(updatedValues);
     setEditingValueId(null);
   };
 
-  // Handle cancel edit
-  const handleCancelEdit = () => {
-    setEditingValueId(null);
-  };
-
-  // Handle delete value
   const handleDeleteValue = (value: ValueItem) => {
-    // For existing values (positive ID), show confirmation modal
-    if (typeof value.id === 'number' && value.id > 0 && onDeleteValue) {
+    if (typeof value.id === "number" && value.id > 0 && onDeleteValue) {
       onDeleteValue(value as SpecificationValue);
-    } else {
-      // For new values (negative/temp ID), just remove from local state
-      onValuesChange(values.filter((v) => v.id !== value.id));
+      return;
     }
+
+    onValuesChange(values.filter((currentValue) => currentValue.id !== value.id));
   };
 
-  // Handle drag end (local state update only)
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
 
-    if (over && active.id !== over.id) {
-      const sortedValues = [...values].sort((a, b) => a.sort_order - b.sort_order);
-      const oldIndex = sortedValues.findIndex((item) => item.id === active.id);
-      const newIndex = sortedValues.findIndex((item) => item.id === over.id);
-
-      const newOrder = arrayMove(sortedValues, oldIndex, newIndex);
-      const reorderedValues = newOrder.map((item, index) => ({
-        ...item,
-        sort_order: index,
-      }));
-      onValuesChange(reorderedValues);
+    if (!over || active.id === over.id) {
+      return;
     }
+
+    const scopedValues = [...displayValues].sort((left, right) => left.sort_order - right.sort_order);
+    const oldIndex = scopedValues.findIndex((item) => item.id === active.id);
+    const newIndex = scopedValues.findIndex((item) => item.id === over.id);
+
+    if (oldIndex === -1 || newIndex === -1) {
+      return;
+    }
+
+    const reorderedScope = arrayMove(scopedValues, oldIndex, newIndex).map((item, index) => ({
+      ...item,
+      sort_order: index,
+    }));
+
+    const nextValues = values.map((value) => {
+      const updatedValue = reorderedScope.find((candidate) => candidate.id === value.id);
+      return updatedValue || value;
+    });
+
+    onValuesChange(nextValues);
   };
 
   return (
     <div className="flex flex-col justify-center items-center gap-5 p-5">
-      {/* Header */}
       <PageHeader
         icon={<Tag />}
         title={mode === "create" ? "Create Specification" : "Edit Specification"}
-        description={mode === "create" ? "Add a new product specification" : "Manage specification details and values"}
+        description={
+          mode === "create"
+            ? "Add a new product specification"
+            : "Manage specification details and values"
+        }
         cancelAction={{
           label: "Cancel",
           onClick: () => router.push("/specifications"),
@@ -675,63 +549,54 @@ export const SpecificationForm: React.FC<SpecificationFormProps> = ({
         }}
       />
 
-      {/* Specification Details Form */}
-        <Card className="w-full relative z-10">
+      <Card className="w-full relative z-10">
         <h2 className="text-lg font-semibold">Specification Details</h2>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           <Input
             label="Name (English) *"
             value={nameEn}
-            onChange={(e) => onNameEnChange(e.target.value)}
+            onChange={(event) => onNameEnChange(event.target.value)}
             error={formErrors?.name_en}
             required
           />
           <Input
             label="Name (Arabic) *"
             value={nameAr}
-            onChange={(e) => onNameArChange(e.target.value)}
+            onChange={(event) => onNameArChange(event.target.value)}
             error={formErrors?.name_ar}
             isRtl
             required
           />
         </div>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-4">
           <Input
-            label="Unit (English) - Optional"
+            label="Unit (English)"
             value={unitEn}
-            onChange={(e) => onUnitEnChange(e.target.value)}
+            onChange={(event) => onUnitEnChange(event.target.value)}
             placeholder="e.g. kg, m, L"
           />
           <Input
-            label="Unit (Arabic) - Optional"
+            label="Unit (Arabic)"
             value={unitAr}
-            onChange={(e) => onUnitArChange(e.target.value)}
+            onChange={(event) => onUnitArChange(event.target.value)}
             placeholder="e.g. كغ، م، ل"
             isRtl
           />
         </div>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-4">
           <Select
-            label="Specification Type *"
-            value={specificationType || "spec_specification"}
-            onChange={(val) => onSpecificationTypeChange?.(val as "spec_specification" | "variant_specification")}
-            options={[
-              { value: "spec_specification", label: "Spec Specification" },
-              { value: "variant_specification", label: "Variant Specification" },
-            ]}
-          />
-          <Select
-            label="Parent Specification (Optional)"
+            label="Parent Specification"
             value={parentId || ""}
-            onChange={(val) => {
-              onParentIdChange(val as string);
-              // Clear parent value when parent specification changes
+            onChange={(value) => {
+              onParentIdChange(value as string);
               onParentValueIdChange("");
             }}
-            options={specifications.map(attr => ({
-              value: attr.id.toString(),
-              label: attr.name_en
+            options={specifications.map((specification) => ({
+              value: specification.id.toString(),
+              label: specification.name_en,
             }))}
             placeholder="Select a parent specification"
             onClear={() => {
@@ -743,11 +608,7 @@ export const SpecificationForm: React.FC<SpecificationFormProps> = ({
 
         <div className="flex items-center gap-8 mt-5">
           <div className="flex items-center gap-3">
-            <Toggle checked={isColor} onChange={onIsColorChange} />
-            <span className="text-sm font-medium">Is Color Specification</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <Toggle checked={!!listSeparately} onChange={(val) => onListSeparatelyChange?.(val)} />
+            <Toggle checked={!!listSeparately} onChange={(value) => onListSeparatelyChange?.(value)} />
             <span className="text-sm font-medium">List Separately</span>
           </div>
           <div className="flex items-center gap-3">
@@ -757,7 +618,6 @@ export const SpecificationForm: React.FC<SpecificationFormProps> = ({
         </div>
       </Card>
 
-      {/* Specification Values */}
       <Card className="w-full overflow-hidden">
         <div className="p-1 space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -766,8 +626,8 @@ export const SpecificationForm: React.FC<SpecificationFormProps> = ({
                 {mode === "create" ? "Specification Values" : "Manage Values"}
               </h2>
               <p className="text-sm text-gray-500 mt-1">
-                {mode === "create" 
-                  ? "Define the initial values for this specification." 
+                {mode === "create"
+                  ? "Define the initial values for this specification."
                   : "Add, edit, or reorder the values available for this specification."}
               </p>
             </div>
@@ -783,29 +643,28 @@ export const SpecificationForm: React.FC<SpecificationFormProps> = ({
             </Button>
           </div>
 
-          {/* Parent Values Tabs */}
           {parentSpecification && parentValues.length > 0 && (
             <div className="space-y-3">
               <div className="flex items-center gap-2 text-xs font-semibold text-gray-500 uppercase tracking-widest pl-1">
-                 <ListFilter className="w-3 h-3" />
-                 <span>{parentSpecification.name_en} Categories</span>
+                <ListFilter className="w-3 h-3" />
+                <span>{parentSpecification.name_en} Values</span>
               </div>
               <div className="flex flex-wrap gap-2.5">
-                {parentValues.map((pv) => {
-                  const isActive = activeParentValueId === pv.id.toString();
+                {parentValues.map((parentValue) => {
+                  const isCurrent = activeParentValueId === parentValue.id.toString();
                   return (
                     <button
-                      key={pv.id}
+                      key={parentValue.id}
                       type="button"
-                      onClick={() => setActiveParentValueId(pv.id.toString())}
+                      onClick={() => setActiveParentValueId(parentValue.id.toString())}
                       className={cn(
                         "px-5 py-2.5 text-sm font-medium rounded-full transition-all duration-300 ease-out border md:flex-1 md:max-w-fit text-center",
-                        isActive 
-                          ? "bg-primary text-white border-primary shadow-md shadow-primary/25 scale-105" 
+                        isCurrent
+                          ? "bg-primary text-white border-primary shadow-md shadow-primary/25 scale-105"
                           : "bg-white text-gray-600 border-gray-200 hover:border-primary/30 hover:bg-primary/5 hover:text-primary"
                       )}
                     >
-                      {pv.value_en}
+                      {parentValue.value_en}
                     </button>
                   );
                 })}
@@ -813,7 +672,6 @@ export const SpecificationForm: React.FC<SpecificationFormProps> = ({
             </div>
           )}
 
-          {/* Empty State for Tabs */}
           {parentSpecification && parentValues.length === 0 && (
             <div className="flex flex-col items-center justify-center p-8 bg-amber-50 border border-amber-100 rounded-2xl text-center">
               <div className="w-12 h-12 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mb-3">
@@ -835,8 +693,8 @@ export const SpecificationForm: React.FC<SpecificationFormProps> = ({
               </div>
               <h3 className="font-bold text-gray-900 text-lg mb-2">No Values Yet</h3>
               <p className="text-gray-500 text-sm max-w-sm text-center mb-8 px-4">
-                {!!parentSpecification && !activeParentValueId 
-                  ? "Select a category above to start adding values."
+                {!!parentSpecification && !activeParentValueId
+                  ? "Select a parent value above to start adding values."
                   : "Start building your specification by adding its first value."}
               </p>
               <Button
@@ -860,60 +718,51 @@ export const SpecificationForm: React.FC<SpecificationFormProps> = ({
                   <TableHeader className="bg-gray-50/80">
                     <TableRow isHeader className="hover:bg-transparent border-gray-100">
                       <TableHead width="60px"><span className="sr-only">Sort</span></TableHead>
-                      <TableHead width={isColor ? "5%" : "5%"} className="text-gray-500 font-medium">#</TableHead>
-                  <TableHead width={isColor ? "40%" : "42%"}>Name (EN)</TableHead>
-                  <TableHead width={isColor ? "40%" : "42%"}>Name (AR)</TableHead>
-                  {isColor && <TableHead width="11%">Color</TableHead>}
-                  <TableHead width={isColor ? "10%" : "11%"}>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {/* New Value Row (inline add at top) */}
-                {showNewValueRow && (
-                  <NewValueRow
-                    isColor={isColor}
-                    isAdding={false}
-                    onSave={handleSaveNewValue}
-                    onCancel={handleCancelNewValue}
-                  />
-                )}
-                <SortableContext
-                  items={displayValues.map((v) => v.id)}
-                  strategy={verticalListSortingStrategy}
-                >
-                  {displayValues.map((value) => {
-                    const isEditing = editingValueId === value.id;
-
-                    if (isEditing) {
-                      return (
-                        <EditableValueRow
-                          key={value.id}
-                          value={value}
-                          isColor={isColor}
-                          onSave={(data) => handleSaveEdit(value.id, data)}
-                          onCancel={handleCancelEdit}
-                          isCreateMode={mode === "create"}
-                        />
-                      );
-                    }
-
-                    return (
-                      <SortableValueRow
-                        key={value.id}
-                        value={value}
-                        isColor={isColor}
-                        onEdit={handleEditValue}
-                        onDelete={handleDeleteValue}
-                        isCreateMode={mode === "create"}
+                      <TableHead width="8%" className="text-gray-500 font-medium">#</TableHead>
+                      <TableHead width="41%">Name (EN)</TableHead>
+                      <TableHead width="41%">Name (AR)</TableHead>
+                      <TableHead width="10%">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {showNewValueRow && (
+                      <NewValueRow
+                        isAdding={false}
+                        onSave={handleSaveNewValue}
+                        onCancel={() => setShowNewValueRow(false)}
                       />
-                    );
-                  })}
-                </SortableContext>
-              </TableBody>
-            </Table>
-          </DndContext>
-          </div>
-        )}
+                    )}
+                    <SortableContext
+                      items={displayValues.map((value) => value.id)}
+                      strategy={verticalListSortingStrategy}
+                    >
+                      {displayValues.map((value) => {
+                        if (editingValueId === value.id) {
+                          return (
+                            <EditableValueRow
+                              key={value.id}
+                              value={value}
+                              onSave={(data) => handleSaveEdit(value.id, data)}
+                              onCancel={() => setEditingValueId(null)}
+                            />
+                          );
+                        }
+
+                        return (
+                          <SortableValueRow
+                            key={value.id}
+                            value={value}
+                            onEdit={handleEditValue}
+                            onDelete={handleDeleteValue}
+                          />
+                        );
+                      })}
+                    </SortableContext>
+                  </TableBody>
+                </Table>
+              </DndContext>
+            </div>
+          )}
         </div>
       </Card>
     </div>

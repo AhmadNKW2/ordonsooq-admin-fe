@@ -279,7 +279,7 @@ const SortableValueRow: React.FC<SortableValueRowProps> = ({
           {value.color_code ? (
             <div className="flex items-center gap-2">
               <div
-                className="w-6 h-6 rounded-full flex-shrink-0 shadow-s1 border border-black/20"
+                className="w-6 h-6 rounded-full shrink-0 shadow-s1 border border-black/20"
                 style={{ backgroundColor: value.color_code }}
               />
               <span className="text-sm text-gray-500">{value.color_code}</span>
@@ -463,9 +463,7 @@ interface AttributeFormProps {
   onParentValueIdChange: (value: string) => void;
   onIsColorChange: (value: boolean) => void;
   onIsActiveChange: (value: boolean) => void;
-  attributeType?: "spec_attribute" | "variant_attribute" | null;
   listSeparately?: boolean | null;
-  onAttributeTypeChange?: (value: "spec_attribute" | "variant_attribute") => void;
   onListSeparatelyChange?: (value: boolean) => void;
   attributes?: Attribute[]; // List of available attributes for parent selection
   // Validation - now using React Hook Form
@@ -499,9 +497,7 @@ export const AttributeForm: React.FC<AttributeFormProps> = ({
   onParentValueIdChange,
   onIsColorChange,
   onIsActiveChange,
-  attributeType = "spec_attribute",
   listSeparately = false,
-  onAttributeTypeChange,
   onListSeparatelyChange,
   attributes = [], // Default to empty array
   formErrors,
@@ -711,16 +707,7 @@ export const AttributeForm: React.FC<AttributeFormProps> = ({
           />
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-4">
-          <Select
-            label="Attribute Type *"
-            value={attributeType || "spec_attribute"}
-            onChange={(val) => onAttributeTypeChange?.(val as "spec_attribute" | "variant_attribute")}
-            options={[
-              { value: "spec_attribute", label: "Spec Attribute" },
-              { value: "variant_attribute", label: "Variant Attribute" },
-            ]}
-          />
+        <div className="mt-4">
           <Select
             label="Parent Attribute (Optional)"
             value={parentId || ""}

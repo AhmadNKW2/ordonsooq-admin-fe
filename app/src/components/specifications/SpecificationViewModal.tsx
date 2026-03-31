@@ -1,25 +1,23 @@
-/**
- * Specification View Modal Component
- * A modal for viewing specification details and values
- */
-
 "use client";
 
 import React from "react";
-import { Modal } from "../ui/modal";
+import { Calendar, Hash, List, Ruler, Tag } from "lucide-react";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Card } from "../ui/card";
+import { Modal } from "../ui/modal";
 import {
   Table,
-  TableHeader,
   TableBody,
-  TableRow,
-  TableHead,
   TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from "../ui/table";
-import { Tag, Hash, Palette, List, Calendar } from "lucide-react";
-import { Specification, SpecificationValue } from "../../services/specifications/types/specification.types";
+import {
+  Specification,
+  SpecificationValue,
+} from "../../services/specifications/types/specification.types";
 
 interface SpecificationViewModalProps {
   isOpen: boolean;
@@ -28,9 +26,11 @@ interface SpecificationViewModalProps {
   onEdit?: () => void;
 }
 
-// Helper to format date
 const formatDate = (date: string | Date | null | undefined): string => {
-  if (!date) return "—";
+  if (!date) {
+    return "—";
+  }
+
   return new Date(date).toLocaleDateString("en-US", {
     year: "numeric",
     month: "short",
@@ -40,19 +40,18 @@ const formatDate = (date: string | Date | null | undefined): string => {
   });
 };
 
-// Section Header Component
-const SectionHeader: React.FC<{
-  icon: React.ReactNode;
-  title: string;
-  badge?: React.ReactNode;
-}> = ({ icon, title, badge }) => (
-  <div className="flex items-center justify-between">
-    <div className="flex items-center gap-3">
-      <div className="p-2 bg-primary/10 rounded-r1 text-primary">{icon}</div>
-      <h3 className="text-lg font-semibold">{title}</h3>
+const DetailCard: React.FC<{ label: string; value: React.ReactNode; icon: React.ReactNode }> = ({
+  label,
+  value,
+  icon,
+}) => (
+  <Card variant="nested" noFlex className="flex flex-col gap-2 justify-between items-center">
+    <div className="flex items-center justify-center gap-2">
+      {icon}
+      <span className="text-xs font-semibold text-primary uppercase tracking-wide">{label}</span>
     </div>
-    {badge}
-  </div>
+    <div className="text-lg font-bold text-center">{value}</div>
+  </Card>
 );
 
 export const SpecificationViewModal: React.FC<SpecificationViewModalProps> = ({
@@ -61,14 +60,13 @@ export const SpecificationViewModal: React.FC<SpecificationViewModalProps> = ({
   specification,
   onEdit,
 }) => {
-  if (!specification) return null;
+  if (!specification) {
+    return null;
+  }
 
-  // Check if this is a color specification
-
-  // Sort values by sort_order
-  const sortedValues = specification.values
-    ? [...specification.values].sort((a, b) => a.sort_order - b.sort_order)
-    : [];
+  const sortedValues = [...(specification.values || [])].sort(
+    (left, right) => left.sort_order - right.sort_order
+  );
 
   return (
     <Modal
@@ -76,7 +74,6 @@ export const SpecificationViewModal: React.FC<SpecificationViewModalProps> = ({
       onClose={onClose}
       className="w-full max-w-4xl max-h-[90vh] bg-white overflow-hidden"
     >
-      {/* Header */}
       <div className="flex items-center justify-between pb-5 border-b border-primary/20 w-full">
         <div className="flex items-center gap-4">
           <div className="p-3 bg-primary/10 rounded-r1">
@@ -84,75 +81,61 @@ export const SpecificationViewModal: React.FC<SpecificationViewModalProps> = ({
           </div>
           <div>
             <h2 className="text-xl font-bold">{specification.name_en}</h2>
-            {specification.name_ar && (
-              <p className="text-sm text-primary/75" dir="rtl">
-                {specification.name_ar}
-              </p>
-            )}
+            <p className="text-sm text-primary/75" dir="rtl">
+              {specification.name_ar}
+            </p>
           </div>
           <Badge variant={specification.is_active ? "success" : "danger"}>
             {specification.is_active ? "Active" : "Inactive"}
           </Badge>
         </div>
-        <div className="flex items-center gap-2">
-          {onEdit && (
-            <Button onClick={onEdit} variant="outline">
-              Edit
-            </Button>
-          )}
-        </div>
+        {onEdit && (
+          <Button onClick={onEdit} variant="outline">
+            Edit
+          </Button>
+        )}
       </div>
 
-      {/* Content */}
       <div className="overflow-y-auto max-h-[calc(90vh-100px)] space-y-5 pt-5">
-        {/* Basic Information */}
         <Card variant="nested">
-          <SectionHeader
-            icon={<Hash className="h-5 w-5" />}
-            title="Specification Information"
-          />
-
-          {/* Key Info Cards */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <Card variant="nested" noFlex className="flex flex-col gap-2 justify-between items-center">
-              <div className="flex items-center justify-start gap-2">
-                <Hash className="h-4 w-4 text-primary" />
-                <span className="text-xs font-semibold text-primary uppercase tracking-wide">ID</span>
-              </div>
-              <span className="text-lg font-bold">{specification.id}</span>
-            </Card>
-            <Card variant="nested" noFlex className="flex flex-col gap-2 justify-between items-center">
-              <div className="flex items-center justify-center gap-2">
-                <Tag className="h-4 w-4 text-primary" />
-                <span className="text-xs font-semibold text-primary uppercase tracking-wide">Sort Order</span>
-              </div>
-              <span className="text-lg font-bold">{specification.sort_order ?? "—"}</span>
-            </Card>
-            <Card variant="nested" noFlex className="flex flex-col gap-2 justify-between items-center">
-              <div className="flex items-center justify-center gap-2">
-                {isColorSpecification ? (
-                  <Palette className="h-4 w-4 text-primary" />
-                ) : (
-                  <List className="h-4 w-4 text-primary" />
-                )}
-                <span className="text-xs font-semibold text-primary uppercase tracking-wide">Type</span>
-              </div>
-              <Badge variant="primary">
-                {isColorSpecification ? "Color" : "Standard"}
+            <DetailCard
+              label="ID"
+              value={specification.id}
+              icon={<Hash className="h-4 w-4 text-primary" />}
+            />
+            <DetailCard
+              label="Sort Order"
+              value={specification.sort_order}
+              icon={<List className="h-4 w-4 text-primary" />}
+            />
+            <DetailCard
+              label="Unit"
+              value={specification.unit_en || specification.unit_ar || "—"}
+              icon={<Ruler className="h-4 w-4 text-primary" />}
+            />
+            <DetailCard
+              label="Values"
+              value={sortedValues.length}
+              icon={<Tag className="h-4 w-4 text-primary" />}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
+            <Card variant="nested" noFlex className="flex justify-between items-center">
+              <span className="text-sm font-medium">List separately</span>
+              <Badge variant={specification.list_separately ? "success" : "default"}>
+                {specification.list_separately ? "Yes" : "No"}
               </Badge>
             </Card>
-            <Card variant="nested" noFlex className="flex flex-col gap-2 justify-between items-center">
-              <div className="flex items-center justify-center gap-2">
-                <List className="h-4 w-4 text-primary" />
-                <span className="text-xs font-semibold text-primary uppercase tracking-wide">Values</span>
-              </div>
-              <span className="text-lg font-bold">{sortedValues.length}</span>
+            <Card variant="nested" noFlex className="flex justify-between items-center">
+              <span className="text-sm font-medium">Parent specification</span>
+              <span className="font-semibold">{specification.parent_id ?? "—"}</span>
             </Card>
           </div>
 
-          {/* Timestamps */}
           {(specification.created_at || specification.updated_at) && (
-            <Card variant="nested" noFlex className="flex justify-between">
+            <Card variant="nested" noFlex className="flex justify-between mt-3">
               <div className="flex items-center gap-3">
                 <Calendar className="h-4 w-4 text-primary" />
                 <div>
@@ -172,55 +155,39 @@ export const SpecificationViewModal: React.FC<SpecificationViewModalProps> = ({
           )}
         </Card>
 
-        {/* Values Table */}
         <Card variant="nested">
-          <SectionHeader
-            icon={<List className="h-5 w-5" />}
-            title="Specification Values"
-            badge={
-              <Badge variant="default">{sortedValues.length} values</Badge>
-            }
-          />
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-primary/10 rounded-r1 text-primary">
+                <List className="h-5 w-5" />
+              </div>
+              <h3 className="text-lg font-semibold">Specification Values</h3>
+            </div>
+            <Badge variant="default">{sortedValues.length} values</Badge>
+          </div>
+
           {sortedValues.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12">
               <div className="font-medium text-lg text-gray-500">No values</div>
-              <div className="text-sm text-gray-400">
-                This specification has no values yet
-              </div>
+              <div className="text-sm text-gray-400">This specification has no values yet</div>
             </div>
           ) : (
             <Table noPagination={true}>
               <TableHeader>
                 <TableRow isHeader>
-                  <TableHead width="15%">ID</TableHead>
-                  <TableHead width={isColorSpecification ? "30%" : "42.5%"}>Name (EN)</TableHead>
-                  <TableHead width={isColorSpecification ? "30%" : "42.5%"}>Name (AR)</TableHead>
-                  {isColorSpecification && <TableHead width="25%">Color</TableHead>}
+                  <TableHead width="15%">Order</TableHead>
+                  <TableHead width="42.5%">Name (EN)</TableHead>
+                  <TableHead width="42.5%">Name (AR)</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {sortedValues.map((value: SpecificationValue) => (
                   <TableRow key={value.id}>
-                    <TableCell className="font-mono text-sm">
-                      {value.sort_order}
-                    </TableCell>
+                    <TableCell className="font-mono text-sm">{value.sort_order}</TableCell>
                     <TableCell className="font-medium">{value.value_en}</TableCell>
                     <TableCell>
                       <span dir="rtl" className="font-medium">{value.value_ar}</span>
                     </TableCell>
-                    {isColorSpecification && (
-                      <TableCell>
-                        {value.color_code ? (
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm font-mono text-gray-500">
-                              {value.color_code}
-                            </span>
-                          </div>
-                        ) : (
-                          <span className="text-gray-400">—</span>
-                        )}
-                      </TableCell>
-                    )}
                   </TableRow>
                 ))}
               </TableBody>
@@ -231,5 +198,3 @@ export const SpecificationViewModal: React.FC<SpecificationViewModalProps> = ({
     </Modal>
   );
 };
-
-
