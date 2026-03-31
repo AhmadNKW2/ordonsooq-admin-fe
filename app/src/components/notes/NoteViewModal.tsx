@@ -157,7 +157,7 @@ export function NoteViewModal({ isOpen, onClose, note }: NoteViewModalProps) {
         <div className="md:col-span-7 lg:col-span-8 flex flex-col h-full">
           <div className="flex-1 rounded-xl border border-[#eed067] bg-[#fffcf0] shadow-[0_4px_15px_-4px_rgba(238,208,103,0.3)] flex flex-col overflow-hidden relative">
             {/* Soft decorative tape effect at the top */}
-            <div className="absolute top-0 inset-x-0 h-5 bg-gradient-to-b from-[#f2e2a9]/80 to-transparent"></div>
+            <div className="absolute top-0 inset-x-0 h-5 bg-linear-to-b from-[#f2e2a9]/80 to-transparent"></div>
             
             <div className="px-6 py-4 flex items-center gap-2 border-b border-[#f2e2a9] bg-[#fffcf0]/50 z-10">
                <MessageSquare className="w-4 h-4 text-amber-600" />
