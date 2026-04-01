@@ -496,7 +496,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     await handleLogout(true);
   }, [handleLogout]);
 
-  const isAdmin = authState.user?.role === 'admin';
+  const isAdmin = authState.user?.role === 'admin' || authState.user?.role === 'constant_token_admin';
   const isCatalogManager = authState.user?.role === 'catalog_manager';
   const hasAdminAccess = isAdmin || isCatalogManager;
 

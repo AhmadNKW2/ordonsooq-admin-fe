@@ -24,6 +24,7 @@ import { useSpecifications } from "../../src/services/specifications/hooks/use-s
 import { useProduct } from "../../src/services/products/hooks/use-products";
 import { productService } from "../../src/services/products/api/product.service";
 import { mediaService } from "../../src/services/media/api/media.service";
+import { buildProductSpecificationsPayload } from "../../src/services/products/form/transform";
 import { Card } from "../../src/components/ui/card";
 import { AlertCircle, RefreshCw, Loader2 } from "lucide-react";
 import { Button } from "../../src/components/ui/button";
@@ -1368,18 +1369,12 @@ const transformVariantMedia = (stockVariants: any[], attrs: any[]) => {
       const shouldClearPrices = attributeRemoved || (originalPricingControlled !== newPricingControlled);
       const shouldClearWeights = attributeRemoved || (originalWeightControlled !== newWeightControlled);
       const shouldClearMedia = attributeRemoved || (originalMediaControlled !== newMediaControlled);
-      const nextSpecificationValueIds = Array.from(
-        new Set(
-          (data.specifications || []).flatMap((specification) =>
-            specification.values
-              .map((value) => parseInt(value.id, 10))
-              .filter((value) => !Number.isNaN(value))
-          )
-        )
-      );
-      const originalSpecificationValueIds = new Set(
-        normalizedProductSpecifications.map((specification) => specification.specification_value_id)
-      );
+      const nextSpecificationsPayload = buildProductSpecificationsPayload(data.specifications);
+      const hasOriginalSpecifications =
+        normalizedProductSpecifications.length > 0 ||
+        (!!product?.specifications &&
+          !Array.isArray(product.specifications) &&
+          Object.keys(product.specifications).length > 0);
       
       console.log('=== DEBUG: Attribute Change Detection ===');
       console.log('originalAttrIds:', [...originalAttrIds]);
@@ -1409,10 +1404,10 @@ const transformVariantMedia = (stockVariants: any[], attrs: any[]) => {
         visible: data.visible,
       };
 
-      if (nextSpecificationValueIds.length > 0) {
-        productPayload.specification_value_ids = nextSpecificationValueIds;
-      } else if (originalSpecificationValueIds.size > 0) {
-        productPayload.specification_value_ids = [];
+      if (nextSpecificationsPayload.length > 0) {
+        productPayload.specifications = nextSpecificationsPayload;
+      } else if (hasOriginalSpecifications) {
+        productPayload.specifications = [];
       }
 
 

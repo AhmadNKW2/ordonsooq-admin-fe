@@ -3,7 +3,11 @@
  */
 
 import { ProductFormData, MediaItem } from "../types/product-form.types";
-import { CreateProductDto, MediaInputDto } from "../types/product.types";
+import {
+  CreateProductDto,
+  MediaInputDto,
+  ProductSpecificationInputDto,
+} from "../types/product.types";
 
 /**
  * Media upload data structure - contains files that need to be uploaded
@@ -27,6 +31,40 @@ export interface UploadedMediaReference {
   combination?: Record<string, number>;
 }
 
+export function buildProductSpecificationsPayload(
+  specifications: ProductFormData["specifications"]
+): ProductSpecificationInputDto[] {
+  if (!specifications || specifications.length === 0) {
+    return [];
+  }
+
+  return specifications.flatMap((specification) => {
+    const specificationId = parseInt(specification.id, 10);
+    if (Number.isNaN(specificationId)) {
+      return [];
+    }
+
+    const specificationValueIds = Array.from(
+      new Set(
+        specification.values
+          .map((value) => parseInt(value.id, 10))
+          .filter((valueId) => !Number.isNaN(valueId))
+      )
+    );
+
+    if (specificationValueIds.length === 0) {
+      return [];
+    }
+
+    return [
+      {
+        specification_id: specificationId,
+        specification_value_ids: specificationValueIds,
+      },
+    ];
+  });
+}
+
 /**
  * Transform frontend ProductFormData to CreateProductDto (without media)
  * and extract media files for separate upload
@@ -40,13 +78,7 @@ export interface UploadedMediaReference {
 export function transformFormDataToDto(
   data: ProductFormData
 ): { dto: CreateProductDto; mediaFiles: MediaUploadData } {
-  const specificationValueIds = Array.from(
-    new Set(
-      (data.specifications || []).flatMap((specification) =>
-        specification.values.map((value) => parseInt(value.id, 10)).filter((value) => !Number.isNaN(value))
-      )
-    )
-  );
+  const specificationsPayload = buildProductSpecificationsPayload(data.specifications);
 
   const dto: CreateProductDto = {
     name_en: data.nameEn,
@@ -64,7 +96,7 @@ export function transformFormDataToDto(
   // Optional fields
   if (data.vendorId) dto.vendor_id = parseInt(data.vendorId);
   if (data.brandId) dto.brand_id = parseInt(data.brandId);
-  if (specificationValueIds.length > 0) dto.specification_value_ids = specificationValueIds;
+  if (specificationsPayload.length > 0) dto.specifications = specificationsPayload;
 
   // Attributes
   if (data.attributes && data.attributes.length > 0) {

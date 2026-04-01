@@ -68,7 +68,7 @@ export function SidebarHeader({ children }: SidebarHeaderProps) {
       <div
         className={`
           overflow-hidden transition-all duration-300 ease-in-out whitespace-nowrap
-          ${isCollapsed ? 'max-w-0 opacity-0 pointer-events-none' : 'max-w-[200px] flex-1 opacity-100'}
+          ${isCollapsed ? 'max-w-0 opacity-0 pointer-events-none' : 'max-w-50 flex-1 opacity-100'}
         `}
       >
         {children}
@@ -207,6 +207,7 @@ interface SidebarLinkProps {
   icon: React.ReactNode;
   label: string;
   badge?: string | number;
+  exact?: boolean;
   onClick?: () => void;
 }
 
@@ -215,11 +216,14 @@ export function SidebarLink({
   icon,
   label,
   badge,
+  exact = false,
   onClick,
 }: SidebarLinkProps) {
   const pathname = usePathname();
   const { isCollapsed } = useSidebar();
-  const isActive = pathname === href || pathname.startsWith(`${href}/`);
+  const isActive = exact
+    ? pathname === href
+    : pathname === href || pathname.startsWith(`${href}/`);
 
   const linkRef = useRef<HTMLAnchorElement>(null);
   const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number } | null>(null);
@@ -270,7 +274,7 @@ export function SidebarLink({
           className={`
             font-medium text-sm whitespace-nowrap overflow-hidden
             transition-all duration-300 ease-in-out
-            ${isCollapsed ? 'max-w-0 opacity-0' : 'max-w-[200px] flex-1 opacity-100'}
+            ${isCollapsed ? 'max-w-0 opacity-0' : 'max-w-50 flex-1 opacity-100'}
             ${isActive ? 'text-white' : ''}
           `}
         >
@@ -282,7 +286,7 @@ export function SidebarLink({
             className={`
               text-xs font-semibold rounded-full overflow-hidden whitespace-nowrap flex items-center justify-center
               transition-all duration-300 ease-in-out
-              ${isCollapsed ? 'max-w-0 opacity-0 px-0 py-0' : 'max-w-[50px] px-2 py-0.5 opacity-100'}
+              ${isCollapsed ? 'max-w-0 opacity-0 px-0 py-0' : 'max-w-12.5 px-2 py-0.5 opacity-100'}
               ${isActive ? 'bg-white text-primary' : 'bg-primary text-white'}
             `}
           >

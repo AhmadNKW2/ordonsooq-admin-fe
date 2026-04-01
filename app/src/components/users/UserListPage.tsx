@@ -45,7 +45,9 @@ export const UserListPage: React.FC<UserListPageProps> = ({ userType }) => {
   const [userToView, setUserToView] = useState<Customer | null>(null);
 
   const isAdmin = userType === "admin";
-  const role: "user" | ("admin" | "catalog_manager")[] = isAdmin ? ["admin", "catalog_manager"] : "user";
+  const role: CustomerFilters["role"] = isAdmin
+    ? ["admin", "constant_token_admin", "catalog_manager"]
+    : "user";
   const basePath = isAdmin ? "/admins" : "/customers";
   const label = isAdmin ? "Admin" : "Customer";
   const labelPlural = isAdmin ? "Admins" : "Customers";
@@ -159,7 +161,7 @@ export const UserListPage: React.FC<UserListPageProps> = ({ userType }) => {
       <Card>
         <h2 className="text-lg font-semibold">Filters</h2>
         <div className="flex flex-wrap items-end gap-4">
-          <div className="flex-1 min-w-[200px] max-w-sm">
+          <div className="flex-1 min-w-50 max-w-sm">
             <Input
               value={searchTerm}
               onChange={(e) => handleSearchChange(e.target.value)}

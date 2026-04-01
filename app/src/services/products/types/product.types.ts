@@ -322,6 +322,7 @@ export interface ProductDetail extends Omit<Product, 'vendor' | 'category' | 'st
 export interface ProductFilters {
   page?: number;
   limit?: number;
+  status?: ProductStatus;
   category_ids?: string;
   vendor_ids?: string;
   brand_ids?: string;
@@ -456,6 +457,11 @@ export interface MediaInputDto {
   combination?: Record<string, number>; // For variant media
 }
 
+export interface ProductSpecificationInputDto {
+  specification_id: number;
+  specification_value_ids: number[];
+}
+
 // ==================== CREATE PRODUCT DTO ====================
 export interface CreateProductDto {
   // Basic product info
@@ -471,7 +477,7 @@ export interface CreateProductDto {
   vendor_id?: number;
   brand_id?: number;
   reference_link?: string | null;
-  specification_value_ids?: number[];
+  specifications?: ProductSpecificationInputDto[];
   visible?: boolean;
 
   // Attributes (for variant products)
@@ -583,7 +589,7 @@ export interface UpdateProductDto {
   vendor_id?: number;
   brand_id?: number;
   reference_link?: string | null;
-  specification_value_ids?: number[];
+  specifications?: ProductSpecificationInputDto[];
   visible?: boolean;
 
   // Attributes (for variant products)

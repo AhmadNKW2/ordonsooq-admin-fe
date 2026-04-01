@@ -34,6 +34,7 @@ export const UserViewModal: React.FC<UserViewModalProps> = ({
 
   const fullName = getCustomerFullName(customer);
   const wishlist = (customer as CustomerWithWishlist).wishlist;
+  const isAdminRole = customer.role === "admin" || customer.role === "constant_token_admin";
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} className="w-full max-w-lg">
@@ -53,8 +54,8 @@ export const UserViewModal: React.FC<UserViewModalProps> = ({
               <Badge variant={customer.isActive ? "success" : "danger"}>
                 {customer.isActive ? "Active" : "Inactive"}
               </Badge>
-              <Badge variant={customer.role === "admin" ? "warning" : "default"}>
-                {customer.role === "admin" ? "Admin" : "User"}
+              <Badge variant={isAdminRole ? "warning" : "default"}>
+                {isAdminRole ? "Admin" : "User"}
               </Badge>
               {customer.emailVerified && (
                 <Badge variant="success">
