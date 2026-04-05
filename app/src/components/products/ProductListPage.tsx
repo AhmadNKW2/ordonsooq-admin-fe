@@ -7,6 +7,7 @@ import { useSessionStoragePage } from "@/hooks/use-session-storage-page";
 import { useLoading } from "@/providers/loading-provider";
 import {
   useDeleteProduct,
+  usePermanentDeleteProduct,
   useProducts,
   useToggleProductStatus,
 } from "@/services/products/hooks/use-products";
@@ -127,9 +128,12 @@ export function ProductListPage({
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
   const [highlightedProductId, setHighlightedProductId] = useState<string | null>(null);
+  const isPermanentDeleteMode = fixedStatus === "review";
 
   const { data, isLoading, isError, error, refetch } = useProducts(queryParams);
-  const deleteProduct = useDeleteProduct();
+  const archiveProduct = useDeleteProduct();
+  const permanentDeleteProduct = usePermanentDeleteProduct();
+  const deleteProduct = isPermanentDeleteMode ? permanentDeleteProduct : archiveProduct;
   const toggleProductStatus = useToggleProductStatus();
 
   const handleToggleVisibility = async (event: React.MouseEvent, product: Product) => {
@@ -741,7 +745,7 @@ export function ProductListPage({
                   </TableCell>
                   <TableCell>
                     {product.categories && product.categories.length > 0 ? (
-                      <span title={product.categories[0].name_en} className="block max-w-[90px]">
+                      <span title={product.categories[0].name_en} className="block max-w-22.5">
                         <Badge
                           variant="default2"
                           className="w-full whitespace-nowrap overflow-hidden text-ellipsis block"
@@ -937,7 +941,7 @@ export function ProductListPage({
                           event.stopPropagation();
                           handleDeleteClick(product);
                         }}
-                        title="Delete product"
+                        title={isPermanentDeleteMode ? "Delete product permanently" : "Delete product"}
                       />
                     </div>
                   </TableCell>
@@ -955,6 +959,12 @@ export function ProductListPage({
           setProductToDelete(null);
         }}
         onConfirm={handleDeleteConfirm}
+        title={isPermanentDeleteMode ? "Delete Product Permanently?" : undefined}
+        message={isPermanentDeleteMode
+          ? `This will permanently delete ${productToDelete?.name_en || "this product"}. This action cannot be undone.`
+          : undefined}
+        confirmText={isPermanentDeleteMode ? "Delete Permanently" : undefined}
+        isPermanent={isPermanentDeleteMode}
         isLoading={deleteProduct.isPending}
       />
     </div>
