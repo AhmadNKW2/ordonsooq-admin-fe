@@ -105,6 +105,16 @@ export const userSchema = z.object({
 
 export type User = z.infer<typeof userSchema>;
 
+export const linkedProductSummarySchema = z.object({
+  id: z.number(),
+  name_en: z.string().optional().nullable(),
+  name_ar: z.string().optional().nullable(),
+  slug: z.string().optional().nullable(),
+  sku: z.string().optional().nullable(),
+});
+
+export type LinkedProductSummary = z.infer<typeof linkedProductSummarySchema>;
+
 // Product Schema for validation (matches backend)
 export const productSchema = z.object({
   id: z.number(),
@@ -138,6 +148,9 @@ export const productSchema = z.object({
   variants: z.array(z.any()).optional().nullable(),
   media: z.array(z.any()).optional().nullable(),
   specifications: z.union([z.array(z.any()), z.record(z.string(), z.any())]).optional(),
+  linked_group_id: z.number().optional().nullable(),
+  linked_product_ids: z.array(z.number()).optional(),
+  linked_products: z.array(linkedProductSummarySchema).optional(),
   status: z.enum(["active", "archived", "updated", "review"]).optional(),
   visible: z.boolean().optional(),
   archived_at: z.string().or(z.date()).optional().nullable(),
@@ -477,6 +490,7 @@ export interface CreateProductDto {
   vendor_id?: number;
   brand_id?: number;
   reference_link?: string | null;
+  linked_product_ids: number[];
   specifications?: ProductSpecificationInputDto[];
   visible?: boolean;
 
@@ -589,6 +603,7 @@ export interface UpdateProductDto {
   vendor_id?: number;
   brand_id?: number;
   reference_link?: string | null;
+  linked_product_ids: number[];
   specifications?: ProductSpecificationInputDto[];
   visible?: boolean;
 

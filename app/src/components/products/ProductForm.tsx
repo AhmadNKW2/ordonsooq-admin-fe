@@ -37,6 +37,7 @@ import { useZodValidation, flattenZodErrors } from "../../hooks/use-zod-validati
 import { createProductSchema, type ProductFormConfig } from "../../lib/validations/product.schema";
 import { Package } from "lucide-react";
 import { Category } from "../../services/categories/types/category.types";
+import type { LinkedProductSummary } from "../../services/products/types/product.types";
 import {
     generateCombinations,
     getControllingAttributes,
@@ -53,6 +54,7 @@ interface ProductFormProps {
   brands?: Array<{ id: string; name: string; nameEn?: string; nameAr?: string }>;
   attributes?: Array<{ id: string; name: string; displayName: string; values: Array<{ id: string; value: string; displayValue: string }> }>;
   specifications?: Array<{ id: string; name: string; displayName: string; parentId?: string; parentValueId?: string; values: Array<{ id: string; value: string; displayValue: string; parentId?: string }> }>;
+  initialLinkedProducts?: LinkedProductSummary[];
 }
 
 export const ProductForm: React.FC<ProductFormProps> = ({
@@ -66,6 +68,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
   brands = [],
   attributes = [],
   specifications = [],
+  initialLinkedProducts = [],
 }) => {
   const router = useRouter();
 
@@ -82,6 +85,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
     vendorId: "",
     brandId: "",
     referenceLink: "",
+    linked_product_ids: [],
     shortDescriptionEn: "",
     shortDescriptionAr: "",
     longDescriptionEn: "",
@@ -129,6 +133,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
         vendorId: "",
         brandId: "",
         referenceLink: "",
+        linked_product_ids: [],
         shortDescriptionEn: "",
         shortDescriptionAr: "",
         longDescriptionEn: "",
@@ -279,6 +284,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
       vendorId: formData.vendorId || '',
       brandId: formData.brandId || '',
       referenceLink: formData.referenceLink || '',
+      linked_product_ids: formData.linked_product_ids || [],
       shortDescriptionEn: formData.shortDescriptionEn || '',
       shortDescriptionAr: formData.shortDescriptionAr || '',
       longDescriptionEn: formData.longDescriptionEn || '',
@@ -673,6 +679,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
           vendorId: formData.vendorId,
           brandId: formData.brandId,
           referenceLink: formData.referenceLink,
+          linked_product_ids: formData.linked_product_ids,
           shortDescriptionEn: formData.shortDescriptionEn,
           shortDescriptionAr: formData.shortDescriptionAr,
           longDescriptionEn: formData.longDescriptionEn,
@@ -684,6 +691,8 @@ export const ProductForm: React.FC<ProductFormProps> = ({
         vendors={vendors}
         brands={brands}
         onChange={handleFieldChange}
+        currentProductId={productId}
+        initialLinkedProducts={initialLinkedProducts}
       />
 
       {/* Attributes Configuration - Always visible */}

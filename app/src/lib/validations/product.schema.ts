@@ -33,6 +33,7 @@ export const basicInformationSchema = z.object({
   vendorId: z.string().min(1, "Required"),
   brandId: z.string().optional().default("").pipe(z.string().min(1, "Required")),
   referenceLink: z.string().optional().refine(isValidUrl, "Must be a valid URL"),
+  linked_product_ids: z.array(z.string()).default([]),
   shortDescriptionEn: z
     .string()
     .min(1, "Required")
@@ -176,6 +177,7 @@ export const createProductSchema = (config: ProductFormConfig) => {
     vendorId: z.string().min(1, "Required"),
     brandId: z.string().optional().default("").pipe(z.string().min(1, "Required")),
     referenceLink: z.string().optional().refine(isValidUrl, "Must be a valid URL"),
+    linked_product_ids: z.array(z.string()).default([]),
     shortDescriptionEn: z.string().min(1, "Required"),
     shortDescriptionAr: z.string().min(1, "Required"),
     longDescriptionEn: z.string().min(1, "Required"),

@@ -6,7 +6,8 @@ import { Card } from "@/components/ui";
 import { Toggle } from "@/components/ui/toggle";
 import { Category } from "../../../services/categories/types/category.types";
 import { CategoryTreeSelect } from "../CategoryTreeSelect";
-import type { ProductStatus } from "../../../services/products/types/product.types";
+import type { LinkedProductSummary, ProductStatus } from "../../../services/products/types/product.types";
+import { LinkedProductsField } from "./LinkedProductsField";
 
 const RECENT_VENDOR_KEY = 'recent_vendor_ids';
 const RECENT_BRAND_KEY = 'recent_brand_ids';
@@ -44,6 +45,7 @@ interface BasicInformationSectionProps {
         vendorId?: string;
         brandId?: string;
         referenceLink?: string;
+        linked_product_ids?: string[];
         shortDescriptionEn?: string;
         shortDescriptionAr?: string;
         longDescriptionEn?: string;
@@ -55,6 +57,8 @@ interface BasicInformationSectionProps {
     vendors: Array<{ id: string; name: string; nameEn?: string; nameAr?: string }>;
     brands: Array<{ id: string; name: string; nameEn?: string; nameAr?: string }>;
     onChange: (field: string, value: any) => void;
+    currentProductId?: string;
+    initialLinkedProducts?: LinkedProductSummary[];
 }
 
 export const BasicInformationSection: React.FC<BasicInformationSectionProps> = ({
@@ -64,6 +68,8 @@ export const BasicInformationSection: React.FC<BasicInformationSectionProps> = (
     vendors,
     brands,
     onChange,
+    currentProductId,
+    initialLinkedProducts,
 }) => {
     // Save to localStorage when selected
     useEffect(() => {
@@ -331,6 +337,16 @@ export const BasicInformationSection: React.FC<BasicInformationSectionProps> = (
                     placeholder="https://example.com/reference"
                     error={errors.referenceLink}
                 />
+
+                <div className="col-span-2">
+                    <LinkedProductsField
+                        value={formData.linked_product_ids || []}
+                        onChange={(value) => onChange("linked_product_ids", value)}
+                        error={errors.linked_product_ids}
+                        excludeProductId={currentProductId}
+                        initialSelectedProducts={initialLinkedProducts}
+                    />
+                </div>
 
                 {/* Visibility Status */}
                 <div className="flex items-center justify-between bg-gray-50 rounded-lg p-3">

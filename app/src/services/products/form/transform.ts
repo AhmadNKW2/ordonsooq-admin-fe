@@ -79,6 +79,13 @@ export function transformFormDataToDto(
   data: ProductFormData
 ): { dto: CreateProductDto; mediaFiles: MediaUploadData } {
   const specificationsPayload = buildProductSpecificationsPayload(data.specifications);
+  const linkedProductIds = Array.from(
+    new Set(
+      (data.linked_product_ids || [])
+        .map((id) => parseInt(id, 10))
+        .filter((id) => !Number.isNaN(id))
+    )
+  );
 
   const dto: CreateProductDto = {
     name_en: data.nameEn,
@@ -90,6 +97,7 @@ export function transformFormDataToDto(
     long_description_ar: data.longDescriptionAr || '',
     category_ids: (data.categoryIds || []).map(id => parseInt(id)), // Changed to category_ids array
     reference_link: data.referenceLink?.trim() || null,
+    linked_product_ids: linkedProductIds,
     visible: data.visible,
   };
 

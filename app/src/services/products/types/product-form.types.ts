@@ -106,6 +106,7 @@ export const productFormSchema = z.object({
   vendorId: z.string().optional(),
   brandId: z.string().optional(),
   referenceLink: z.string().optional(),
+  linked_product_ids: z.array(z.string()).default([]),
   shortDescriptionEn: z.string().optional(),
   shortDescriptionAr: z.string().optional(),
   longDescriptionEn: z.string().optional(),

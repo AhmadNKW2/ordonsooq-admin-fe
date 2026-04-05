@@ -11,6 +11,7 @@ import { useRouter } from "@/hooks/use-loading-router";
 import { ProductForm } from "../../src/components/products/ProductForm";
 import { ProductFormData } from "../../src/services/products/types/product-form.types";
 import {
+  LinkedProductSummary,
   ProductDetail,
   MediaInputDto,
   ProductSpecification as ProductSpecificationMap,
@@ -1256,6 +1257,13 @@ const transformVariantMedia = (stockVariants: any[], attrs: any[]) => {
       vendorId: product.vendor?.id?.toString() || product.vendor_id?.toString(),
       brandId: product.brand?.id?.toString() || product.brand_id?.toString(),
       referenceLink: product.reference_link || "",
+      linked_product_ids: Array.from(
+        new Set(
+          (product.linked_product_ids || product.linked_products?.map((linkedProduct) => linkedProduct.id) || [])
+            .map((linkedProductId) => String(linkedProductId))
+            .filter((linkedProductId) => linkedProductId !== String(product_id))
+        )
+      ),
       shortDescriptionEn: product.short_description_en || "",
       shortDescriptionAr: product.short_description_ar || "",
     longDescriptionEn: product.long_description_en || "",
@@ -1401,6 +1409,13 @@ const transformVariantMedia = (stockVariants: any[], attrs: any[]) => {
         vendor_id: data.vendorId ? parseInt(data.vendorId) : undefined,
         brand_id: data.brandId ? parseInt(data.brandId) : undefined,
         reference_link: data.referenceLink?.trim() || null,
+        linked_product_ids: Array.from(
+          new Set(
+            (data.linked_product_ids || [])
+              .map((linkedProductId) => parseInt(linkedProductId, 10))
+              .filter((linkedProductId) => !Number.isNaN(linkedProductId) && linkedProductId !== product_id)
+          )
+        ),
         visible: data.visible,
       };
 
@@ -1831,6 +1846,9 @@ const transformVariantMedia = (stockVariants: any[], attrs: any[]) => {
         productId={typeof params?.id === 'string' ? params.id : undefined}
         isEditMode={true}
         initialData={initialData}
+      initialLinkedProducts={((product?.linked_products || []) as LinkedProductSummary[]).filter(
+        (linkedProduct) => String(linkedProduct.id) !== String(product_id)
+      )}
       onSubmit={handleSubmit}
       onSaveDraft={handleSaveDraft}
       categories={categories}
