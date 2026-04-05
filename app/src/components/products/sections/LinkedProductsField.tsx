@@ -14,15 +14,55 @@ interface LinkedProductsFieldProps {
 const SEARCH_DEBOUNCE_MS = 300;
 const SEARCH_LIMIT = 20;
 
+const getSingleValueAttributeSummary = (product: Product) => {
+  if (!product.attributes || Array.isArray(product.attributes)) {
+    return null;
+  }
+
+  const attributeSummaries = Object.values(product.attributes)
+    .flatMap((attribute) => {
+      const values = attribute?.values
+        ? Object.values(
+            attribute.values as Record<string, { name_en?: string | null; name_ar?: string | null }>
+          )
+        : [];
+      if (values.length !== 1) {
+        return [];
+      }
+
+      const attributeName = attribute.name_en || attribute.name_ar;
+      const attributeValue = values[0]?.name_en || values[0]?.name_ar;
+      if (!attributeName || !attributeValue) {
+        return [];
+      }
+
+      return [`${attributeName}: ${attributeValue}`];
+    });
+
+  if (attributeSummaries.length === 0) {
+    return null;
+  }
+
+  return attributeSummaries.join(" | ");
+};
+
 const formatLinkedProductLabel = (product: {
   id: number | string;
   name_en?: string | null;
   name_ar?: string | null;
   sku?: string | null;
+  attributes?: Product["attributes"];
 }) => {
   const displayName = product.name_en || product.name_ar || `Product #${product.id}`;
   const sku = product.sku?.trim() || "N/A";
-  return `${displayName} - SKU: ${sku}`;
+
+  const attributeSummary = "attributes" in product
+    ? getSingleValueAttributeSummary(product as Product)
+    : null;
+
+  return attributeSummary
+    ? `${displayName} - SKU: ${sku} - ${attributeSummary}`
+    : `${displayName} - SKU: ${sku}`;
 };
 
 const toSelectOption = (product: {
@@ -30,6 +70,7 @@ const toSelectOption = (product: {
   name_en?: string | null;
   name_ar?: string | null;
   sku?: string | null;
+  attributes?: Product["attributes"];
 }): SelectOption => ({
   value: String(product.id),
   label: formatLinkedProductLabel(product),

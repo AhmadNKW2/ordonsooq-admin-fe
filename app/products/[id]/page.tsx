@@ -38,6 +38,15 @@ type NormalizedProductSpecification = {
   specification_value: SpecificationValue;
 };
 
+const parseOptionalNumber = (value: unknown) => {
+  if (value === null || value === undefined || value === "") {
+    return undefined;
+  }
+
+  const numericValue = Number(value);
+  return Number.isFinite(numericValue) ? numericValue : undefined;
+};
+
 const normalizeProductSpecificationEntry = (
   entry: unknown,
   fallbackSpecificationId?: number,
@@ -1173,6 +1182,25 @@ const transformVariantMedia = (stockVariants: any[], attrs: any[]) => {
   };
 
   const transformSingleWeight = () => {
+    const topLevelWeight = parseOptionalNumber((product as any)?.weight);
+    const topLevelLength = parseOptionalNumber((product as any)?.length);
+    const topLevelWidth = parseOptionalNumber((product as any)?.width);
+    const topLevelHeight = parseOptionalNumber((product as any)?.height);
+
+    if (
+      topLevelWeight !== undefined ||
+      topLevelLength !== undefined ||
+      topLevelWidth !== undefined ||
+      topLevelHeight !== undefined
+    ) {
+      return {
+        weight: topLevelWeight,
+        length: topLevelLength,
+        width: topLevelWidth,
+        height: topLevelHeight,
+      };
+    }
+
     // Check for weights array (single product would have one weight with empty groupValues)
     const weights = (product as any)?.weights;
     if (weights && weights.length > 0) {
@@ -1204,6 +1232,23 @@ const transformVariantMedia = (stockVariants: any[], attrs: any[]) => {
   };
 
   const transformSinglePricing = () => {
+    const topLevelPrice = parseOptionalNumber((product as any)?.price);
+    const topLevelCost = parseOptionalNumber((product as any)?.cost);
+    const topLevelSalePrice = parseOptionalNumber((product as any)?.sale_price);
+
+    if (topLevelPrice !== undefined || topLevelSalePrice !== undefined || topLevelCost !== undefined) {
+      const resolvedPrice = topLevelPrice ?? topLevelSalePrice;
+
+      if (resolvedPrice !== undefined) {
+        return {
+          cost: topLevelCost,
+          price: resolvedPrice,
+          isSale: topLevelSalePrice !== undefined,
+          salePrice: topLevelSalePrice,
+        };
+      }
+    }
+
     // New API structure: price_groups dict  { "88": { price, sale_price, cost } }
     if ((product as any)?.price_groups) {
       const groups = Object.values((product as any).price_groups);
