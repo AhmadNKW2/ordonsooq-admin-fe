@@ -49,6 +49,131 @@ interface ProductListPageProps {
   fixedStatus?: ProductStatus;
 }
 
+const formatPriceValue = (value: number) => {
+  return value.toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+};
+
+const toPriceCandidate = (value: unknown) => {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+
+  const numericValue = Number(value);
+  if (!Number.isFinite(numericValue)) {
+    return null;
+  }
+
+  return {
+    raw: formatPriceValue(numericValue),
+    numericValue,
+  };
+};
+
+const getProductImageUrl = (product: Product) => {
+  if (product.primary_image?.url) {
+    return product.primary_image.url;
+  }
+
+  if (typeof product.image === "string" && product.image.trim()) {
+    return product.image;
+  }
+
+  const directMedia = Array.isArray(product.media) ? product.media : [];
+  const primaryDirectMedia = directMedia.find((mediaItem: any) => mediaItem?.is_primary && mediaItem?.url);
+  if (primaryDirectMedia?.url) {
+    return primaryDirectMedia.url;
+  }
+
+  const firstDirectMedia = [...directMedia]
+    .sort((left: any, right: any) => (left?.sort_order ?? 0) - (right?.sort_order ?? 0))
+    .find((mediaItem: any) => mediaItem?.url);
+  if (firstDirectMedia?.url) {
+    return firstDirectMedia.url;
+  }
+
+  if (product.media_groups) {
+    for (const key in product.media_groups) {
+      const group = product.media_groups[key];
+      if (group?.media?.length) {
+        const primaryMedia = group.media.find((mediaItem: any) => mediaItem.is_primary);
+        if (primaryMedia?.url) {
+          return primaryMedia.url;
+        }
+      }
+    }
+  }
+
+  if (product.variants?.length && product.media_groups) {
+    const firstVariant = product.variants[0];
+    if (product.media_groups[firstVariant.media_group_id]?.media?.length) {
+      return product.media_groups[firstVariant.media_group_id].media[0].url;
+    }
+  }
+
+  if (product.media_groups) {
+    const firstGroup = product.media_groups[Object.keys(product.media_groups)[0]];
+    if (firstGroup?.media?.length) {
+      return firstGroup.media[0].url;
+    }
+  }
+
+  return null;
+};
+
+const getProductDisplayPrice = (product: Product) => {
+  let basePrice = null;
+  let salePrice = null;
+
+  if (product.variants?.length && product.price_groups) {
+    const firstVariant = product.variants[0];
+    const priceGroup = product.price_groups[firstVariant.price_group_id];
+    if (priceGroup) {
+      basePrice = toPriceCandidate(priceGroup.price);
+      salePrice = toPriceCandidate(priceGroup.sale_price);
+    }
+  } else if (product.price_groups) {
+    const firstGroup = product.price_groups[Object.keys(product.price_groups)[0]];
+    if (firstGroup) {
+      basePrice = toPriceCandidate(firstGroup.price);
+      salePrice = toPriceCandidate(firstGroup.sale_price);
+    }
+  } else if (product.price) {
+    const legacyPrice = product.price as any;
+    if (typeof legacyPrice === "object") {
+      basePrice = toPriceCandidate(legacyPrice.price);
+      salePrice = toPriceCandidate(legacyPrice.sale_price);
+    } else {
+      basePrice = toPriceCandidate(legacyPrice);
+      salePrice = toPriceCandidate(product.sale_price);
+    }
+  } else {
+    salePrice = toPriceCandidate(product.sale_price);
+  }
+
+  if (basePrice && salePrice && basePrice.numericValue !== salePrice.numericValue) {
+    const currentPrice = basePrice.numericValue <= salePrice.numericValue ? basePrice : salePrice;
+    const compareAtPrice = basePrice.numericValue <= salePrice.numericValue ? salePrice : basePrice;
+
+    return {
+      currentPrice: currentPrice.raw,
+      compareAtPrice: compareAtPrice.raw,
+    };
+  }
+
+  const currentPrice = basePrice || salePrice;
+  if (!currentPrice) {
+    return null;
+  }
+
+  return {
+    currentPrice: currentPrice.raw,
+    compareAtPrice: null,
+  };
+};
+
 export function ProductListPage({
   title,
   description,
@@ -674,37 +799,8 @@ export function ProductListPage({
           </TableHeader>
           <TableBody>
             {products.map((product) => {
-              let imageUrl = null;
-
-              if (product.media_groups) {
-                for (const key in product.media_groups) {
-                  const group = product.media_groups[key];
-                  if (group?.media?.length) {
-                    const primaryMedia = group.media.find((mediaItem: any) => mediaItem.is_primary);
-                    if (primaryMedia) {
-                      imageUrl = primaryMedia.url;
-                      break;
-                    }
-                  }
-                }
-              }
-
-              if (!imageUrl && product.variants?.length && product.media_groups) {
-                const firstVariant = product.variants[0];
-                if (product.media_groups[firstVariant.media_group_id]?.media?.length) {
-                  imageUrl = product.media_groups[firstVariant.media_group_id].media[0].url;
-                }
-              }
-
-              if (!imageUrl && product.media_groups) {
-                const groupKeys = Object.keys(product.media_groups);
-                if (groupKeys.length > 0) {
-                  const firstGroup = product.media_groups[groupKeys[0]];
-                  if (firstGroup?.media?.length) {
-                    imageUrl = firstGroup.media[0].url;
-                  }
-                }
-              }
+              const imageUrl = getProductImageUrl(product);
+              const displayPrice = getProductDisplayPrice(product);
 
               return (
                 <TableRow
@@ -798,50 +894,18 @@ export function ProductListPage({
                     </div>
                   </TableCell>
                   <TableCell>
-                    {(() => {
-                      let price = null;
-                      let salePrice = null;
-
-                      if (product.variants?.length && product.price_groups) {
-                        const firstVariant = product.variants[0];
-                        const priceGroup = product.price_groups[firstVariant.price_group_id];
-                        if (priceGroup) {
-                          price = priceGroup.price;
-                          salePrice = priceGroup.sale_price;
-                        }
-                      } else if (product.price_groups) {
-                        const groupKeys = Object.keys(product.price_groups);
-                        if (groupKeys.length > 0) {
-                          const priceGroup = product.price_groups[groupKeys[0]];
-                          price = priceGroup.price;
-                          salePrice = priceGroup.sale_price;
-                        }
-                      } else if (product.price) {
-                        const legacyPrice = product.price as any;
-                        price = typeof legacyPrice === "object" ? legacyPrice.price : legacyPrice;
-                        salePrice =
-                          typeof legacyPrice === "object"
-                            ? legacyPrice.sale_price
-                            : product.sale_price;
-                      }
-
-                      if (!price) {
-                        return <span className="text-gray-400">—</span>;
-                      }
-
-                      return (
-                        <div className="flex flex-col">
-                          {salePrice ? (
-                            <>
-                              <span className="font-semibold">{salePrice}</span>
-                              <span className="text-xs text-gray-500 line-through">{price}</span>
-                            </>
-                          ) : (
-                            <span className="font-semibold">{price}</span>
-                          )}
-                        </div>
-                      );
-                    })()}
+                    {!displayPrice ? (
+                      <span className="text-gray-400">—</span>
+                    ) : (
+                      <div className="flex flex-col">
+                        <span className="font-semibold">{displayPrice.currentPrice}</span>
+                        {displayPrice.compareAtPrice ? (
+                          <span className="text-xs text-gray-500 line-through">
+                            {displayPrice.compareAtPrice}
+                          </span>
+                        ) : null}
+                      </div>
+                    )}
                   </TableCell>
                   <TableCell>
                     {(() => {
