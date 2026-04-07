@@ -12,6 +12,7 @@ import { useRouter } from "@/hooks/use-loading-router";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useLoading } from "../../src/providers/loading-provider";
+import { useCategories } from "../../src/services/categories/hooks/use-categories";
 import {
   useAttribute,
   useAttributes,
@@ -25,6 +26,21 @@ import { DeleteConfirmationModal } from "../../src/components/common/DeleteConfi
 import { AttributeValue, Attribute } from "../../src/services/attributes/types/attribute.types";
 import { AttributeForm } from "../../src/components/attributes/AttributeForm";
 import { attributeSchema, type AttributeFormData, type AttributeFormOutput } from "../../src/lib/validations/attribute.schema";
+
+const extractCategoryIds = (attribute?: Attribute | null): number[] => {
+  if (!attribute) {
+    return [];
+  }
+
+  const directIds = Array.isArray(attribute.category_ids) ? attribute.category_ids : [];
+  const relatedIds = Array.isArray(attribute.categories)
+    ? attribute.categories
+        .map((category) => category.id)
+        .filter((categoryId): categoryId is number => typeof categoryId === "number")
+    : [];
+
+  return [...new Set([...directIds, ...relatedIds])];
+};
 
 export default function AttributeEditPage() {
   const params = useParams();
@@ -46,6 +62,7 @@ export default function AttributeEditPage() {
       is_active: true,
       attribute_type: "spec_attribute",
       list_separately: false,
+      category_ids: [],
     },
     mode: "onSubmit",
   });
@@ -59,6 +76,7 @@ export default function AttributeEditPage() {
   const unitAr = watch("unit_ar");
   const parentId = watch("parent_id");
   const parentValueId = watch("parent_value_id");
+  const categoryIds = watch("category_ids") || [];
   const isColor = watch("is_color");
   const isActive = watch("is_active");
   const listSeparately = watch("list_separately");
@@ -78,6 +96,7 @@ export default function AttributeEditPage() {
     { enabled: !!attributeId }
   );
   const { data: allAttributes = [] } = useAttributes();
+  const { data: categories = [] } = useCategories();
   const updateAttribute = useUpdateAttribute();
   const deleteValue = useDeleteAttributeValue();
 
@@ -95,6 +114,7 @@ export default function AttributeEditPage() {
         is_active: attribute.is_active,
         attribute_type: attribute.attribute_type ?? "spec_attribute",
         list_separately: attribute.list_separately ?? false,
+        category_ids: extractCategoryIds(attribute),
       });
       const sortedValues = [...(attribute.values || [])].sort((a, b) => a.sort_order - b.sort_order);
       setLocalValues(sortedValues);
@@ -149,6 +169,7 @@ export default function AttributeEditPage() {
           is_active: data.is_active,
           attribute_type: data.attribute_type,
           list_separately: data.list_separately,
+          category_ids: data.category_ids,
           values: valuesPayload,
         },
       });
@@ -231,6 +252,7 @@ export default function AttributeEditPage() {
         unitAr={unitAr || ""}
         parentId={parentId?.toString() || ""}
         parentValueId={parentValueId?.toString() || ""}
+        categoryIds={categoryIds.map(String)}
         isColor={isColor}
         isActive={isActive}
         onNameEnChange={handleNameEnChange}
@@ -239,6 +261,7 @@ export default function AttributeEditPage() {
         onUnitArChange={(val) => setValue("unit_ar", val)}
         onParentIdChange={(val) => setValue("parent_id", val ? Number(val) : null)}
         onParentValueIdChange={(val) => setValue("parent_value_id", val ? Number(val) : null)}
+        onCategoryIdsChange={(ids) => setValue("category_ids", ids.map(Number))}
         onIsColorChange={(value) => setValue("is_color", value)}
         onIsActiveChange={(value) => setValue("is_active", value)}
         listSeparately={listSeparately}
@@ -254,6 +277,7 @@ export default function AttributeEditPage() {
         isSubmitting={updateAttribute.isPending}
         submitButtonText="Save Changes"
         attributes={allAttributes.filter((attr: Attribute) => attr.id !== attributeId)}
+        categories={categories}
       />
 
       {/* Delete Confirmation Modal */}

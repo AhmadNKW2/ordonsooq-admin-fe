@@ -32,6 +32,8 @@ import {
   type AttributeValueFormData,
   type AttributeValueFormOutput,
 } from "../../lib/validations/attribute.schema";
+import { CategoryTreeSelect } from "../products/CategoryTreeSelect";
+import { Category } from "../../services/categories/types/category.types";
 
 // DnD Kit imports
 import {
@@ -461,11 +463,14 @@ interface AttributeFormProps {
   onUnitArChange: (value: string) => void;
   onParentIdChange: (value: string) => void;
   onParentValueIdChange: (value: string) => void;
+  categoryIds: string[];
+  onCategoryIdsChange: (value: string[]) => void;
   onIsColorChange: (value: boolean) => void;
   onIsActiveChange: (value: boolean) => void;
   listSeparately?: boolean | null;
   onListSeparatelyChange?: (value: boolean) => void;
   attributes?: Attribute[]; // List of available attributes for parent selection
+  categories?: Category[];
   // Validation - now using React Hook Form
   formErrors?: { name_en?: string; name_ar?: string };
   // Values (for both create and edit modes - managed locally)
@@ -495,11 +500,14 @@ export const AttributeForm: React.FC<AttributeFormProps> = ({
   onUnitArChange,
   onParentIdChange,
   onParentValueIdChange,
+  categoryIds,
+  onCategoryIdsChange,
   onIsColorChange,
   onIsActiveChange,
   listSeparately = false,
   onListSeparatelyChange,
   attributes = [], // Default to empty array
+  categories = [],
   formErrors,
   values,
   onValuesChange,
@@ -725,6 +733,15 @@ export const AttributeForm: React.FC<AttributeFormProps> = ({
               onParentIdChange("");
               onParentValueIdChange("");
             }}
+          />
+        </div>
+
+        <div className="mt-4">
+          <CategoryTreeSelect
+            label="Categories"
+            categories={categories}
+            selectedIds={categoryIds}
+            onChange={onCategoryIdsChange}
           />
         </div>
 

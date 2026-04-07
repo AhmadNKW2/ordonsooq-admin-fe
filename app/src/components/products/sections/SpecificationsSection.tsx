@@ -119,6 +119,8 @@ const buildSpecificationOptions = (
 interface SpecificationsSectionProps {
     specifications: ProductSpecificationSelection[];
     onChange: (specifications: ProductSpecificationSelection[]) => void;
+    categoriesSelected?: boolean;
+    isLoadingAvailableSpecifications?: boolean;
     availableSpecifications?: Array<{
         id: string;
         parentId?: string;
@@ -138,10 +140,16 @@ interface SpecificationsSectionProps {
 export const SpecificationsSection: React.FC<SpecificationsSectionProps> = ({
     specifications,
     onChange,
+    categoriesSelected = false,
+    isLoadingAvailableSpecifications = false,
     availableSpecifications = [],
     errors = {},
 }) => {
     const [recentSpecificationIds, setRecentSpecificationIds] = useState<string[]>(() => getRecentSpecificationIds());
+    const eligibleSpecifications = React.useMemo(
+        () => availableSpecifications.filter((item) => !item.parentId),
+        [availableSpecifications]
+    );
 
     const handleSpecificationsSelectChange = (values: string | string[]) => {
         const selectedIds = Array.isArray(values) ? values : [values];
@@ -234,7 +242,7 @@ export const SpecificationsSection: React.FC<SpecificationsSectionProps> = ({
                         value={specifications.map((item) => item.id)}
                         onChange={handleSpecificationsSelectChange}
                         options={(() => {
-                            const eligible = availableSpecifications.filter((item) => !item.parentId);
+                            const eligible = eligibleSpecifications;
                             const recent = eligible.filter((item) => recentSpecificationIds.includes(item.id));
                             const rest = eligible.filter((item) => !recentSpecificationIds.includes(item.id));
                             recent.sort((left, right) => recentSpecificationIds.indexOf(left.id) - recentSpecificationIds.indexOf(right.id));
@@ -254,12 +262,28 @@ export const SpecificationsSection: React.FC<SpecificationsSectionProps> = ({
                         })()}
                         search={true}
                         multiple={true}
+                        disabled={!categoriesSelected || isLoadingAvailableSpecifications || eligibleSpecifications.length === 0}
                         onOpenChange={(isOpen) => {
                             if (!isOpen) {
                                 setRecentSpecificationIds(getRecentSpecificationIds());
                             }
                         }}
                     />
+                    {!categoriesSelected && (
+                        <p className="mt-2 text-sm text-gray-500">
+                            Select at least one category to load specification options.
+                        </p>
+                    )}
+                    {categoriesSelected && isLoadingAvailableSpecifications && (
+                        <p className="mt-2 text-sm text-gray-500">
+                            Loading specifications for the selected categories...
+                        </p>
+                    )}
+                    {categoriesSelected && !isLoadingAvailableSpecifications && eligibleSpecifications.length === 0 && (
+                        <p className="mt-2 text-sm text-gray-500">
+                            No specifications are available for the selected categories.
+                        </p>
+                    )}
                 </div>
             </div>
 

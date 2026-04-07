@@ -19,8 +19,8 @@ class SpecificationService {
   /**
    * Get all specifications
    */
-  async getSpecifications(): Promise<Specification[]> {
-    return httpClient.get<Specification[]>(this.endpoint);
+  async getSpecifications(params?: { category_ids?: string }): Promise<Specification[]> {
+    return httpClient.get<Specification[]>(this.endpoint, params);
   }
 
   /**

@@ -11,6 +11,8 @@ import { useRouter } from "@/hooks/use-loading-router";
 import { useProductFormDraft } from "../../hooks/use-product-form-draft";
 import { useEnterToSubmit } from "../../hooks/use-enter-to-submit";
 import { STOREFRONT_CONFIG } from "../../lib/constants";
+import { useAttributes } from "../../services/attributes/hooks/use-attributes";
+import { useSpecifications } from "../../services/specifications/hooks/use-specifications";
 import { Button } from "../ui/button";
 import { PageHeader } from "../common/PageHeader";
 import {
@@ -36,7 +38,9 @@ import { Card } from "../ui";
 import { useZodValidation, flattenZodErrors } from "../../hooks/use-zod-validation";
 import { createProductSchema, type ProductFormConfig } from "../../lib/validations/product.schema";
 import { Package } from "lucide-react";
+import type { Attribute as CatalogAttribute, AttributeValue as CatalogAttributeValue } from "../../services/attributes/types/attribute.types";
 import { Category } from "../../services/categories/types/category.types";
+import type { Specification as CatalogSpecification, SpecificationValue as CatalogSpecificationValue } from "../../services/specifications/types/specification.types";
 import type { LinkedProductSummary } from "../../services/products/types/product.types";
 import {
     generateCombinations,
@@ -56,6 +60,50 @@ interface ProductFormProps {
   specifications?: Array<{ id: string; name: string; displayName: string; parentId?: string; parentValueId?: string; values: Array<{ id: string; value: string; displayValue: string; parentId?: string }> }>;
   initialLinkedProducts?: LinkedProductSummary[];
 }
+
+type AvailableAttributeOption = NonNullable<ProductFormProps["attributes"]>[number];
+type AvailableSpecificationOption = NonNullable<ProductFormProps["specifications"]>[number];
+
+const mapAttributeDefinitions = (
+  attributeDefinitions: CatalogAttribute[] | undefined
+): AvailableAttributeOption[] => {
+  return (
+    attributeDefinitions?.map((attribute) => ({
+      id: attribute.id.toString(),
+      parentId: attribute.parent_id?.toString(),
+      parentValueId: attribute.parent_value_id?.toString(),
+      name: attribute.name_en,
+      displayName: attribute.name_ar,
+      values:
+        attribute.values?.map((value: CatalogAttributeValue) => ({
+          id: value.id.toString(),
+          parentId: value.parent_value_id?.toString(),
+          value: value.value_en,
+          displayValue: value.value_ar,
+        })) || [],
+    })) || []
+  );
+};
+
+const mapSpecificationDefinitions = (
+  specificationDefinitions: CatalogSpecification[] | undefined
+): AvailableSpecificationOption[] => {
+  return (
+    specificationDefinitions?.map((specification) => ({
+      id: specification.id.toString(),
+      parentId: specification.parent_id?.toString(),
+      parentValueId: specification.parent_value_id?.toString(),
+      name: specification.name_en,
+      displayName: specification.name_ar,
+      values: specification.values.map((value: CatalogSpecificationValue) => ({
+        id: value.id.toString(),
+        parentId: value.parent_value_id?.toString(),
+        value: value.value_en,
+        displayValue: value.value_ar,
+      })),
+    })) || []
+  );
+};
 
 export const ProductForm: React.FC<ProductFormProps> = ({
   productId,
@@ -107,6 +155,37 @@ export const ProductForm: React.FC<ProductFormProps> = ({
     // restoredDraft is null or when initialData already provides values).
     ...(!isEditMode && restoredDraft ? restoredDraft : {}),
   });
+
+  const selectedCategoryIds = formData.categoryIds || [];
+  const categoryIdsQuery = useMemo(() => {
+    const uniqueIds = Array.from(new Set(selectedCategoryIds.filter(Boolean)));
+    return uniqueIds.length > 0 ? uniqueIds.join(",") : undefined;
+  }, [selectedCategoryIds]);
+  const hasSelectedCategories = !!categoryIdsQuery;
+
+  const { data: filteredAttributesData, isLoading: filteredAttributesLoading } = useAttributes(
+    categoryIdsQuery ? { category_ids: categoryIdsQuery } : undefined,
+    { enabled: hasSelectedCategories }
+  );
+  const { data: filteredSpecificationsData, isLoading: filteredSpecificationsLoading } = useSpecifications(
+    categoryIdsQuery ? { category_ids: categoryIdsQuery } : undefined,
+    { enabled: hasSelectedCategories }
+  );
+
+  const filteredAttributeOptions = useMemo(
+    () => mapAttributeDefinitions(filteredAttributesData as CatalogAttribute[] | undefined),
+    [filteredAttributesData]
+  );
+  const filteredSpecificationOptions = useMemo(
+    () => mapSpecificationDefinitions(filteredSpecificationsData as CatalogSpecification[] | undefined),
+    [filteredSpecificationsData]
+  );
+  const availableAttributeOptions = hasSelectedCategories ? filteredAttributeOptions : [];
+  const availableSpecificationOptions = hasSelectedCategories ? filteredSpecificationOptions : [];
+  const attributeDefinitionsForLogic = useMemo(
+    () => (availableAttributeOptions.length > 0 ? availableAttributeOptions : attributes),
+    [availableAttributeOptions, attributes]
+  );
 
   // Auto-save draft to localStorage on every formData change (create mode only).
   useEffect(() => {
@@ -332,7 +411,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
 
            // Check each selected value to see if it belongs to a hierarchy
            // We need to look up the system definition for the selected values.
-           const systemAttr = attributes.find(a => a.id === attr.id);
+           const systemAttr = attributeDefinitionsForLogic.find(a => a.id === attr.id);
            
            if (!systemAttr) {
               // Just keep as is if not found in system
@@ -362,7 +441,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                // This is O(Attributes * Values), might be slow if list is huge.
                while(currentId && depth < 10) {
                    let found = false;
-                   for(const sysA of attributes) {
+                   for(const sysA of attributeDefinitionsForLogic) {
                        const sysV = sysA.values.find(v => v.id === currentId);
                        if (sysV) {
                            chain.unshift({ attrId: sysA.id, valId: sysV.id });
@@ -397,7 +476,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
 
            // Now convert the map back to Attribute objects
            impliedSelections.forEach((valIds, attrId) => {
-               const sysA = attributes.find(a => a.id === attrId);
+                   const sysA = attributeDefinitionsForLogic.find(a => a.id === attrId);
                // Inherit control flags from the root attribute
                // This ensures that child attributes (ie CPU Model) also control pricing if CPU controls pricing
                const controlFlags = {
@@ -698,7 +777,9 @@ export const ProductForm: React.FC<ProductFormProps> = ({
       {/* Attributes Configuration - Always visible */}
       <AttributesSection
         attributes={formData.attributes || []}
-        availableAttributes={attributes}
+        availableAttributes={availableAttributeOptions}
+        categoriesSelected={hasSelectedCategories}
+        isLoadingAvailableAttributes={filteredAttributesLoading}
         onChange={(attributes: Attribute[], resetType?: 'pricing' | 'weight' | 'media' | 'stock' | 'all') => {
           const hasWeight = attributes.some(a => a.controlsWeightDimensions);
           const hasMedia = attributes.some(a => a.controlsMedia);
@@ -767,7 +848,9 @@ export const ProductForm: React.FC<ProductFormProps> = ({
 
       <SpecificationsSection
         specifications={formData.specifications || []}
-        availableSpecifications={specifications}
+        availableSpecifications={availableSpecificationOptions}
+        categoriesSelected={hasSelectedCategories}
+        isLoadingAvailableSpecifications={filteredSpecificationsLoading}
         onChange={(nextSpecifications: ProductSpecificationSelection[]) => {
           handleFieldChange("specifications", nextSpecifications);
           if (isSubmitted) {

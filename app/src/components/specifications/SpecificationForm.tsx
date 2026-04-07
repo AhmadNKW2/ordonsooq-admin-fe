@@ -39,6 +39,7 @@ import {
 import { Toggle } from "../ui/toggle";
 import { cn } from "../../lib/utils";
 import { useEnterToSubmit } from "../../hooks/use-enter-to-submit";
+import { CategoryTreeSelect } from "../products/CategoryTreeSelect";
 import {
   createSpecificationValueSchema,
   type SpecificationValueFormData,
@@ -48,6 +49,7 @@ import {
   Specification,
   SpecificationValue,
 } from "../../services/specifications/types/specification.types";
+import { Category } from "../../services/categories/types/category.types";
 
 type ValueItem = SpecificationValue;
 
@@ -344,6 +346,7 @@ interface SpecificationFormProps {
   unitAr: string;
   parentId?: string;
   parentValueId?: string;
+  categoryIds: string[];
   isActive: boolean;
   listSeparately?: boolean | null;
   onNameEnChange: (value: string) => void;
@@ -352,9 +355,11 @@ interface SpecificationFormProps {
   onUnitArChange: (value: string) => void;
   onParentIdChange: (value: string) => void;
   onParentValueIdChange: (value: string) => void;
+  onCategoryIdsChange: (value: string[]) => void;
   onIsActiveChange: (value: boolean) => void;
   onListSeparatelyChange?: (value: boolean) => void;
   specifications?: Specification[];
+  categories?: Category[];
   formErrors?: { name_en?: string; name_ar?: string };
   values: SpecificationValue[];
   onValuesChange: (values: SpecificationValue[]) => void;
@@ -372,6 +377,7 @@ export const SpecificationForm: React.FC<SpecificationFormProps> = ({
   unitAr,
   parentId,
   parentValueId,
+  categoryIds,
   isActive,
   listSeparately = false,
   onNameEnChange,
@@ -380,9 +386,11 @@ export const SpecificationForm: React.FC<SpecificationFormProps> = ({
   onUnitArChange,
   onParentIdChange,
   onParentValueIdChange,
+  onCategoryIdsChange,
   onIsActiveChange,
   onListSeparatelyChange,
   specifications = [],
+  categories = [],
   formErrors,
   values,
   onValuesChange,
@@ -603,6 +611,15 @@ export const SpecificationForm: React.FC<SpecificationFormProps> = ({
               onParentIdChange("");
               onParentValueIdChange("");
             }}
+          />
+        </div>
+
+        <div className="mt-4">
+          <CategoryTreeSelect
+            label="Categories"
+            categories={categories}
+            selectedIds={categoryIds}
+            onChange={onCategoryIdsChange}
           />
         </div>
 

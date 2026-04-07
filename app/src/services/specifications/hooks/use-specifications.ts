@@ -13,10 +13,18 @@ import {
   UpdateSpecificationValueDto,
 } from "../types/specification.types";
 
-export const useSpecifications = () => {
+interface SpecificationQueryParams {
+  category_ids?: string;
+}
+
+export const useSpecifications = (
+  params?: SpecificationQueryParams,
+  options?: { enabled?: boolean }
+) => {
   return useQuery({
-    queryKey: [queryKeys.specifications.all],
-    queryFn: () => specificationService.getSpecifications(),
+    queryKey: queryKeys.specifications.list(params),
+    queryFn: () => specificationService.getSpecifications(params),
+    enabled: options?.enabled ?? true,
     select: (data) => {
       if (Array.isArray(data)) {
         return data;

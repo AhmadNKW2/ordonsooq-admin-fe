@@ -10,7 +10,9 @@ import {
   useCategories,
   useCreateCategory,
 } from "../../src/services/categories/hooks/use-categories";
+import { useAttributes } from "../../src/services/attributes/hooks/use-attributes";
 import { useProducts } from "../../src/services/products/hooks/use-products";
+import { useSpecifications } from "../../src/services/specifications/hooks/use-specifications";
 import { CategoryForm } from "../../src/components/categories/CategoryForm";
 import { ImageUploadItem } from "../../src/components/ui/image-upload";
 import { validateCategoryForm } from "../../src/lib/validations";
@@ -28,6 +30,8 @@ export default function CreateCategoryPage() {
   const [visible, setVisible] = useState(true);
   const [parentId, setParentId] = useState<number | null>(null);
   const [product_ids, setProductIds] = useState<number[]>([]);
+  const [attribute_ids, setAttributeIds] = useState<number[]>([]);
+  const [specification_ids, setSpecificationIds] = useState<number[]>([]);
   const [formErrors, setFormErrors] = useState<{
     name_en?: string;
     name_ar?: string;
@@ -38,7 +42,9 @@ export default function CreateCategoryPage() {
 
   // Get parent categories for dropdown
   const { data: categories } = useCategories();
+  const { data: attributes = [] } = useAttributes();
   const { data: productsData } = useProducts({ limit: 1000 });
+  const { data: specifications = [] } = useSpecifications();
   const createCategory = useCreateCategory();
 
   // Transform products for the ProductsTableSection
@@ -93,6 +99,8 @@ export default function CreateCategoryPage() {
         parent_id: parentId,
         image: image?.file || undefined,
         product_ids,
+        attribute_ids,
+        specification_ids,
       });
       
       router.push("/categories");
@@ -112,6 +120,8 @@ export default function CreateCategoryPage() {
       visible={visible}
       parentId={parentId}
       product_ids={product_ids}
+      attributeIds={attribute_ids.map(String)}
+      specificationIds={specification_ids.map(String)}
       onNameEnChange={(value) => {
         setNameEn(value);
         if (formErrors.name_en) {
@@ -140,8 +150,12 @@ export default function CreateCategoryPage() {
       onVisibleChange={setVisible}
       onParentIdChange={setParentId}
       onProductIdsChange={setProductIds}
+      onAttributeIdsChange={(value) => setAttributeIds(value.map(Number))}
+      onSpecificationIdsChange={(value) => setSpecificationIds(value.map(Number))}
       formErrors={formErrors}
       parentCategories={categories || []}
+      allAttributes={attributes}
+      allSpecifications={specifications}
       allProducts={allProducts}
       assignedProducts={assignedProducts}
       onSubmit={handleSubmit}

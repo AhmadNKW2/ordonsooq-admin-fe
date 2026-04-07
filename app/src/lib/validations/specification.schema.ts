@@ -55,6 +55,7 @@ export const specificationSchema = z.object({
       }
       return Number(value);
     }),
+  category_ids: z.array(z.number()).optional().default([]),
   list_separately: z.boolean().optional().default(false),
   is_active: z.boolean().default(true),
 });

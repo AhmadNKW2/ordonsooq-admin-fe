@@ -97,6 +97,14 @@ class CategoryService {
         formData.append("product_ids", JSON.stringify(data.product_ids));
       }
 
+    if (data.attribute_ids !== undefined) {
+      formData.append("attribute_ids", JSON.stringify(data.attribute_ids));
+    }
+
+    if (data.specification_ids !== undefined) {
+      formData.append("specification_ids", JSON.stringify(data.specification_ids));
+    }
+
     return httpClient.postFormData<ApiResponse<Category>>(
       this.endpoint,
       formData
@@ -148,6 +156,14 @@ class CategoryService {
     if (data.product_ids !== undefined) {
         formData.append("product_ids", JSON.stringify(data.product_ids));
       }
+
+    if (data.attribute_ids !== undefined) {
+      formData.append("attribute_ids", JSON.stringify(data.attribute_ids));
+    }
+
+    if (data.specification_ids !== undefined) {
+      formData.append("specification_ids", JSON.stringify(data.specification_ids));
+    }
 
     return httpClient.patchFormData<ApiResponse<Category>>(
       `${this.endpoint}/${id}`,

@@ -34,6 +34,8 @@ import { Card } from "@/components/ui";
 interface AttributesSectionProps {
     attributes: Attribute[];
     onChange: (attributes: Attribute[], resetType?: 'pricing' | 'weight' | 'media' | 'stock' | 'all') => void;
+    categoriesSelected?: boolean;
+    isLoadingAvailableAttributes?: boolean;
     availableAttributes?: Array<{ 
         id: string; 
         parentId?: string;
@@ -53,10 +55,16 @@ interface AttributesSectionProps {
 export const AttributesSection: React.FC<AttributesSectionProps> = ({
     attributes,
     onChange,
+    categoriesSelected = false,
+    isLoadingAvailableAttributes = false,
     availableAttributes = [],
     errors = {},
 }) => {
     const [recentAttributeIds, setRecentAttributeIds] = useState<string[]>(() => getRecentAttributeIds());
+    const eligibleAttributes = useMemo(
+        () => availableAttributes.filter((attr) => !attr.parentId),
+        [availableAttributes]
+    );
 
     // Calculate total combinations
     const calculateCombinations = () => {
@@ -231,9 +239,7 @@ export const AttributesSection: React.FC<AttributesSectionProps> = ({
                         value={attributes.map(a => a.id)}
                         onChange={handleAttributesSelectChange}
                         options={(() => {
-                            const eligible = availableAttributes.filter(
-                                attr => !attr.parentId
-                            );
+                            const eligible = eligibleAttributes;
                             const recent = eligible.filter(attr => recentAttributeIds.includes(attr.id));
                             const rest = eligible.filter(attr => !recentAttributeIds.includes(attr.id));
                             // Sort recent by last-used order
@@ -254,12 +260,28 @@ export const AttributesSection: React.FC<AttributesSectionProps> = ({
                         })()}
                         search={true}
                         multiple={true}
+                        disabled={!categoriesSelected || isLoadingAvailableAttributes || eligibleAttributes.length === 0}
                         onOpenChange={(isOpen) => {
                             if (!isOpen) {
                                 setRecentAttributeIds(getRecentAttributeIds());
                             }
                         }}
                     />
+                    {!categoriesSelected && (
+                        <p className="mt-2 text-sm text-gray-500">
+                            Select at least one category to load attribute options.
+                        </p>
+                    )}
+                    {categoriesSelected && isLoadingAvailableAttributes && (
+                        <p className="mt-2 text-sm text-gray-500">
+                            Loading attributes for the selected categories...
+                        </p>
+                    )}
+                    {categoriesSelected && !isLoadingAvailableAttributes && eligibleAttributes.length === 0 && (
+                        <p className="mt-2 text-sm text-gray-500">
+                            No attributes are available for the selected categories.
+                        </p>
+                    )}
                 </div>
             </div>
 

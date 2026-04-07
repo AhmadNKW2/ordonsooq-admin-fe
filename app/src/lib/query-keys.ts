@@ -44,6 +44,16 @@ export const queryKeys = {
     main: ["categories", "main"] as const,
     archived: ["categories", "archived"] as const,
     products: (id: number) => ["categories", id, "products"] as const,
+    urls: () => [...queryKeys.categories.all, "urls"] as const,
+    urlList: (params?: Record<string, any>) =>
+      [...queryKeys.categories.urls(), params] as const,
+    urlDetails: () => [...queryKeys.categories.urls(), "detail"] as const,
+    urlDetail: (id: string | number) =>
+      [...queryKeys.categories.urlDetails(), id] as const,
+    categoryUrls: (id: string | number) =>
+      [...queryKeys.categories.all, id, "urls"] as const,
+    vendorUrls: (vendorId: string | number, params?: Record<string, any>) =>
+      [...queryKeys.categories.all, "vendor", vendorId, "urls", params] as const,
     lists: () => [...queryKeys.categories.all, "list"] as const,
     list: (params?: Record<string, any>) =>
       [...queryKeys.categories.lists(), params] as const,

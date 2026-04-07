@@ -12,6 +12,7 @@ import { useRouter } from "@/hooks/use-loading-router";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useLoading } from "../../src/providers/loading-provider";
+import { useCategories } from "../../src/services/categories/hooks/use-categories";
 import {
   useSpecification,
   useSpecifications,
@@ -25,6 +26,21 @@ import { DeleteConfirmationModal } from "../../src/components/common/DeleteConfi
 import { SpecificationValue, Specification } from "../../src/services/specifications/types/specification.types";
 import { SpecificationForm } from "../../src/components/specifications/SpecificationForm";
 import { specificationSchema, type SpecificationFormData, type SpecificationFormOutput } from "../../src/lib/validations/specification.schema";
+
+const extractCategoryIds = (specification?: Specification | null): number[] => {
+  if (!specification) {
+    return [];
+  }
+
+  const directIds = Array.isArray(specification.category_ids) ? specification.category_ids : [];
+  const relatedIds = Array.isArray(specification.categories)
+    ? specification.categories
+        .map((category) => category.id)
+        .filter((categoryId): categoryId is number => typeof categoryId === "number")
+    : [];
+
+  return [...new Set([...directIds, ...relatedIds])];
+};
 
 export default function SpecificationEditPage() {
   const params = useParams();
@@ -42,6 +58,7 @@ export default function SpecificationEditPage() {
       unit_ar: "",
       parent_id: null,
       parent_value_id: null,
+      category_ids: [],
       is_active: true,
       list_separately: false,
     },
@@ -57,6 +74,7 @@ export default function SpecificationEditPage() {
   const unitAr = watch("unit_ar");
   const parentId = watch("parent_id");
   const parentValueId = watch("parent_value_id");
+  const categoryIds = watch("category_ids") || [];
   const isActive = watch("is_active");
   const listSeparately = watch("list_separately");
 
@@ -75,6 +93,7 @@ export default function SpecificationEditPage() {
     { enabled: !!specificationId }
   );
   const { data: allSpecifications = [] } = useSpecifications();
+  const { data: categories = [] } = useCategories();
   const updateSpecification = useUpdateSpecification();
   const deleteValue = useDeleteSpecificationValue();
 
@@ -88,6 +107,7 @@ export default function SpecificationEditPage() {
         unit_ar: specification.unit_ar || "",
         parent_id: specification.parent_id,
         parent_value_id: specification.parent_value_id,
+        category_ids: extractCategoryIds(specification),
         is_active: specification.is_active,
         list_separately: specification.list_separately ?? false,
       });
@@ -139,6 +159,7 @@ export default function SpecificationEditPage() {
           unit_ar: data.unit_ar || undefined,
           parent_id: data.parent_id,
           parent_value_id: data.parent_value_id,
+          category_ids: data.category_ids,
           is_active: data.is_active,
           list_separately: data.list_separately,
           values: valuesPayload,
@@ -223,6 +244,7 @@ export default function SpecificationEditPage() {
         unitAr={unitAr || ""}
         parentId={parentId?.toString() || ""}
         parentValueId={parentValueId?.toString() || ""}
+        categoryIds={categoryIds.map(String)}
         isActive={!!isActive}
         onNameEnChange={handleNameEnChange}
         onNameArChange={handleNameArChange}
@@ -230,6 +252,7 @@ export default function SpecificationEditPage() {
         onUnitArChange={(val) => setValue("unit_ar", val)}
         onParentIdChange={(val) => setValue("parent_id", val ? Number(val) : null)}
         onParentValueIdChange={(val) => setValue("parent_value_id", val ? Number(val) : null)}
+        onCategoryIdsChange={(ids) => setValue("category_ids", ids.map(Number))}
         onIsActiveChange={(value) => setValue("is_active", value)}
         listSeparately={listSeparately}
         onListSeparatelyChange={(value) => setValue("list_separately", value)}
@@ -244,6 +267,7 @@ export default function SpecificationEditPage() {
         isSubmitting={updateSpecification.isPending}
         submitButtonText="Save Changes"
         specifications={allSpecifications.filter((attr: Specification) => attr.id !== specificationId)}
+        categories={categories}
       />
 
       {/* Delete Confirmation Modal */}

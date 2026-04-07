@@ -97,6 +97,7 @@ export default function CreateVendorPage() {
   return (
     <VendorForm
       mode="create"
+      vendorId={undefined}
       nameEn={nameEn}
       nameAr={nameAr}
       descriptionEn={descriptionEn}

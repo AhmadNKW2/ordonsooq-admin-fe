@@ -10,6 +10,7 @@ import { useRouter } from "@/hooks/use-loading-router";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useCreateAttribute, useAttributes } from "../../src/services/attributes/hooks/use-attributes";
+import { useCategories } from "../../src/services/categories/hooks/use-categories";
 import { AttributeForm } from "../../src/components/attributes/AttributeForm";
 import { AttributeValue } from "../../src/services/attributes/types/attribute.types";
 import { attributeSchema, type AttributeFormData, type AttributeFormOutput } from "../../src/lib/validations/attribute.schema";
@@ -31,6 +32,7 @@ export default function CreateAttributePage() {
       is_active: true,
       attribute_type: "spec_attribute",
       list_separately: false,
+      category_ids: [],
     },
     mode: "onSubmit",
   });
@@ -44,6 +46,7 @@ export default function CreateAttributePage() {
   const unitAr = watch("unit_ar");
   const parentId = watch("parent_id");
   const parentValueId = watch("parent_value_id");
+  const categoryIds = watch("category_ids") || [];
   const isColor = watch("is_color");
   const isActive = watch("is_active");
   const listSeparately = watch("list_separately");
@@ -53,6 +56,7 @@ export default function CreateAttributePage() {
 
   const createAttribute = useCreateAttribute();
   const { data: attributes = [] } = useAttributes();
+  const { data: categories = [] } = useCategories();
 
   const handleNameEnChange = (value: string) => {
     setValue("name_en", value);
@@ -94,6 +98,7 @@ export default function CreateAttributePage() {
         is_active: data.is_active,
         attribute_type: data.attribute_type,
         list_separately: data.list_separately,
+        category_ids: data.category_ids,
         values: validValues.length > 0 ? validValues : undefined,
       });
       router.push("/attributes");
@@ -115,6 +120,7 @@ export default function CreateAttributePage() {
       unitAr={unitAr || ""}
       parentId={parentId?.toString() || ""}
       parentValueId={parentValueId?.toString() || ""}
+      categoryIds={categoryIds.map(String)}
       isColor={isColor}
       isActive={isActive}
       onNameEnChange={handleNameEnChange}
@@ -123,6 +129,7 @@ export default function CreateAttributePage() {
       onUnitArChange={(val) => setValue("unit_ar", val)}
       onParentIdChange={(val) => setValue("parent_id", val)}
       onParentValueIdChange={(val) => setValue("parent_value_id", val)}
+      onCategoryIdsChange={(ids) => setValue("category_ids", ids.map(Number))}
       onIsColorChange={(value) => setValue("is_color", value)}
       onIsActiveChange={(value) => setValue("is_active", value)}
       listSeparately={listSeparately}
@@ -137,6 +144,7 @@ export default function CreateAttributePage() {
       isSubmitting={createAttribute.isPending}
       submitButtonText="Create Attribute"
       attributes={attributes}
+      categories={categories}
     />
   );
 }

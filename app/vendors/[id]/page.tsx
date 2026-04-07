@@ -204,6 +204,7 @@ export default function EditVendorPage() {
   return (
     <VendorForm
       mode="edit"
+      vendorId={vendorId}
       nameEn={nameEn}
       nameAr={nameAr}
       descriptionEn={descriptionEn}

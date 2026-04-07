@@ -20,8 +20,8 @@ class AttributeService {
   /**
    * Get all attributes
    */
-  async getAttributes(): Promise<Attribute[]> {
-    return httpClient.get<Attribute[]>(this.endpoint);
+  async getAttributes(params?: { category_ids?: string }): Promise<Attribute[]> {
+    return httpClient.get<Attribute[]>(this.endpoint, params);
   }
 
   /**

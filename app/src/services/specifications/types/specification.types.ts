@@ -15,6 +15,12 @@ export interface SpecificationValue {
   updated_at?: string;
 }
 
+export interface SpecificationCategorySummary {
+  id: number;
+  name_en?: string | null;
+  name_ar?: string | null;
+}
+
 export interface Specification {
   id: number;
   name_en: string;
@@ -26,6 +32,8 @@ export interface Specification {
   list_separately: boolean;
   sort_order: number;
   is_active: boolean;
+  category_ids?: number[];
+  categories?: SpecificationCategorySummary[];
   level?: number;
   values: SpecificationValue[];
   children?: Specification[];
@@ -58,6 +66,7 @@ export interface CreateSpecificationDto {
   list_separately?: boolean;
   sort_order?: number;
   is_active?: boolean;
+  category_ids?: number[];
   values?: CreateSpecificationValueDto[];
 }
 
@@ -80,6 +89,7 @@ export interface UpdateSpecificationDto {
   list_separately?: boolean;
   sort_order?: number;
   is_active?: boolean;
+  category_ids?: number[];
   values?: UpdateSpecificationValueInDto[];
 }
 

@@ -10,6 +10,7 @@ import { useRouter } from "@/hooks/use-loading-router";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useCreateSpecification, useSpecifications } from "../../src/services/specifications/hooks/use-specifications";
+import { useCategories } from "../../src/services/categories/hooks/use-categories";
 import { SpecificationForm } from "../../src/components/specifications/SpecificationForm";
 import { SpecificationValue } from "../../src/services/specifications/types/specification.types";
 import { specificationSchema, type SpecificationFormData, type SpecificationFormOutput } from "../../src/lib/validations/specification.schema";
@@ -27,6 +28,7 @@ export default function CreateSpecificationPage() {
       unit_ar: "",
       parent_id: null,
       parent_value_id: null,
+      category_ids: [],
       is_active: true,
       list_separately: false,
     },
@@ -42,6 +44,7 @@ export default function CreateSpecificationPage() {
   const unitAr = watch("unit_ar");
   const parentId = watch("parent_id");
   const parentValueId = watch("parent_value_id");
+  const categoryIds = watch("category_ids") || [];
   const isActive = watch("is_active");
   const listSeparately = watch("list_separately");
 
@@ -50,6 +53,7 @@ export default function CreateSpecificationPage() {
 
   const createSpecification = useCreateSpecification();
   const { data: specifications = [] } = useSpecifications();
+  const { data: categories = [] } = useCategories();
 
   const handleNameEnChange = (value: string) => {
     setValue("name_en", value);
@@ -87,6 +91,7 @@ export default function CreateSpecificationPage() {
         unit_ar: data.unit_ar || undefined,
         parent_id: data.parent_id,
         parent_value_id: data.parent_value_id,
+        category_ids: data.category_ids,
         is_active: data.is_active,
         list_separately: data.list_separately,
         values: validValues.length > 0 ? validValues : undefined,
@@ -110,6 +115,7 @@ export default function CreateSpecificationPage() {
       unitAr={unitAr || ""}
       parentId={parentId?.toString() || ""}
       parentValueId={parentValueId?.toString() || ""}
+      categoryIds={categoryIds.map(String)}
       isActive={!!isActive}
       onNameEnChange={handleNameEnChange}
       onNameArChange={handleNameArChange}
@@ -117,6 +123,7 @@ export default function CreateSpecificationPage() {
       onUnitArChange={(val) => setValue("unit_ar", val)}
       onParentIdChange={(val) => setValue("parent_id", val ? Number(val) : null)}
       onParentValueIdChange={(val) => setValue("parent_value_id", val ? Number(val) : null)}
+      onCategoryIdsChange={(ids) => setValue("category_ids", ids.map(Number))}
       onIsActiveChange={(value) => setValue("is_active", value)}
       listSeparately={listSeparately}
       onListSeparatelyChange={(value) => setValue("list_separately", value)}
@@ -130,6 +137,7 @@ export default function CreateSpecificationPage() {
       isSubmitting={createSpecification.isPending}
       submitButtonText="Create Specification"
       specifications={specifications}
+      categories={categories}
     />
   );
 }
