@@ -356,9 +356,6 @@ export interface ProductFilters {
 //  Product Creation DTOs
 export interface ProductAttributeInput {
   attribute_id: number;
-  controls_pricing: boolean;
-  controls_media: boolean;
-  controls_weight: boolean;
 }
 
 export interface SinglePricingInput {
@@ -540,16 +537,10 @@ export interface MediaManagementDto {
 // Attributes Management
 export interface UpdateProductAttributeInputDto {
   attribute_id: number;
-  controls_pricing?: boolean;
-  controls_media?: boolean;
-  controls_weight?: boolean;
 }
 
 export interface AddProductAttributeInputDto {
   attribute_id: number;
-  controls_pricing: boolean;
-  controls_media: boolean;
-  controls_weight: boolean;
 }
 
 // Pricing Management

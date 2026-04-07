@@ -10,7 +10,7 @@ import {
 import { Card } from "@/components/ui";
 import {
     generateCombinations,
-    getControllingAttributes,
+    getVariantAttributes,
     getVariantData,
 } from "../../../services/products/utils/variant-combinations";
 
@@ -23,7 +23,7 @@ interface WeightDimensionsSectionProps {
     onToggleVariantBased: (value: boolean) => void;
     onChangeSingle: (data: WeightDimensions) => void;
     onChangeVariant: (data: VariantWeightDimensions[]) => void;
-    hasAttributeControllingWeight: boolean;
+    hasVariantAttributes: boolean;
     errors: Record<string, string | boolean>;
 }
 
@@ -116,11 +116,10 @@ export const WeightDimensionsSection: React.FC<WeightDimensionsSectionProps> = (
     onToggleVariantBased,
     onChangeSingle,
     onChangeVariant,
-    hasAttributeControllingWeight,
+    hasVariantAttributes,
     errors,
 }) => {
-    // Filter attributes that control weight AND have values
-    const weightAttributes = getControllingAttributes(attributes, 'controlsWeightDimensions');
+    const weightAttributes = getVariantAttributes(attributes);
 
     // Generate all combinations for weight attributes
     const allCombinations = generateCombinations(weightAttributes);
@@ -174,21 +173,17 @@ export const WeightDimensionsSection: React.FC<WeightDimensionsSectionProps> = (
         return getVariantData(key, variantWeightDimensions, attributeValues);
     };
 
-    // Single mode (not variant-based)
-    if (!isWeightVariantBased && !hasAttributeControllingWeight) {
-        return (
-            <Card>
-                <div className="flex flex-col gap-2">
-                    <div className="flex items-center justify-between">
-                        <h2 className="text-xl font-semibold ">
-                            Weight & Dimensions
-                        </h2>
+    // Single mode (forced)
+    return (
+        <Card>
+            <div className="flex flex-col gap-2">
+                <div className="flex items-center justify-between">
+                    <h2 className="text-xl font-semibold ">
+                        Weight & Dimensions
+                    </h2>
+
                     </div>
-                    {hasAttributeControllingWeight && weightAttributes.length === 0 && (
-                        <p className="text-sm ">
-                            No attributes are controlling weight/dimensions. These values apply to all variants.
-                        </p>
-                    )}
+
                 </div>
 
                 <WeightInputs
@@ -208,68 +203,5 @@ export const WeightDimensionsSection: React.FC<WeightDimensionsSectionProps> = (
                 />
             </Card>
         );
-    }
 
-    // Variant-based mode
-    if (combinations.length === 0) {
-        return (
-            <Card>
-                <div className="flex items-center justify-between">
-                    <h2 className="text-xl font-semibold ">
-                        Weight & Dimensions
-                    </h2>
-                </div>
-                <div className=" border border-gray-200 rounded-r1 p-4">
-                    <p className="">
-                        Please select attribute values to configure weight and dimensions.
-                    </p>
-                </div>
-            </Card>
-        );
-    }
-
-    return (
-        <Card>
-            <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold ">
-                    Weight & Dimensions - Variant Based
-                </h2>
-            </div>
-
-            <p className="text-sm ">
-                Configure weight and dimensions for each variant based on{" "}
-                <strong>{weightAttributes.map((a) => a.name).join(", ")}</strong>
-            </p>
-
-            {combinations.map((combo) => {
-                const weight = getWeight(combo.key, combo.attributeValues);
-                const variantIndex = variantWeightDimensions.findIndex(vw => vw.key === combo.key);
-
-                return (
-                    <Card
-                        key={combo.key}
-                        variant="nested"
-                    >
-                        <h4 className="font-medium ">{combo.label}</h4>
-
-                        <WeightInputs
-                            weight={weight?.weight}
-                            length={weight?.length}
-                            width={weight?.width}
-                            height={weight?.height}
-                            onWeightChange={(value) => handleVariantChange(combo.key, "weight", value)}
-                            onLengthChange={(value) => handleVariantChange(combo.key, "length", value)}
-                            onWidthChange={(value) => handleVariantChange(combo.key, "width", value)}
-                            onHeightChange={(value) => handleVariantChange(combo.key, "height", value)}
-                            weightError={variantIndex >= 0 ? errors[`variantWeightDimensions.${variantIndex}.weight`] : undefined}
-                            lengthError={variantIndex >= 0 ? errors[`variantWeightDimensions.${variantIndex}.length`] : undefined}
-                            widthError={variantIndex >= 0 ? errors[`variantWeightDimensions.${variantIndex}.width`] : undefined}
-                            heightError={variantIndex >= 0 ? errors[`variantWeightDimensions.${variantIndex}.height`] : undefined}
-                            idPrefix={`variantWeightDimensions.${variantIndex}`}
-                        />
-                    </Card>
-                );
-            })}
-        </Card>
-    );
 };

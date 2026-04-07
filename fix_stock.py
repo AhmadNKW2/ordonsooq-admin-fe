@@ -1,4 +1,7 @@
-import React from "react";
+import sys
+
+with open("app/src/components/products/sections/StockSection.tsx", "w", encoding="utf-8") as f:
+    f.write("""import React from "react";
 import { Input } from "../../ui/input";
 import { Checkbox } from "../../ui/checkbox";
 import { Card } from "@/components/ui";
@@ -49,3 +52,5 @@ export const StockSection: React.FC<StockSectionProps> = ({
         </Card>
     );
 };
+""")
+

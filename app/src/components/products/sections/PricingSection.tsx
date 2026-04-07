@@ -10,7 +10,7 @@ import { Checkbox } from "../../ui/checkbox";
 import { Card } from "@/components/ui";
 import {
     generateCombinations,
-    getControllingAttributes,
+    getVariantAttributes,
     getVariantData,
 } from "../../../services/products/utils/variant-combinations";
 
@@ -108,13 +108,8 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
     calculateSalePercentage,
     errors = {},
 }) => {
-    // Filter attributes that control pricing AND have values
-    const pricingAttributes = getControllingAttributes(attributes, 'controlsPricing');
-
-    // If no attributes control pricing or no attributes have values, always show single pricing
-    // Update: If we have attributes but NO attributes control pricing, we show single pricing.
-    // If we have attributes controlling pricing, but no combinations (no values selected), we show the "Please select..." message.
-    const shouldShowSinglePricing = pricingAttributes.length === 0;
+    const pricingAttributes = getVariantAttributes(attributes);
+    const shouldShowSinglePricing = true; // Always show single pricing
 
     // Generate all combinations for pricing attributes
     const allCombinations = generateCombinations(pricingAttributes);
@@ -228,11 +223,6 @@ export const PricingSection: React.FC<PricingSectionProps> = ({
                         />
 
                     </div>
-                    {attributes.length > 0 && pricingAttributes.length === 0 && (
-                        <p className="text-sm ">
-                            No attributes are controlling pricing. This price applies to all variants.
-                        </p>
-                    )}
                 </div>
 
                 <PricingInputs

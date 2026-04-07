@@ -16,9 +16,6 @@ export interface Attribute {
   name: string;
   values: AttributeValue[];
   order: number;
-  controlsPricing: boolean;
-  controlsWeightDimensions: boolean;
-  controlsMedia: boolean;
 }
 
 export interface ProductSpecificationSelectionValue {
@@ -107,6 +104,9 @@ export const productFormSchema = z.object({
   brandId: z.string().optional(),
   referenceLink: z.string().optional(),
   linked_product_ids: z.array(z.string()).default([]),
+  quantity: z.number().default(0),
+  low_stock_threshold: z.number().default(10),
+  is_out_of_stock: z.boolean().default(false),
   shortDescriptionEn: z.string().optional(),
   shortDescriptionAr: z.string().optional(),
   longDescriptionEn: z.string().optional(),
@@ -126,9 +126,6 @@ export const productFormSchema = z.object({
         })
       ),
       order: z.number(),
-      controlsPricing: z.boolean(),
-      controlsWeightDimensions: z.boolean(),
-      controlsMedia: z.boolean(),
     })
   ).optional(),
 

@@ -482,9 +482,6 @@ export default function EditProductPage() {
           name: attrData.name_en,
           values,
           order: index,
-          controlsPricing: attrData.controls_pricing || false,
-          controlsWeightDimensions: attrData.controls_weight || false,
-          controlsMedia: attrData.controls_media || false,
         };
       });
 
@@ -617,16 +614,8 @@ export default function EditProductPage() {
                };
           });
 
-          // Propagate control flags from any descendant attribute that has them set
-          const controlsPricing = familyAttributes.some(fa => fa.controlsPricing);
-          const controlsWeightDimensions = familyAttributes.some(fa => fa.controlsWeightDimensions);
-          const controlsMedia = familyAttributes.some(fa => fa.controlsMedia);
-
           return {
              ...rootAttr,
-             controlsPricing,
-             controlsWeightDimensions,
-             controlsMedia,
              values: enrichedValues // This attribute now contains only leaf values with full path names
           };
       });
@@ -690,9 +679,6 @@ export default function EditProductPage() {
         name: attrName,
         values,
         order: index,
-        controlsPricing: attr.controls_pricing || false,
-        controlsWeightDimensions: attr.controls_weight || false,
-        controlsMedia: attr.controls_media || false,
       };
     });
   };
@@ -701,9 +687,7 @@ export default function EditProductPage() {
 const transformVariantPricing = (stockVariants: any[], attrs: any[]) => {
     const hasAttributes = attrs && attrs.length > 0;
     if (!hasAttributes) return undefined;
-
-    const controllingIds = attrs.filter((a: any) => a.controlsPricing).map((a: any) => String(a.id));
-    if (controllingIds.length === 0) return undefined;
+  const variantAttributeIds = attrs.map((a: any) => String(a.id));
 
     if (product?.price_groups && product?.variants) {
        const uniqueMap = new Map();
@@ -717,7 +701,7 @@ const transformVariantPricing = (stockVariants: any[], attrs: any[]) => {
           
           const attributeValues: any = {};
           if (stockVariant) {
-            controllingIds.forEach(id => {
+            variantAttributeIds.forEach(id => {
                if (stockVariant.attributeValues[id] !== undefined) {
                    attributeValues[id] = stockVariant.attributeValues[id];
                }
@@ -746,7 +730,7 @@ const transformVariantPricing = (stockVariants: any[], attrs: any[]) => {
       prices.forEach((pg: any) => {
         let attributeValues = buildAttributeValuesFromItem(pg);
         const filteredAttrValues: any = {};
-        controllingIds.forEach(id => {
+        variantAttributeIds.forEach(id => {
            if (attributeValues[id] !== undefined) filteredAttrValues[id] = attributeValues[id];
         });
         const key = generateVariantKey(filteredAttrValues);
@@ -770,8 +754,8 @@ const transformVariantPricing = (stockVariants: any[], attrs: any[]) => {
   // Transform variant weight/dimensions from weights array
 const transformVariantWeightDimensions = (stockVariants: any[], attrs: any[]) => {
     if (!attrs) return undefined;
-    const controllingIds = attrs.filter((a: any) => a.controlsWeightDimensions).map((a: any) => String(a.id));
-    if (controllingIds.length === 0) return undefined;
+  const variantAttributeIds = attrs.map((a: any) => String(a.id));
+  if (variantAttributeIds.length === 0) return undefined;
 
     // NEW: Handle weights via variants linking to weight_groups
     if (product?.weight_groups && product?.variants) {
@@ -786,7 +770,7 @@ const transformVariantWeightDimensions = (stockVariants: any[], attrs: any[]) =>
           const stockVariant = stockVariants.find((sv: any) => sv.id === variant.id.toString());
           const attributeValues: any = {};
           if (stockVariant) {
-             controllingIds.forEach(id => {
+             variantAttributeIds.forEach(id => {
                 if (stockVariant.attributeValues[id] !== undefined) {
                     attributeValues[id] = stockVariant.attributeValues[id];
                 }
@@ -816,7 +800,7 @@ const transformVariantWeightDimensions = (stockVariants: any[], attrs: any[]) =>
     weights.forEach((wg: any) => {
       let attributeValues = buildAttributeValuesFromItem(wg);
       const filteredAttrValues: any = {};
-      controllingIds.forEach(id => {
+      variantAttributeIds.forEach(id => {
           if (attributeValues[id] !== undefined) filteredAttrValues[id] = attributeValues[id];
       });
       const key = generateVariantKey(filteredAttrValues);
@@ -999,15 +983,6 @@ const transformVariantWeightDimensions = (stockVariants: any[], attrs: any[]) =>
 
   // Check if weight is variant-based (has weights with groupValues)
   const isWeightVariantBased = () => {
-    // Check if any attribute controls weight (from product attributes)
-    const productAttributes = product?.attributes;
-    if (productAttributes) {
-      const attrs = Array.isArray(productAttributes) ? productAttributes : Object.values(productAttributes);
-      if (attrs.some((attr: any) => attr.controls_weight === true)) {
-        return true;
-      }
-    }
-    
     // Check if weights exist with non-empty groupValues (variant-based)
     const weights = (product as any)?.weights;
     if (weights && weights.length > 0) {
@@ -1023,15 +998,6 @@ const transformVariantWeightDimensions = (stockVariants: any[], attrs: any[]) =>
 
   // Check if media is variant-based (has media_group with groupValues)
   const isMediaVariantBased = () => {
-    // Check if any attribute controls media (from product attributes)
-    const productAttributes = product?.attributes;
-    if (productAttributes) {
-      const attrs = Array.isArray(productAttributes) ? productAttributes : Object.values(productAttributes);
-      if (attrs.some((attr: any) => attr.controls_media === true)) {
-        return true;
-      }
-    }
-    
     // Check if any media has media_group with non-empty groupValues (variant-based)
     const media = product?.media;
     if (media && media.length > 0) {
@@ -1084,8 +1050,8 @@ const transformVariantWeightDimensions = (stockVariants: any[], attrs: any[]) =>
   // Transform variant media from media array with media_group
 const transformVariantMedia = (stockVariants: any[], attrs: any[]) => {
     if (!attrs) return undefined;
-    const controllingIds = attrs.filter((a: any) => a.controlsMedia).map((a: any) => String(a.id));
-    if (controllingIds.length === 0) return undefined;
+  const variantAttributeIds = attrs.map((a: any) => String(a.id));
+  if (variantAttributeIds.length === 0) return undefined;
 
     // NEW: Handle media via variants linking to media_groups
     if (product?.media_groups && product?.variants) {
@@ -1114,7 +1080,7 @@ const transformVariantMedia = (stockVariants: any[], attrs: any[]) => {
              const stockVariant = stockVariants.find((sv: any) => sv.id === variant.id.toString());
              const attributeValues: any = {};
              if (stockVariant) {
-                controllingIds.forEach(id => {
+               variantAttributeIds.forEach(id => {
                    if (stockVariant.attributeValues[id] !== undefined) {
                        attributeValues[id] = stockVariant.attributeValues[id];
                    }
@@ -1165,7 +1131,7 @@ const transformVariantMedia = (stockVariants: any[], attrs: any[]) => {
     Array.from(mediaGroupMap.values()).forEach((group) => {
       let attributeValues = buildAttributeValuesFromGroupValues(group.groupValues);
       const filteredAttrValues: any = {};
-      controllingIds.forEach(id => {
+      variantAttributeIds.forEach(id => {
           if (attributeValues[id] !== undefined) filteredAttrValues[id] = attributeValues[id];
       });
       const key = generateVariantKey(filteredAttrValues);
@@ -1284,7 +1250,7 @@ const transformVariantMedia = (stockVariants: any[], attrs: any[]) => {
     // Determine if attributes exist
     const hasAttributes = Array.isArray(product.attributes) ? product.attributes.length > 0 : (product.attributes && Object.keys(product.attributes).length > 0);
     const attrs = hasAttributes ? transformProductAttributes() : undefined;
-    const hasPricingAttributes = !!(attrs && attrs.some((a: any) => a.controlsPricing));
+    const hasPricingAttributes = !!(attrs && attrs.length > 0);
 
     const stockVariants = transformVariants();
 
@@ -1294,6 +1260,8 @@ const transformVariantMedia = (stockVariants: any[], attrs: any[]) => {
       nameEn: product.name_en,
       nameAr: product.name_ar,
       status: product.status || 'active',
+        quantity: (product.stock && product.stock[0]) ? product.stock[0].quantity : 0,
+        is_out_of_stock: (product.stock && product.stock[0]) ? product.stock[0].is_out_of_stock : ((product as any).is_out_of_stock ?? false),
       categoryIds: (product.categories && product.categories.length > 0)
         ? product.categories.map((c: any) => c.id.toString())
         : (product.category_ids?.map(id => id.toString()) || 
@@ -1320,18 +1288,18 @@ const transformVariantMedia = (stockVariants: any[], attrs: any[]) => {
     specifications: transformProductSpecifications(),
     
     // Pricing
-    singlePricing: !hasPricingAttributes ? transformSinglePricing() : undefined,
-    variantPricing: hasPricingAttributes ? transformVariantPricing(stockVariants || [], attrs || []) : undefined,
+    singlePricing: transformSinglePricing(),
+    variantPricing: [],
     
     // Weight & Dimensions
     isWeightVariantBased: isWeightVariantBased(),
-    singleWeightDimensions: !isWeightVariantBased() ? transformSingleWeight() : undefined,
-    variantWeightDimensions: isWeightVariantBased() ? transformVariantWeightDimensions(stockVariants || [], attrs || []) : undefined,
+    singleWeightDimensions: transformSingleWeight(),
+    variantWeightDimensions: [],
     
     // Media
     isMediaVariantBased: isMediaVariantBased(),
-    singleMedia: !isMediaVariantBased() ? transformSingleMedia() : [],
-    variantMedia: isMediaVariantBased() ? transformVariantMedia(stockVariants || [], attrs || []) : undefined,
+    singleMedia: transformSingleMedia(),
+    variantMedia: [],
     
     // Stock/Variants
     variants: stockVariants,
@@ -1381,47 +1349,19 @@ const transformVariantMedia = (stockVariants: any[], attrs: any[]) => {
         });
       }
       // ========== DETECT ATTRIBUTE CHANGES ==========
-      // Helper to normalize product attributes to array
-      let originalAttrList: any[] = [];
-      if (Array.isArray(product?.attributes)) {
-          originalAttrList = product.attributes;
-      } else if (product?.attributes && typeof product.attributes === 'object') {
-          // It's a dictionary Record<string, Attribute>
-          originalAttrList = Object.entries(product.attributes).map(([id, attr]: [string, any]) => ({
-              attribute_id: id,
-              ...attr
-          }));
-      }
-
-      // Get original attribute IDs and their controlling flags
-      const originalAttrIds = new Set(
-        originalAttrList.map((a: any) => a.attribute_id?.toString() || a.attribute?.id?.toString() || a.id?.toString()) || []
-      );
+      const originalFormAttributes = initialData?.attributes || [];
+      const originalAttrIds = new Set(originalFormAttributes.map((attribute) => attribute.id));
       const newAttrIds = new Set(data.attributes?.map(a => a.id) || []);
-      
-      // Check if any attribute was REMOVED (original has IDs that new doesn't have)
-      const attributeRemoved = [...originalAttrIds].some(id => !newAttrIds.has(id));
-      
-      // Get original controlling flags
-      // Note: In new structure we might need to deduce this if not explicit
-      const hasVariantWeights = (product as any)?.weight_groups && Object.keys((product as any)?.weight_groups).length > 1;
-      const hasVariantMedia = (product as any)?.media_groups && Object.keys((product as any)?.media_groups).length > 1;
-
-      const originalPricingControlled = originalAttrList.some((a: any) => a.controls_pricing) || true; // Default true for legacy/safety? Or check if price_groups > 1
-      const originalWeightControlled = originalAttrList.some((a: any) => a.controls_weight) || hasVariantWeights;
-      const originalMediaControlled = originalAttrList.some((a: any) => a.controls_media) || hasVariantMedia;
-      
-      // Get new controlling flags
-      const newPricingControlled = data.attributes?.some(a => a.controlsPricing) || false;
-      const newWeightControlled = data.attributes?.some(a => a.controlsWeightDimensions) || false;
-      const newMediaControlled = data.attributes?.some(a => a.controlsMedia) || false;
-      
-      // Determine what needs to be cleared:
-      // - If attribute REMOVED: clear ALL (prices, weights, media) since combinations become invalid
-      // - If attribute ADDED: only clear if the corresponding control flag changed
-      const shouldClearPrices = attributeRemoved || (originalPricingControlled !== newPricingControlled);
-      const shouldClearWeights = attributeRemoved || (originalWeightControlled !== newWeightControlled);
-      const shouldClearMedia = attributeRemoved || (originalMediaControlled !== newMediaControlled);
+      const attributeSelectionChanged =
+        originalAttrIds.size !== newAttrIds.size ||
+        [...originalAttrIds].some((id) => !newAttrIds.has(id));
+      const shouldClearPrices = attributeSelectionChanged;
+      const shouldClearWeights =
+        attributeSelectionChanged ||
+        Boolean(initialData?.isWeightVariantBased) !== Boolean(data.isWeightVariantBased);
+      const shouldClearMedia =
+        attributeSelectionChanged ||
+        Boolean(initialData?.isMediaVariantBased) !== Boolean(data.isMediaVariantBased);
       const nextSpecificationsPayload = buildProductSpecificationsPayload(data.specifications);
       const hasOriginalSpecifications =
         normalizedProductSpecifications.length > 0 ||
@@ -1432,10 +1372,9 @@ const transformVariantMedia = (stockVariants: any[], attrs: any[]) => {
       console.log('=== DEBUG: Attribute Change Detection ===');
       console.log('originalAttrIds:', [...originalAttrIds]);
       console.log('newAttrIds:', [...newAttrIds]);
-      console.log('attributeRemoved:', attributeRemoved);
-      console.log('originalPricingControlled:', originalPricingControlled, '-> newPricingControlled:', newPricingControlled);
-      console.log('originalWeightControlled:', originalWeightControlled, '-> newWeightControlled:', newWeightControlled);
-      console.log('originalMediaControlled:', originalMediaControlled, '-> newMediaControlled:', newMediaControlled);
+      console.log('attributeSelectionChanged:', attributeSelectionChanged);
+      console.log('originalWeightVariantBased:', Boolean(initialData?.isWeightVariantBased), '-> newWeightVariantBased:', Boolean(data.isWeightVariantBased));
+      console.log('originalMediaVariantBased:', Boolean(initialData?.isMediaVariantBased), '-> newMediaVariantBased:', Boolean(data.isMediaVariantBased));
       console.log('shouldClearPrices:', shouldClearPrices);
       console.log('shouldClearWeights:', shouldClearWeights);
       console.log('shouldClearMedia:', shouldClearMedia);
@@ -1478,9 +1417,6 @@ const transformVariantMedia = (stockVariants: any[], attrs: any[]) => {
       if (data.attributes && data.attributes.length > 0) {
         productPayload.attributes = data.attributes.map(attr => ({
           attribute_id: parseInt(attr.id),
-          controls_pricing: attr.controlsPricing || false,
-          controls_media: attr.controlsMedia || false,
-          controls_weight: attr.controlsWeightDimensions || false,
         }));
         console.log('=== DEBUG: Attributes Payload ===');
         console.log('productPayload.attributes:', productPayload.attributes);
@@ -1495,10 +1431,10 @@ const transformVariantMedia = (stockVariants: any[], attrs: any[]) => {
       // ========== PRICING ==========
       // If pricing control changed (attributes added/removed/changed), clear old prices and use new data
       if (shouldClearPrices) {
-        console.log('=== DEBUG: Pricing control changed, will use only new pricing data ===');
+        console.log('=== DEBUG: Attribute selection changed, will use only new pricing data ===');
       }
       
-      const hasPricingAttributes = data.attributes?.some(a => a.controlsPricing);
+      const hasPricingAttributes = false; // Forced single pricing
 
       if (!hasPricingAttributes) {
         // Single pricing - no combination (either no attributes, or attributes don't control pricing)
@@ -1518,19 +1454,16 @@ const transformVariantMedia = (stockVariants: any[], attrs: any[]) => {
       } else {
         // Variant pricing - with combinations
         if (data.variantPricing && data.variantPricing.length > 0) {
-          // Get pricing-controlling attribute IDs
-          const pricingControllingAttrIds = (data.attributes || [])
-            .filter(attr => attr.controlsPricing)
-            .map(attr => attr.id);
+          const variantAttributeIds = (data.attributes || []).map((attr) => attr.id);
 
           console.log('=== DEBUG: Variant Pricing ===');
-          console.log('pricingControllingAttrIds:', pricingControllingAttrIds);
+          console.log('variantAttributeIds:', variantAttributeIds);
           console.log('data.variantPricing:', data.variantPricing);
 
           const priceMap = new Map<string, any>();
           data.variantPricing.forEach(vp => {
             const combination: Record<string, number> = {};
-            pricingControllingAttrIds.forEach(attrId => {
+            variantAttributeIds.forEach(attrId => {
               const attrValueId = vp.attributeValues[attrId];
               if (attrValueId) {
                 combination[attrId] = parseInt(attrValueId);
@@ -1567,12 +1500,12 @@ const transformVariantMedia = (stockVariants: any[], attrs: any[]) => {
       console.log('data.singleWeightDimensions:', data.singleWeightDimensions);
       console.log('data.variantWeightDimensions:', data.variantWeightDimensions);
       
-      // If weight control changed (attributes added/removed/changed), clear old weights and use new data
+      // If weight mode changed, clear old weights and use new data
       if (shouldClearWeights) {
-        console.log('=== DEBUG: Weight control changed, will use only new weight data ===');
+        console.log('=== DEBUG: Weight configuration changed, will use only new weight data ===');
       }
       
-      if (!data.isWeightVariantBased && data.singleWeightDimensions) {
+      if (true && data.singleWeightDimensions) {
         // Single weight - no combination
         productPayload.weights = [{
           weight: data.singleWeightDimensions.weight,
@@ -1580,17 +1513,14 @@ const transformVariantMedia = (stockVariants: any[], attrs: any[]) => {
           width: data.singleWeightDimensions.width,
           height: data.singleWeightDimensions.height,
         }];
-      } else if (data.isWeightVariantBased && data.variantWeightDimensions && data.variantWeightDimensions.length > 0) {
-        // Get weight-controlling attribute IDs
-        const weightControllingAttrIds = (data.attributes || [])
-          .filter(attr => attr.controlsWeightDimensions)
-          .map(attr => attr.id);
+      } else if (false && (data.variantWeightDimensions || []).length > 0) {
+        const variantAttributeIds = (data.attributes || []).map((attr) => attr.id);
 
         // Variant weights - with combinations
         const weightMap = new Map<string, any>();
-        data.variantWeightDimensions.forEach(vw => {
+        (data.variantWeightDimensions || []).forEach(vw => {
           const combination: Record<string, number> = {};
-          weightControllingAttrIds.forEach(attrId => {
+          variantAttributeIds.forEach(attrId => {
             const attrValueId = vw.attributeValues[attrId];
             if (attrValueId) {
               combination[attrId] = parseInt(attrValueId);
@@ -1620,72 +1550,21 @@ const transformVariantMedia = (stockVariants: any[], attrs: any[]) => {
       }
 
       // ========== STOCK ==========
-      if (!data.attributes || data.attributes.length === 0) {
-        // Single stock - no combination
-        const singleVariant = data.variants?.[0];
-        if (singleVariant) {
-          productPayload.stocks = [{
-            quantity: 0,
-            is_out_of_stock: singleVariant.is_out_of_stock ?? false,
-          }];
-        }
-      } else if (data.variants && data.variants.length > 0) {
-        // Variant stocks and explicit variants - with deduplication
-        const stocksMap = new Map<string, any>();
-        const variantsMap = new Map<string, any>();
+        productPayload.stocks = [{
+          quantity: data.quantity || 0,
+          is_out_of_stock: data.is_out_of_stock || false
+        }];
 
-        data.variants.forEach(v => {
-          if (v.id === 'single') return;
-
-          const combination: Record<string, number> = {};
-          Object.entries(v.attributeValues || {}).forEach(([attrId, attrValueId]) => {
-            if (attrValueId) {
-              combination[attrId] = typeof attrValueId === 'string' ? parseInt(attrValueId) : attrValueId;
-            }
-          });
-
-          const key = Object.entries(combination)
-            .sort(([a], [b]) => a.localeCompare(b))
-            .map(([k, val]) => `${k}:${val}`)
-            .join('|');
-
-          if (Object.keys(combination).length > 0) {
-            // Only add active variants to stocks
-            if (v.active !== false && !stocksMap.has(key)) {
-              stocksMap.set(key, {
-                combination,
-                quantity: 0,
-                is_out_of_stock: v.is_out_of_stock ?? false,
-              });
-            }
-
-            // Add all variants (active and inactive) to explicit variants array
-            if (!variantsMap.has(key)) {
-              variantsMap.set(key, {
-                combination,
-                is_active: v.active !== false
-              });
-            }
-          }
-        });
-
-        productPayload.stocks = Array.from(stocksMap.values());
-        productPayload.variants = Array.from(variantsMap.values());
-      }
-
-      // ========== MEDIA ==========
+        // ========== MEDIA ==========
       // New flow: upload new files first, then build complete media array
       const mediaArray: MediaInputDto[] = [];
       let hasSetProductPrimary = false;
 
-      // Get media-controlling attribute IDs
-      const mediaControllingAttrIds = (data.attributes || [])
-        .filter(attr => attr.controlsMedia)
-        .map(attr => attr.id);
+      const variantAttributeIds = (data.attributes || []).map((attr) => attr.id);
 
-      // If media control changed (attributes added/removed/changed), clear old media and use new data
+      // If media mode changed, clear old media and use new data
       if (shouldClearMedia) {
-        console.log('=== DEBUG: Media control changed, will use only new media data ===');
+        console.log('=== DEBUG: Media configuration changed, will use only new media data ===');
       }
 
       if (!data.isMediaVariantBased && data.singleMedia && data.singleMedia.length > 0) {
@@ -1698,7 +1577,7 @@ const transformVariantMedia = (stockVariants: any[], attrs: any[]) => {
               subtitle: `${completedUploads + 1}/${totalUploads} files`,
               progress: totalUploads > 0 ? completedUploads / totalUploads : 0,
             });
-            const uploadResult = await mediaService.uploadMedia(media.file);
+            const uploadResult = await mediaService.uploadMedia(media.file!);
             completedUploads += 1;
             updateLoadingToast(toastId, {
               title: "Uploading media",
@@ -1724,12 +1603,11 @@ const transformVariantMedia = (stockVariants: any[], attrs: any[]) => {
             }
           }
         }
-      } else if (data.isMediaVariantBased && data.variantMedia && data.variantMedia.length > 0) {
+      } else if (false && (data.variantMedia || []).length > 0) {
         // Variant media (with combinations)
-        for (const variantMediaData of data.variantMedia) {
-          // Build combination object with only media-controlling attributes
+        for (const variantMediaData of (data.variantMedia || [])) {
           const combination: Record<string, number> = {};
-          for (const attrId of mediaControllingAttrIds) {
+          for (const attrId of variantAttributeIds) {
             const valueId = variantMediaData.attributeValues[attrId];
             if (valueId && valueId !== '') {
               combination[attrId] = parseInt(valueId, 10);
@@ -1744,7 +1622,7 @@ const transformVariantMedia = (stockVariants: any[], attrs: any[]) => {
                 subtitle: `${completedUploads + 1}/${totalUploads} files`,
                 progress: totalUploads > 0 ? completedUploads / totalUploads : 0,
               });
-              const uploadResult = await mediaService.uploadMedia(media.file);
+              const uploadResult = await mediaService.uploadMedia(media.file!);
               completedUploads += 1;
               updateLoadingToast(toastId, {
                 title: "Uploading media",

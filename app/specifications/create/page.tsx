@@ -28,6 +28,7 @@ export default function CreateSpecificationPage() {
       unit_ar: "",
       parent_id: null,
       parent_value_id: null,
+      for_all_categories: false,
       category_ids: [],
       is_active: true,
       list_separately: false,
@@ -44,6 +45,7 @@ export default function CreateSpecificationPage() {
   const unitAr = watch("unit_ar");
   const parentId = watch("parent_id");
   const parentValueId = watch("parent_value_id");
+  const forAllCategories = watch("for_all_categories");
   const categoryIds = watch("category_ids") || [];
   const isActive = watch("is_active");
   const listSeparately = watch("list_separately");
@@ -91,7 +93,8 @@ export default function CreateSpecificationPage() {
         unit_ar: data.unit_ar || undefined,
         parent_id: data.parent_id,
         parent_value_id: data.parent_value_id,
-        category_ids: data.category_ids,
+        for_all_categories: data.for_all_categories,
+        category_ids: data.for_all_categories ? [] : data.category_ids,
         is_active: data.is_active,
         list_separately: data.list_separately,
         values: validValues.length > 0 ? validValues : undefined,
@@ -116,6 +119,7 @@ export default function CreateSpecificationPage() {
       parentId={parentId?.toString() || ""}
       parentValueId={parentValueId?.toString() || ""}
       categoryIds={categoryIds.map(String)}
+      forAllCategories={!!forAllCategories}
       isActive={!!isActive}
       onNameEnChange={handleNameEnChange}
       onNameArChange={handleNameArChange}
@@ -124,6 +128,7 @@ export default function CreateSpecificationPage() {
       onParentIdChange={(val) => setValue("parent_id", val ? Number(val) : null)}
       onParentValueIdChange={(val) => setValue("parent_value_id", val ? Number(val) : null)}
       onCategoryIdsChange={(ids) => setValue("category_ids", ids.map(Number))}
+      onForAllCategoriesChange={(value) => setValue("for_all_categories", value)}
       onIsActiveChange={(value) => setValue("is_active", value)}
       listSeparately={listSeparately}
       onListSeparatelyChange={(value) => setValue("list_separately", value)}

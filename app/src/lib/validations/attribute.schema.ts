@@ -82,6 +82,7 @@ export const attributeSchema = z.object({
       return Number(val);
     }),
   is_color: z.boolean(),
+  for_all_categories: z.boolean().optional().default(false),
   is_active: z.boolean(),
   attribute_type: z.enum(["spec_attribute", "variant_attribute"]).optional().nullable(),
   list_separately: z.boolean().optional(),

@@ -330,15 +330,15 @@ export const SpecificationsSection: React.FC<SpecificationsSectionProps> = ({
                                     <div className="flex gap-5">
                                         <div className="flex-1">
                                             <Select
-                                                label="Select Values"
-                                                value={selectedValues}
+                                                label="Select Value"
+                                                value={selectedValues[0] || ""}
                                                 onChange={(values) => {
                                                     const normalized = Array.isArray(values) ? values : [values];
                                                     handleUpdateValues(specification.id, normalized, options);
                                                 }}
                                                 options={options}
                                                 search={true}
-                                                multiple={true}
+                                                multiple={false}
                                             />
                                         </div>
                                     </div>

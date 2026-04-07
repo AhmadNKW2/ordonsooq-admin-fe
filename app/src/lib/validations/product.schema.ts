@@ -65,9 +65,6 @@ export const productAttributeSchema = z.object({
   name: z.string(),
   values: z.array(productAttributeValueSchema),
   order: z.number(),
-  controlsPricing: z.boolean(),
-  controlsWeightDimensions: z.boolean(),
-  controlsMedia: z.boolean(),
 });
 
 export const productSpecificationSelectionValueSchema = z.object({
@@ -183,6 +180,9 @@ export const createProductSchema = (config: ProductFormConfig) => {
     longDescriptionEn: z.string().min(1, "Required"),
     longDescriptionAr: z.string().min(1, "Required"),
     visible: z.boolean().default(true),
+    quantity: z.number().min(0, "Must be 0 or greater").optional().default(0),
+    low_stock_threshold: z.number().min(0, "Must be 0 or greater").optional().default(10),
+    is_out_of_stock: z.boolean().default(false),
 
     // Attributes - optional
     attributes: z.array(productAttributeSchema).optional(),
@@ -196,49 +196,23 @@ export const createProductSchema = (config: ProductFormConfig) => {
     variants: z.array(variantCombinationSchema).optional(),
   });
 
-  // Add pricing validation based on whether pricing is variant-based
-  if (config.hasPricingAttributes) {
-    // Variant pricing required
-    schema = schema.extend({
-      singlePricing: singlePricingSchema.optional(),
-      variantPricing: z.array(variantPricingSchema)
-        .min(config.expectedPricingCount, `Expected ${config.expectedPricingCount} pricing variants`),
-    });
-  } else {
-    // Single pricing required
-    schema = schema.extend({
-      singlePricing: singlePricingSchema,
-      variantPricing: z.array(variantPricingSchema).optional(),
-    });
-  }
+  // Variant pricing no longer used, force single pricing
+  schema = schema.extend({
+    singlePricing: singlePricingSchema,
+    variantPricing: z.array(variantPricingSchema).optional(),
+  });
 
-  // Add weight/dimensions validation
-  if (config.isWeightVariantBased) {
-    schema = schema.extend({
-      singleWeightDimensions: weightDimensionsSchema.partial().optional(),
-      variantWeightDimensions: z.array(variantWeightDimensionsSchema)
-        .min(config.expectedWeightCount, `Expected ${config.expectedWeightCount} weight variants`),
-    });
-  } else {
-    schema = schema.extend({
-      singleWeightDimensions: weightDimensionsSchema.optional(),
-      variantWeightDimensions: z.array(variantWeightDimensionsSchema).optional(),
-    });
-  }
+  // Weight/dimensions validation - variants removed
+  schema = schema.extend({
+    singleWeightDimensions: weightDimensionsSchema.optional(),
+    variantWeightDimensions: z.array(variantWeightDimensionsSchema).optional(),
+  });
 
-  // Add media validation
-  if (config.isMediaVariantBased) {
-    schema = schema.extend({
-      singleMedia: z.array(mediaItemSchema).optional(),
-      variantMedia: z.array(variantMediaSchema)
-        .min(config.expectedMediaCount, `Expected ${config.expectedMediaCount} media variants`),
-    });
-  } else {
-    schema = schema.extend({
-      singleMedia: z.array(mediaItemSchema).min(1, "Required"),
-      variantMedia: z.array(variantMediaSchema).optional(),
-    });
-  }
+  // Media validation - variants removed
+  schema = schema.extend({
+    singleMedia: z.array(mediaItemSchema).min(1, "Required"),
+    variantMedia: z.array(variantMediaSchema).optional(),
+  });
 
   return schema;
 };

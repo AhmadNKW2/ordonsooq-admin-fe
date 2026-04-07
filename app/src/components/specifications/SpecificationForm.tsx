@@ -24,6 +24,7 @@ import {
 } from "@dnd-kit/sortable";
 import { Card } from "../ui/card";
 import { Button } from "../ui/button";
+import { Checkbox } from "../ui/checkbox";
 import { IconButton } from "../ui/icon-button";
 import { Input } from "../ui/input";
 import { PageHeader } from "../common/PageHeader";
@@ -347,6 +348,7 @@ interface SpecificationFormProps {
   parentId?: string;
   parentValueId?: string;
   categoryIds: string[];
+  forAllCategories: boolean;
   isActive: boolean;
   listSeparately?: boolean | null;
   onNameEnChange: (value: string) => void;
@@ -356,6 +358,7 @@ interface SpecificationFormProps {
   onParentIdChange: (value: string) => void;
   onParentValueIdChange: (value: string) => void;
   onCategoryIdsChange: (value: string[]) => void;
+  onForAllCategoriesChange: (value: boolean) => void;
   onIsActiveChange: (value: boolean) => void;
   onListSeparatelyChange?: (value: boolean) => void;
   specifications?: Specification[];
@@ -378,6 +381,7 @@ export const SpecificationForm: React.FC<SpecificationFormProps> = ({
   parentId,
   parentValueId,
   categoryIds,
+  forAllCategories,
   isActive,
   listSeparately = false,
   onNameEnChange,
@@ -387,6 +391,7 @@ export const SpecificationForm: React.FC<SpecificationFormProps> = ({
   onParentIdChange,
   onParentValueIdChange,
   onCategoryIdsChange,
+  onForAllCategoriesChange,
   onIsActiveChange,
   onListSeparatelyChange,
   specifications = [],
@@ -618,9 +623,23 @@ export const SpecificationForm: React.FC<SpecificationFormProps> = ({
           <CategoryTreeSelect
             label="Categories"
             categories={categories}
-            selectedIds={categoryIds}
+            selectedIds={forAllCategories ? [] : categoryIds}
             onChange={onCategoryIdsChange}
+            disabled={forAllCategories}
           />
+        </div>
+
+        <div className="mt-4 flex flex-col gap-2">
+          <Checkbox
+            checked={forAllCategories}
+            onChange={onForAllCategoriesChange}
+            label="All Categories"
+          />
+          {forAllCategories && (
+            <p className="text-sm text-gray-500">
+              This specification will be available for every category. Specific category selection will be ignored when you save.
+            </p>
+          )}
         </div>
 
         <div className="flex items-center gap-8 mt-5">

@@ -29,6 +29,7 @@ export default function CreateAttributePage() {
       parent_id: null,
       parent_value_id: null,
       is_color: false,
+      for_all_categories: false,
       is_active: true,
       attribute_type: "spec_attribute",
       list_separately: false,
@@ -48,6 +49,7 @@ export default function CreateAttributePage() {
   const parentValueId = watch("parent_value_id");
   const categoryIds = watch("category_ids") || [];
   const isColor = watch("is_color");
+  const forAllCategories = watch("for_all_categories");
   const isActive = watch("is_active");
   const listSeparately = watch("list_separately");
 
@@ -95,10 +97,11 @@ export default function CreateAttributePage() {
         parent_id: data.parent_id,
         parent_value_id: data.parent_value_id,
         is_color: data.is_color,
+        for_all_categories: data.for_all_categories,
         is_active: data.is_active,
         attribute_type: data.attribute_type,
         list_separately: data.list_separately,
-        category_ids: data.category_ids,
+        category_ids: data.for_all_categories ? [] : data.category_ids,
         values: validValues.length > 0 ? validValues : undefined,
       });
       router.push("/attributes");
@@ -122,6 +125,7 @@ export default function CreateAttributePage() {
       parentValueId={parentValueId?.toString() || ""}
       categoryIds={categoryIds.map(String)}
       isColor={isColor}
+      forAllCategories={!!forAllCategories}
       isActive={isActive}
       onNameEnChange={handleNameEnChange}
       onNameArChange={handleNameArChange}
@@ -131,6 +135,7 @@ export default function CreateAttributePage() {
       onParentValueIdChange={(val) => setValue("parent_value_id", val)}
       onCategoryIdsChange={(ids) => setValue("category_ids", ids.map(Number))}
       onIsColorChange={(value) => setValue("is_color", value)}
+      onForAllCategoriesChange={(value) => setValue("for_all_categories", value)}
       onIsActiveChange={(value) => setValue("is_active", value)}
       listSeparately={listSeparately}
       onListSeparatelyChange={(value) => setValue("list_separately", value)}

@@ -43,9 +43,6 @@ import { queryKeys } from "../../../lib/query-keys";
 // Product Attributes
 export interface ProductAttributeDto {
   attribute_id: number;
-  controls_pricing: boolean;
-  controls_media: boolean;
-  controls_weight: boolean;
 }
 
 export interface AddProductAttributesDto {

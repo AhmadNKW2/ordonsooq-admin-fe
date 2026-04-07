@@ -44,7 +44,7 @@ import type { Specification as CatalogSpecification, SpecificationValue as Catal
 import type { LinkedProductSummary } from "../../services/products/types/product.types";
 import {
     generateCombinations,
-    getControllingAttributes,
+    
 } from "../../services/products/utils/variant-combinations";
 
 interface ProductFormProps {
@@ -239,17 +239,14 @@ export const ProductForm: React.FC<ProductFormProps> = ({
     const attributes = formData.attributes || [];
 
     // Pricing
-    const pricingAttributes = getControllingAttributes(attributes, 'controlsPricing');
-    const hasPricingAttributes = pricingAttributes.length > 0;
-    const pricingCombinations = hasPricingAttributes ? generateCombinations(pricingAttributes) : [];
+        const hasPricingAttributes = false;
+    const pricingCombinations: any[] = [];
 
     // Weight
-    const weightAttributes = getControllingAttributes(attributes, 'controlsWeightDimensions');
-    const weightCombinations = formData.isWeightVariantBased ? generateCombinations(weightAttributes) : [];
+        const weightCombinations = formData.isWeightVariantBased ? [] : [];
 
     // Media
-    const mediaAttributes = getControllingAttributes(attributes, 'controlsMedia');
-    const mediaCombinations = formData.isMediaVariantBased ? generateCombinations(mediaAttributes) : [];
+        const mediaCombinations = formData.isMediaVariantBased ? [] : [];
     
     // Check which variant pricing items have sale enabled
     // We must ensure the array passed here matches the length expected, 
@@ -364,6 +361,9 @@ export const ProductForm: React.FC<ProductFormProps> = ({
       brandId: formData.brandId || '',
       referenceLink: formData.referenceLink || '',
       linked_product_ids: formData.linked_product_ids || [],
+      quantity: formData.quantity || 0,
+      low_stock_threshold: formData.low_stock_threshold || 10,
+      is_out_of_stock: formData.is_out_of_stock || false,
       shortDescriptionEn: formData.shortDescriptionEn || '',
       shortDescriptionAr: formData.shortDescriptionAr || '',
       longDescriptionEn: formData.longDescriptionEn || '',
@@ -480,9 +480,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                // Inherit control flags from the root attribute
                // This ensures that child attributes (ie CPU Model) also control pricing if CPU controls pricing
                const controlFlags = {
-                   controlsPricing: attr.controlsPricing,
-                   controlsWeightDimensions: attr.controlsWeightDimensions,
-                   controlsMedia: attr.controlsMedia
+                   
                };
 
                if (addedAttributeIds.has(attrId)) {
@@ -696,11 +694,11 @@ export const ProductForm: React.FC<ProductFormProps> = ({
 
   // Check if any attribute controls pricing, media, or weight
   const hasAttributeControllingPricing =
-    formData.attributes?.some((attr) => attr.controlsPricing) || false;
+    false;
   const hasAttributeControllingMedia =
-    formData.attributes?.some((attr) => attr.controlsMedia) || false;
+    false;
   const hasAttributeControllingWeight =
-    formData.attributes?.some((attr) => attr.controlsWeightDimensions) || false;
+    false;
 
   const calculateSalePercentage = (price: number, salePrice?: number) => {
     if (!salePrice || salePrice >= price) return 0;
@@ -781,8 +779,8 @@ export const ProductForm: React.FC<ProductFormProps> = ({
         categoriesSelected={hasSelectedCategories}
         isLoadingAvailableAttributes={filteredAttributesLoading}
         onChange={(attributes: Attribute[], resetType?: 'pricing' | 'weight' | 'media' | 'stock' | 'all') => {
-          const hasWeight = attributes.some(a => a.controlsWeightDimensions);
-          const hasMedia = attributes.some(a => a.controlsMedia);
+          const hasWeight = false;
+          const hasMedia = false;
           const hasAttributes = attributes.length > 0;
 
           setFormData(prev => {
@@ -803,16 +801,14 @@ export const ProductForm: React.FC<ProductFormProps> = ({
               if (!na) {
                 // Attribute removed
                 if (pa.values.length > 1) {
-                  if (pa.controlsMedia) shouldClearMedia = true;
-                  if (pa.controlsPricing) shouldClearPricing = true;
-                  if (pa.controlsWeightDimensions) shouldClearWeight = true;
+
+
                 }
               } else {
                 // Attribute control toggled off
                 if (pa.values.length > 1) {
-                  if (pa.controlsMedia && !na.controlsMedia) shouldClearMedia = true;
-                  if (pa.controlsPricing && !na.controlsPricing) shouldClearPricing = true;
-                  if (pa.controlsWeightDimensions && !na.controlsWeightDimensions) shouldClearWeight = true;
+
+
                 }
               }
             });
@@ -862,11 +858,12 @@ export const ProductForm: React.FC<ProductFormProps> = ({
 
       {/* Stock Management */}
       <StockSection
-        attributes={formData.attributes || []}
-        variants={formData.variants || []}
-        onChange={handleStockChange}
-        errors={errors}
-      />
+          quantity={formData.quantity || 0}
+          isOutOfStock={formData.is_out_of_stock || false}
+          onChangeQuantity={(q) => handleFieldChange("quantity", q)}
+          onChangeIsOutOfStock={(isOut) => handleFieldChange("is_out_of_stock", isOut)}
+          errors={errors}
+        />
 
       {/* Pricing Configuration */}
       <PricingSection
@@ -886,7 +883,8 @@ export const ProductForm: React.FC<ProductFormProps> = ({
 
       {/* Weight & Dimensions */}
       <WeightDimensionsSection
-        attributes={formData.attributes || []}
+          hasVariantAttributes={(formData.attributes?.length || 0) > 0}
+                            attributes={formData.attributes || []}
         variants={formData.variants || []}
         isWeightVariantBased={formData.isWeightVariantBased || false}
         singleWeightDimensions={formData.singleWeightDimensions}
@@ -900,13 +898,13 @@ export const ProductForm: React.FC<ProductFormProps> = ({
         onChangeVariant={(data: VariantWeightDimensions[]) =>
           handleFieldChange("variantWeightDimensions", data)
         }
-        hasAttributeControllingWeight={hasAttributeControllingWeight}
         errors={errors}
       />
 
       {/* Media Management */}
       <MediaSection
-        attributes={formData.attributes || []}
+          hasVariantAttributes={(formData.attributes?.length || 0) > 0}
+                            attributes={formData.attributes || []}
         variants={formData.variants || []}
         isMediaVariantBased={formData.isMediaVariantBased || false}
         singleMedia={formData.singleMedia || []}
@@ -920,7 +918,6 @@ export const ProductForm: React.FC<ProductFormProps> = ({
         onChangeVariant={(media: VariantMedia[]) =>
           handleFieldChange("variantMedia", media)
         }
-        hasAttributeControllingMedia={hasAttributeControllingMedia}
         errors={errors}
       />
     </div>

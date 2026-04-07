@@ -8,10 +8,11 @@ import {
 import { Card } from "@/components/ui";
 import {
     generateCombinations,
-    getControllingAttributes,
+    getVariantAttributes,
     getVariantData,
 } from "../../../services/products/utils/variant-combinations";
 import { ImageUpload, ImageUploadItem } from "../../ui/image-upload";
+import { Toggle } from "../../ui/toggle";
 import {
     DndContext,
     closestCenter,
@@ -32,7 +33,7 @@ interface MediaSectionProps {
     onToggleVariantBased: (value: boolean) => void;
     onChangeSingle: (media: MediaItem[]) => void;
     onChangeVariant: (media: VariantMedia[]) => void;
-    hasAttributeControllingMedia: boolean;
+    hasVariantAttributes: boolean;
     errors?: Record<string, string | boolean>;
 }
 
@@ -45,7 +46,7 @@ export const MediaSection: React.FC<MediaSectionProps> = ({
     onToggleVariantBased,
     onChangeSingle,
     onChangeVariant,
-    hasAttributeControllingMedia,
+    hasVariantAttributes,
     errors = {},
 }) => {
     const sensors = useSensors(
@@ -55,8 +56,7 @@ export const MediaSection: React.FC<MediaSectionProps> = ({
         })
     );
 
-    // Filter attributes that control media AND have values
-    const mediaAttributes = getControllingAttributes(attributes, 'controlsMedia');
+    const mediaAttributes = getVariantAttributes(attributes);
 
     // Generate all combinations for media attributes
     const allCombinations = generateCombinations(mediaAttributes);
@@ -74,7 +74,7 @@ export const MediaSection: React.FC<MediaSectionProps> = ({
 
     // Reconcile variantMedia subsets when combinations change to prevent losing media
     useEffect(() => {
-        if (!hasAttributeControllingMedia) return;
+        if (!hasVariantAttributes || !isMediaVariantBased) return;
         
         let shouldUpdate = false;
         const newVariantMedia: VariantMedia[] = [];
@@ -105,7 +105,7 @@ export const MediaSection: React.FC<MediaSectionProps> = ({
         if (shouldUpdate) {
             onChangeVariant(newVariantMedia);
         }
-    }, [combinations, variantMedia, onChangeVariant, hasAttributeControllingMedia]);
+    }, [combinations, variantMedia, onChangeVariant, hasVariantAttributes, isMediaVariantBased]);
 
     const toImageUploadItems = (media: MediaItem[]): ImageUploadItem[] => {
         return media.map((m) => ({
@@ -297,9 +297,9 @@ export const MediaSection: React.FC<MediaSectionProps> = ({
         }
     };
 
-    if (!isMediaVariantBased && !hasAttributeControllingMedia) {
-        return (
-            <Card className={errors['singleMedia'] ? "border-danger" : ""}>
+    // Single mode (forced)
+    return (
+        <Card className={errors['singleMedia'] ? "border-danger" : ""}>
                 <DndContext sensors={sensors} collisionDetection={closestCenter} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
                     <div className="flex flex-col gap-2" id="singleMedia">
                         <div className="flex items-center justify-between">
@@ -307,11 +307,6 @@ export const MediaSection: React.FC<MediaSectionProps> = ({
                                 Media Management
                             </h2>
                         </div>
-                        {hasAttributeControllingMedia && mediaAttributes.length === 0 && (
-                            <p className="text-sm">
-                                No attributes are controlling media. These images apply to all variants.
-                            </p>
-                        )}
                     </div>
 
                     <ImageUpload
@@ -327,67 +322,5 @@ export const MediaSection: React.FC<MediaSectionProps> = ({
                 </DndContext>
             </Card>
         );
-    }
 
-    if (combinations.length === 0) {
-        return (
-            <Card>
-                <div className="flex items-center justify-between">
-                    <h2 className="text-xl font-semibold">
-                        Media Management
-                    </h2>
-                </div>
-                <div className="border border-b1 rounded-r1 p-4">
-                    <p>
-                        Please select attribute values to configure media.
-                    </p>
-                </div>
-            </Card>
-        );
-    }
-
-    return (
-        <Card>
-            <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold">
-                    Media Management - Variant Based
-                </h2>
-            </div>
-
-            <p className="text-sm">
-                Upload media for each variant based on{" "}
-                <strong>{mediaAttributes.map((a) => a.name).join(", ")}</strong>
-            </p>
-
-            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragOver={handleDragOver} onDragEnd={handleDragEnd}>
-                {combinations.map((combo) => {
-                    const media = getMedia(combo.key, combo.attributeValues);
-                    const variantIndex = variantMedia.findIndex(vm => vm.key === combo.key);
-                    const errorKey = variantIndex >= 0 ? `variantMedia.${variantIndex}.media` : undefined;
-
-                    return (
-                        <Card
-                            key={combo.key}
-                            variant="nested"
-                        >
-                            <h4 className="font-medium">{combo.label}</h4>
-
-                            <ImageUpload
-                                id={errorKey}
-                                value={toImageUploadItems(media)}
-                                onChange={(items) => handleVariantMediaChange(combo.key, items)}
-                                isMulti={true}
-                                hasPrimary={true}
-                                hasGroupPrimary={true}
-                                autoSetPrimaryOnFirstAdd={false}
-                                error={errorKey ? (errors[errorKey] as string) : undefined}
-                                disableInternalDnd={true}
-                                sortableContextId={combo.key}
-                            />
-                        </Card>
-                    );
-                })}
-            </DndContext>
-        </Card>
-    );
 };

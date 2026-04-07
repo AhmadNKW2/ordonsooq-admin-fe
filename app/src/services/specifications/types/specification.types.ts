@@ -25,6 +25,7 @@ export interface Specification {
   id: number;
   name_en: string;
   name_ar: string;
+  for_all_categories?: boolean;
   unit_en?: string | null;
   unit_ar?: string | null;
   parent_id?: number | null;
@@ -63,6 +64,7 @@ export interface CreateSpecificationDto {
   unit_ar?: string;
   parent_id?: number | null;
   parent_value_id?: number | null;
+  for_all_categories?: boolean;
   list_separately?: boolean;
   sort_order?: number;
   is_active?: boolean;
@@ -86,6 +88,7 @@ export interface UpdateSpecificationDto {
   unit_ar?: string;
   parent_id?: number | null;
   parent_value_id?: number | null;
+  for_all_categories?: boolean;
   list_separately?: boolean;
   sort_order?: number;
   is_active?: boolean;

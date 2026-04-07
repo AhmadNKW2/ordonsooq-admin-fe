@@ -12,6 +12,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Tag, Palette, GripVertical, Layers, ListFilter } from "lucide-react";
 import { Card } from "../ui/card";
 import { Button } from "../ui/button";
+import { Checkbox } from "../ui/checkbox";
 import { Input } from "../ui/input";
 import { Select } from "../ui/select";
 import { Toggle } from "../ui/toggle";
@@ -456,6 +457,7 @@ interface AttributeFormProps {
   parentId?: string;
   parentValueId?: string;
   isColor: boolean;
+  forAllCategories: boolean;
   isActive: boolean;
   onNameEnChange: (value: string) => void;
   onNameArChange: (value: string) => void;
@@ -466,6 +468,7 @@ interface AttributeFormProps {
   categoryIds: string[];
   onCategoryIdsChange: (value: string[]) => void;
   onIsColorChange: (value: boolean) => void;
+  onForAllCategoriesChange: (value: boolean) => void;
   onIsActiveChange: (value: boolean) => void;
   listSeparately?: boolean | null;
   onListSeparatelyChange?: (value: boolean) => void;
@@ -493,6 +496,7 @@ export const AttributeForm: React.FC<AttributeFormProps> = ({
   parentId,
   parentValueId,
   isColor,
+  forAllCategories,
   isActive,
   onNameEnChange,
   onNameArChange,
@@ -503,6 +507,7 @@ export const AttributeForm: React.FC<AttributeFormProps> = ({
   categoryIds,
   onCategoryIdsChange,
   onIsColorChange,
+  onForAllCategoriesChange,
   onIsActiveChange,
   listSeparately = false,
   onListSeparatelyChange,
@@ -740,9 +745,23 @@ export const AttributeForm: React.FC<AttributeFormProps> = ({
           <CategoryTreeSelect
             label="Categories"
             categories={categories}
-            selectedIds={categoryIds}
+            selectedIds={forAllCategories ? [] : categoryIds}
             onChange={onCategoryIdsChange}
+            disabled={forAllCategories}
           />
+        </div>
+
+        <div className="mt-4 flex flex-col gap-2">
+          <Checkbox
+            checked={forAllCategories}
+            onChange={onForAllCategoriesChange}
+            label="All Categories"
+          />
+          {forAllCategories && (
+            <p className="text-sm text-gray-500">
+              This attribute will be available for every category. Specific category selection will be ignored when you save.
+            </p>
+          )}
         </div>
 
         <div className="flex items-center gap-8 mt-5">

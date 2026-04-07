@@ -59,6 +59,7 @@ export default function AttributeEditPage() {
       parent_id: null,
       parent_value_id: null,
       is_color: false,
+      for_all_categories: false,
       is_active: true,
       attribute_type: "spec_attribute",
       list_separately: false,
@@ -78,6 +79,7 @@ export default function AttributeEditPage() {
   const parentValueId = watch("parent_value_id");
   const categoryIds = watch("category_ids") || [];
   const isColor = watch("is_color");
+  const forAllCategories = watch("for_all_categories");
   const isActive = watch("is_active");
   const listSeparately = watch("list_separately");
 
@@ -111,6 +113,7 @@ export default function AttributeEditPage() {
         parent_id: attribute.parent_id,
         parent_value_id: attribute.parent_value_id,
         is_color: attribute.is_color ?? false,
+        for_all_categories: attribute.for_all_categories ?? false,
         is_active: attribute.is_active,
         attribute_type: attribute.attribute_type ?? "spec_attribute",
         list_separately: attribute.list_separately ?? false,
@@ -166,10 +169,11 @@ export default function AttributeEditPage() {
           parent_id: data.parent_id,
           parent_value_id: data.parent_value_id,
           is_color: data.is_color,
+          for_all_categories: data.for_all_categories,
           is_active: data.is_active,
           attribute_type: data.attribute_type,
           list_separately: data.list_separately,
-          category_ids: data.category_ids,
+          category_ids: data.for_all_categories ? [] : data.category_ids,
           values: valuesPayload,
         },
       });
@@ -254,6 +258,7 @@ export default function AttributeEditPage() {
         parentValueId={parentValueId?.toString() || ""}
         categoryIds={categoryIds.map(String)}
         isColor={isColor}
+        forAllCategories={!!forAllCategories}
         isActive={isActive}
         onNameEnChange={handleNameEnChange}
         onNameArChange={handleNameArChange}
@@ -263,6 +268,7 @@ export default function AttributeEditPage() {
         onParentValueIdChange={(val) => setValue("parent_value_id", val ? Number(val) : null)}
         onCategoryIdsChange={(ids) => setValue("category_ids", ids.map(Number))}
         onIsColorChange={(value) => setValue("is_color", value)}
+        onForAllCategoriesChange={(value) => setValue("for_all_categories", value)}
         onIsActiveChange={(value) => setValue("is_active", value)}
         listSeparately={listSeparately}
         onListSeparatelyChange={(value) => setValue("list_separately", value)}

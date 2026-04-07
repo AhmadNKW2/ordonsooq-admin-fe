@@ -1,7 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { Button } from "../../ui/button";
 import { Select } from "../../ui/select";
-import { Checkbox } from "../../ui/checkbox";
 
 const RECENT_ATTRIBUTE_KEY = 'recent_attribute_ids';
 
@@ -76,9 +74,14 @@ export const AttributesSection: React.FC<AttributesSectionProps> = ({
     };
 
     const handleAttributesSelectChange = (values: string | string[]) => {
-        const selectedIds = Array.isArray(values) ? values : [values];
-
-        const removed = attributes.some(attr => !selectedIds.includes(attr.id));
+        const selectedIds = Array.isArray(values)
+            ? values.filter(Boolean)
+            : values
+                ? [values]
+                : [];
+        const previousSelectedId = attributes[0]?.id;
+        const nextSelectedId = selectedIds[0];
+        const selectionChanged = previousSelectedId !== nextSelectedId;
 
         const newAttributes: Attribute[] = [];
         
@@ -95,9 +98,6 @@ export const AttributesSection: React.FC<AttributesSectionProps> = ({
                         name: selectedAttr.name,
                         values: [],
                         order: newAttributes.length,
-                        controlsPricing: false,
-                        controlsWeightDimensions: false,
-                        controlsMedia: false,
                     });
                 }
             }
@@ -108,7 +108,7 @@ export const AttributesSection: React.FC<AttributesSectionProps> = ({
         });
 
         
-        onChange(newAttributes, removed ? 'all' : undefined);
+        onChange(newAttributes, selectionChanged ? 'all' : undefined);
     };
 
     const handleRemoveAttribute = (attributeId: string) => {
@@ -173,44 +173,6 @@ export const AttributesSection: React.FC<AttributesSectionProps> = ({
         onChange(updated);
     };
 
-    const handleToggleControl = (
-        attributeId: string,
-        controlType: "pricing" | "weightDimensions" | "media"
-    ) => {
-        // Find the attribute being toggled
-        const attr = attributes.find(a => a.id === attributeId);
-        if (!attr) return;
-
-        const updated = attributes.map((a) => {
-            if (a.id === attributeId) {
-                return {
-                    ...a,
-                    controlsPricing:
-                        controlType === "pricing"
-                            ? !a.controlsPricing
-                            : a.controlsPricing,
-                    controlsWeightDimensions:
-                        controlType === "weightDimensions"
-                            ? !a.controlsWeightDimensions
-                            : a.controlsWeightDimensions,
-                    controlsMedia:
-                        controlType === "media" ? !a.controlsMedia : a.controlsMedia,
-                };
-            }
-            return a;
-        });
-
-        // Always pass reset type when toggling the control (both ON and OFF)
-        // because the variant combinations change
-        const resetType = controlType === "pricing" 
-            ? "pricing" 
-            : controlType === "weightDimensions" 
-                ? "weight" 
-                : "media";
-        
-        onChange(updated, resetType);
-    };
-
     const totalCombinations = calculateCombinations();
 
     return (
@@ -235,7 +197,7 @@ export const AttributesSection: React.FC<AttributesSectionProps> = ({
             <div className="flex gap-5">
                 <div className="flex-1">
                     <Select
-                        label="Select Attributes"
+                        label="Select Attribute"
                         value={attributes.map(a => a.id)}
                         onChange={handleAttributesSelectChange}
                         options={(() => {
@@ -301,7 +263,6 @@ export const AttributesSection: React.FC<AttributesSectionProps> = ({
                                 onRemoveValue={handleRemoveValue}
                                 onUpdateValues={handleUpdateValues}
                                 onRemove={handleRemoveAttribute}
-                                onToggleControl={handleToggleControl}
                                 availableAttr={availableAttr}
                                 allAttributes={availableAttributes} // Pass all attributes for deep linking
                             />
@@ -322,10 +283,6 @@ interface AttributeCardProps {
     onRemoveValue: (attributeId: string, valueId: string) => void;
     onUpdateValues: (attributeId: string, values: AttributeValue[]) => void;
     onRemove: (attributeId: string) => void;
-    onToggleControl: (
-        attributeId: string,
-        controlType: "pricing" | "weightDimensions" | "media"
-    ) => void;
     availableAttr?: { 
         id: string; 
         parentId?: string;
@@ -351,7 +308,6 @@ const AttributeCard: React.FC<AttributeCardProps> = ({
     onRemoveValue,
     onUpdateValues,
     onRemove,
-    onToggleControl,
     availableAttr,
     allAttributes = [],
     id,
@@ -506,37 +462,15 @@ const AttributeCard: React.FC<AttributeCardProps> = ({
                 {options.length > 0 && (
                     <div className="flex-1">
                         <Select
-                            label="Select Values"
-                            value={selectedValues}
+                            label="Select Value"
+                            value={selectedValues[0] || ""}
                             onChange={handleValuesChange}
                             options={options}
                             search={true}
-                            multiple={true}
+                            multiple={false}
                         />
                     </div>
                 )}
-            </div>
-            <div className="flex flex-col gap-2">
-                <p className="text-sm font-medium ">
-                    This attribute controls:
-                </p>
-                <div className="flex flex-wrap gap-5">
-                    <Checkbox
-                        checked={attribute.controlsPricing}
-                        onChange={() => onToggleControl(attribute.id, "pricing")}
-                        label="Pricing"
-                    />
-                    <Checkbox
-                        checked={attribute.controlsWeightDimensions}
-                        onChange={() => onToggleControl(attribute.id, "weightDimensions")}
-                        label="Weight/Dimensions"
-                    />
-                    <Checkbox
-                        checked={attribute.controlsMedia}
-                        onChange={() => onToggleControl(attribute.id, "media")}
-                        label="Media"
-                    />
-                </div>
             </div>
         </Card>
     );

@@ -137,15 +137,11 @@ export default function CreateProductPage() {
 
       // Upload variant media (with combinations)
       if (mediaFiles.variantMedia && mediaFiles.variantMedia.length > 0) {
-        // Get media-controlling attribute IDs
-        const mediaControllingAttrIds = (data.attributes || [])
-          .filter(attr => attr.controlsMedia)
-          .map(attr => attr.id);
+        const variantAttributeIds = (data.attributes || []).map((attr) => attr.id);
 
         for (const variantMediaData of mediaFiles.variantMedia) {
-          // Build combination object with only media-controlling attributes
           const combination: Record<string, number> = {};
-          for (const attrId of mediaControllingAttrIds) {
+          for (const attrId of variantAttributeIds) {
             const valueId = variantMediaData.attributeValues[attrId];
             if (valueId && valueId !== '') {
               combination[attrId] = parseInt(valueId, 10);

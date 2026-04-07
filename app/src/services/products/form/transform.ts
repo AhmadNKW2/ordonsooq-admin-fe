@@ -110,9 +110,6 @@ export function transformFormDataToDto(
   if (data.attributes && data.attributes.length > 0) {
     dto.attributes = data.attributes.map((attr) => ({
       attribute_id: parseInt(attr.id),
-      controls_pricing: attr.controlsPricing,
-      controls_media: attr.controlsMedia,
-      controls_weight: attr.controlsWeightDimensions,
     }));
   }
 
@@ -135,7 +132,7 @@ export function transformFormDataToDto(
   }
 
   // ========== WEIGHT & DIMENSIONS ==========
-  if (!data.isWeightVariantBased && data.singleWeightDimensions) {
+  if (data.singleWeightDimensions) {
     const weight = data.singleWeightDimensions;
     if (weight.weight) {
       dto.weights = [{
@@ -145,50 +142,15 @@ export function transformFormDataToDto(
         height: weight.height,
       }];
     }
-  } else if (data.isWeightVariantBased && data.variantWeightDimensions) {
+  } else if (false && data.variantWeightDimensions) {
     dto.weights = buildWeights(data);
   }
 
   // ========== STOCK ==========
-  if (!data.attributes || data.attributes.length === 0) {
-    // Single stock - no combination
-    if (data.variants && data.variants.length > 0) {
-      const singleVariant = data.variants.find(v => v.id === 'single');
-      if (singleVariant) {
-        dto.stocks = [{
-          quantity: 0,
-          is_out_of_stock: singleVariant.is_out_of_stock ?? false,
-        }];
-      }
-    }
-  } else if (data.variants && data.variants.length > 0) {
-    // Variant stocks - with combinations
-    dto.stocks = buildStocks(data);
-    
-    // Explicit standalone variants array to support active/inactive states natively
-    const variantsMap = new Map<string, any>();
-    data.variants.filter((v: any) => v.id !== 'single').forEach((variant: any) => {
-      const combination: Record<string, number> = {};
-      for (const [attrId, valueId] of Object.entries(variant.attributeValues)) {
-        if (valueId && valueId !== '') {
-          combination[attrId] = parseInt(valueId as string, 10);
-        }
-      }
-      
-      const key = Object.entries(combination)
-        .sort(([a], [b]) => a.localeCompare(b))
-        .map(([k, v]) => `${k}:${v}`)
-        .join('|');
-        
-      if (!variantsMap.has(key) && Object.keys(combination).length > 0) {
-        variantsMap.set(key, {
-          combination,
-          is_active: variant.active !== false
-        });
-      }
-    });
-    dto.variants = Array.from(variantsMap.values());
-  }
+  dto.stocks = [{
+    quantity: data.quantity || 0,
+    is_out_of_stock: data.is_out_of_stock || false
+  }];
 
   // Extract media data for separate upload
   const mediaFiles: MediaUploadData = {};
@@ -243,41 +205,10 @@ interface StockItem {
 
 /**
  * Build prices array from form data
- * Groups by pricing-controlling attributes only
+ * Groups by the selected product attributes
  */
 function buildPrices(data: ProductFormData): PriceItem[] {
-  // Get pricing-controlling attribute IDs
-  const pricingControllingAttrIds = (data.attributes || [])
-    .filter(attr => attr.controlsPricing)
-    .map(attr => attr.id);
-
-  // If there are attributes but none controls pricing, UI uses single pricing
-  // that should apply to all variants (no combination).
-  if (pricingControllingAttrIds.length === 0) {
-    if (data.singlePricing) {
-      const entry: PriceItem = {
-        cost: data.singlePricing.cost,
-        price: data.singlePricing.price,
-        sale_price: data.singlePricing.isSale === true ? data.singlePricing.salePrice : undefined,
-      };
-      if (entry.cost === undefined) delete entry.cost;
-      return [entry];
-    }
-
-    // Fallback: if variant pricing exists, use the first entry as the single price.
-    if (data.variantPricing && data.variantPricing.length > 0) {
-      const first = data.variantPricing[0];
-      const entry: PriceItem = {
-        cost: first.cost,
-        price: first.price,
-        sale_price: first.isSale === true ? first.salePrice : undefined,
-      };
-      if (entry.cost === undefined) delete entry.cost;
-      return [entry];
-    }
-
-    return [];
-  }
+  const variantAttributeIds = (data.attributes || []).map((attr) => attr.id);
 
   if (!data.variantPricing || data.variantPricing.length === 0) {
     return [];
@@ -287,11 +218,9 @@ function buildPrices(data: ProductFormData): PriceItem[] {
   const priceMap = new Map<string, PriceItem>();
 
   for (const pricing of data.variantPricing) {
-    // Build combination object with only pricing-controlling attributes
-    // Format: { "attr_id": value_id }
     const combination: Record<string, number> = {};
     
-    for (const attrId of pricingControllingAttrIds) {
+    for (const attrId of variantAttributeIds) {
       const valueId = pricing.attributeValues[attrId];
       if (valueId && valueId !== '') {
         combination[attrId] = parseInt(valueId, 10);
@@ -323,26 +252,21 @@ function buildPrices(data: ProductFormData): PriceItem[] {
 
 /**
  * Build weights array from form data
- * Groups by weight-controlling attributes only
+ * Groups by the selected product attributes
  */
 function buildWeights(data: ProductFormData): WeightItem[] {
   if (!data.variantWeightDimensions || data.variantWeightDimensions.length === 0) {
     return [];
   }
 
-  // Get weight-controlling attribute IDs
-  const weightControllingAttrIds = (data.attributes || [])
-    .filter(attr => attr.controlsWeightDimensions)
-    .map(attr => attr.id);
+  const variantAttributeIds = (data.attributes || []).map((attr) => attr.id);
 
   const weightMap = new Map<string, WeightItem>();
 
   for (const weight of data.variantWeightDimensions) {
-    // Build combination object with only weight-controlling attributes
-    // Format: { "attr_id": value_id }
     const combination: Record<string, number> = {};
 
-    for (const attrId of weightControllingAttrIds) {
+    for (const attrId of variantAttributeIds) {
       const valueId = weight.attributeValues[attrId];
       if (valueId && valueId !== '') {
         combination[attrId] = parseInt(valueId, 10);
