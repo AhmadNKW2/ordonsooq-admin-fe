@@ -362,7 +362,6 @@ export const BasicInformationSection: React.FC<BasicInformationSectionProps> = (
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                         onChange("referenceLink", e.target.value)
                     }
-                    placeholder="https://example.com/reference"
                     error={errors.referenceLink}
                 />
 
