@@ -17,15 +17,9 @@ import { Button } from "../ui/button";
 import { PageHeader } from "../common/PageHeader";
 import {
   ProductFormData,
+  productFormSchema,
   Attribute,
-  ProductSpecificationSelection,
-  SinglePricing,
-  VariantPricing,
-  WeightDimensions,
-  VariantWeightDimensions,
-  MediaItem,
-  VariantMedia,
-  VariantCombination,
+  ProductSpecificationSelection
 } from "../../services/products/types/product-form.types";
 import { BasicInformationSection } from "./sections/BasicInformationSection";
 import { AttributesSection } from "./sections/AttributesSection";
@@ -128,28 +122,30 @@ export const ProductForm: React.FC<ProductFormProps> = ({
   const [formData, setFormData] = useState<Partial<ProductFormData>>({
     nameEn: "",
     nameAr: "",
+    sku: "",
+    record: "",
     status: "active",
     categoryIds: [],
     vendorId: "",
     brandId: "",
     referenceLink: "",
     linked_product_ids: [],
+    quantity: 0,
+    low_stock_threshold: 10,
+    is_out_of_stock: false,
     shortDescriptionEn: "",
     shortDescriptionAr: "",
     longDescriptionEn: "",
     longDescriptionAr: "",
     visible: true,
+    metaTitleEn: "",
+    metaTitleAr: "",
+    metaDescriptionEn: "",
+    metaDescriptionAr: "",
+    tags: [],
     attributes: [],
     specifications: [],
-    singlePricing: undefined,
-    variantPricing: [],
-    isWeightVariantBased: false,
-    singleWeightDimensions: undefined,
-    variantWeightDimensions: [],
-    isMediaVariantBased: false,
-    singleMedia: [],
-    variantMedia: [],
-    variants: [],
+    media: [],
     ...initialData,
     // Overlay any previously saved draft (create mode only; ignored when
     // restoredDraft is null or when initialData already provides values).
@@ -199,79 +195,40 @@ export const ProductForm: React.FC<ProductFormProps> = ({
   const initialDataJson = JSON.stringify(initialData);
   React.useEffect(() => {
     if (isEditMode && initialData && Object.keys(initialData).length > 0) {
-      console.log('=== DEBUG: Updating formData from initialData ===');
-      console.log('initialData:', initialData);
-      console.log('initialData.isMediaVariantBased:', initialData.isMediaVariantBased);
-      console.log('initialData.variantMedia:', initialData.variantMedia);
-      console.log('initialData.singleMedia:', initialData.singleMedia);
       setFormData({
         nameEn: "",
         nameAr: "",
+        sku: "",
+        record: "",
         status: "active",
         categoryIds: [],
         vendorId: "",
         brandId: "",
         referenceLink: "",
         linked_product_ids: [],
+        quantity: 0,
+        low_stock_threshold: 10,
+        is_out_of_stock: false,
         shortDescriptionEn: "",
         shortDescriptionAr: "",
         longDescriptionEn: "",
         longDescriptionAr: "",
         visible: true,
+        metaTitleEn: "",
+        metaTitleAr: "",
+        metaDescriptionEn: "",
+        metaDescriptionAr: "",
+        tags: [],
         attributes: [],
         specifications: [],
-        singlePricing: undefined,
-        variantPricing: [],
-        isWeightVariantBased: false,
-        singleWeightDimensions: undefined,
-        variantWeightDimensions: [],
-        isMediaVariantBased: false,
-        singleMedia: [],
-        variantMedia: [],
-        variants: [],
+        media: [],
         ...initialData,
       });
     }
   }, [isEditMode, initialDataJson]);
 
   // Build dynamic Zod schema based on form state
-  const validationConfig = useMemo<ProductFormConfig>(() => {
-    const attributes = formData.attributes || [];
-
-    // Pricing
-        const hasPricingAttributes = false;
-    const pricingCombinations: any[] = [];
-
-    // Weight
-        const weightCombinations = formData.isWeightVariantBased ? [] : [];
-
-    // Media
-        const mediaCombinations = formData.isMediaVariantBased ? [] : [];
-    
-    // Check which variant pricing items have sale enabled
-    // We must ensure the array passed here matches the length expected, 
-    // or at least mapped from existing data to check `isSale` status
-    const variantPricingItems: { isSale: boolean }[] = formData.variantPricing?.map(vp => ({ isSale: vp.isSale === true })) || [];
-
-    return {
-      hasPricingAttributes,
-      singlePricingIsSale: formData.singlePricing?.isSale === true,
-      variantPricingItems,
-      isWeightVariantBased: formData.isWeightVariantBased || false,
-      isMediaVariantBased: formData.isMediaVariantBased || false,
-      expectedPricingCount: pricingCombinations.length,
-      expectedWeightCount: weightCombinations.length,
-      expectedMediaCount: mediaCombinations.length,
-    };
-  }, [
-    formData.attributes,
-    formData.singlePricing?.isSale,
-    formData.variantPricing,
-    formData.isWeightVariantBased,
-    formData.isMediaVariantBased,
-  ]);
-
-  const zodSchema = useMemo(() => createProductSchema(validationConfig), [validationConfig]);
+  const zodSchema = React.useMemo(() => productFormSchema, []);
   
   const { errors, validateForm, validateField, clearFieldError, isSubmitted } = useZodValidation<ProductFormData>({
     schema: zodSchema,
@@ -279,82 +236,13 @@ export const ProductForm: React.FC<ProductFormProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async () => {
-    console.log('=== DEBUG: handleSubmit called ===');
-    
-    // Filter variant data to only include items that match at least one existing stock variant
-    // This ensures deleted variants are not sent to the payload
-    const currentVariants = formData.variants || [];
-    
-    const filterVariantData = <T extends { attributeValues: Record<string, string> }>(items: T[] | undefined): T[] => {
-        if (!items) return [];
-        // If we have attributes but no variants, it means all variants were deleted or not generated
-        // In this case, we shouldn't send any variant data
-        if (currentVariants.length === 0 && (formData.attributes?.length || 0) > 0) return [];
-        
-        return items.filter(item => {
-             return currentVariants.some(variant => {
-                if (variant.active === false) return false;
-                return Object.entries(item.attributeValues).every(([key, value]) => {
-                    return variant.attributeValues[key] === value;
-                });
-            });
-        });
-    };
-
-    const filteredVariantPricing = filterVariantData(formData.variantPricing);
-    const filteredVariantWeight = filterVariantData(formData.variantWeightDimensions);
-    const filteredVariantMedia = filterVariantData(formData.variantMedia);
-
-    const ensureSinglePrimaryForProduct = (data: ProductFormData): ProductFormData => {
-      const singleMedia = data.singleMedia ? [...data.singleMedia] : undefined;
-      const variantMedia = data.variantMedia
-        ? data.variantMedia.map((vm) => ({
-            ...vm,
-            media: [...vm.media],
-          }))
-        : undefined;
-
-      const flattened: Array<{ source: 'single' | 'variant'; groupKey?: string; item: MediaItem }> = [];
-
-      if (singleMedia && singleMedia.length > 0) {
-        singleMedia
-          .slice()
-          .sort((a, b) => a.order - b.order)
-          .forEach((m) => flattened.push({ source: 'single', item: m }));
-      }
-
-      if (variantMedia && variantMedia.length > 0) {
-        variantMedia
-          .slice()
-          .sort((a, b) => String(a.key).localeCompare(String(b.key)))
-          .forEach((vm) => {
-            vm.media
-              .slice()
-              .sort((a, b) => a.order - b.order)
-              .forEach((m) => flattened.push({ source: 'variant', groupKey: vm.key, item: m }));
-          });
-      }
-
-      const allItems = flattened.map((x) => x.item);
-      if (allItems.length === 0) return data;
-
-      const currentPrimary = allItems.find((m) => m.isPrimary);
-      const primaryId = currentPrimary ? currentPrimary.id : allItems[0].id;
-
-      const nextSingle = singleMedia?.map((m) => ({ ...m, isPrimary: m.id === primaryId })) ?? singleMedia;
-      const nextVariant =
-        variantMedia?.map((vm) => ({
-          ...vm,
-          media: vm.media.map((m) => ({ ...m, isPrimary: m.id === primaryId })),
-        })) ?? variantMedia;
-
-      return { ...data, singleMedia: nextSingle, variantMedia: nextVariant };
-    };
-
     // Cast to ProductFormData for validation (with defaults)
     let dataToValidate: ProductFormData = {
+      slug: formData.slug || undefined,
       nameEn: formData.nameEn || '',
       nameAr: formData.nameAr || '',
+      sku: formData.sku || '',
+      record: formData.record || '',
       status: formData.status || 'active',
       categoryIds: formData.categoryIds || [],
       vendorId: formData.vendorId || '',
@@ -369,17 +257,16 @@ export const ProductForm: React.FC<ProductFormProps> = ({
       longDescriptionEn: formData.longDescriptionEn || '',
       longDescriptionAr: formData.longDescriptionAr || '',
       visible: formData.visible ?? true,
-      isWeightVariantBased: formData.isWeightVariantBased ?? false,
-      isMediaVariantBased: formData.isMediaVariantBased ?? false,
+      metaTitleEn: formData.metaTitleEn || '',
+      metaTitleAr: formData.metaTitleAr || '',
+      metaDescriptionEn: formData.metaDescriptionEn || '',
+      metaDescriptionAr: formData.metaDescriptionAr || '',
+      tags: formData.tags || [],
       attributes: formData.attributes,
       specifications: formData.specifications,
-      singlePricing: formData.singlePricing,
-      variantPricing: filteredVariantPricing,
-      singleWeightDimensions: formData.singleWeightDimensions,
-      variantWeightDimensions: filteredVariantWeight,
-      singleMedia: formData.singleMedia,
-      variantMedia: filteredVariantMedia,
-      variants: formData.variants || [],
+      pricing: formData.pricing,
+      weightDimensions: formData.weightDimensions,
+      media: formData.media || [],
     };
 
     // -----------------------------------------------------
@@ -478,7 +365,6 @@ export const ProductForm: React.FC<ProductFormProps> = ({
            impliedSelections.forEach((valIds, attrId) => {
                    const sysA = attributeDefinitionsForLogic.find(a => a.id === attrId);
                // Inherit control flags from the root attribute
-               // This ensures that child attributes (ie CPU Model) also control pricing if CPU controls pricing
                const controlFlags = {
                    
                };
@@ -560,31 +446,25 @@ export const ProductForm: React.FC<ProductFormProps> = ({
             });
        };
        
-       dataToValidate.variantPricing = expandAttributeValues(dataToValidate.variantPricing);
-       dataToValidate.variantWeightDimensions = expandAttributeValues(dataToValidate.variantWeightDimensions);
-       dataToValidate.variantMedia = expandAttributeValues(dataToValidate.variantMedia);
+       [] = expandAttributeValues([]);
+       [] = expandAttributeValues([]);
+       [] = expandAttributeValues([]);
        // Stocks
-       dataToValidate.variants = expandAttributeValues(dataToValidate.variants);
     }
 
-    const normalizedData = ensureSinglePrimaryForProduct(dataToValidate);
+    const normalizedData = dataToValidate;
 
     const isValid = validateForm(normalizedData);
-    console.log('isValid:', isValid);
-    console.log('errors after validation:', errors);
 
     if (!isValid) {
-      console.log('=== Validation failed, not submitting ===');
       
       const result = zodSchema.safeParse(normalizedData);
       if (!result.success) {
         console.log('=== ZOD ERRORS ===', JSON.stringify(result.error.format(), null, 2));
         const newErrors = flattenZodErrors(result.error);
-        console.log('=== FLATTENED ERRORS ===', newErrors);
         const firstErrorField = Object.keys(newErrors)[0];
         
         if (firstErrorField) {
-            console.log(`Scrolling to error field: ${firstErrorField}`);
             setTimeout(() => {
                 const element = document.getElementById(firstErrorField);
                 if (element) {
@@ -611,8 +491,6 @@ export const ProductForm: React.FC<ProductFormProps> = ({
       return;
     }
 
-    console.log('=== Validation passed, submitting ===');
-
     setIsSubmitting(true);
     try {
       await onSubmit(normalizedData);
@@ -628,14 +506,8 @@ export const ProductForm: React.FC<ProductFormProps> = ({
   const handleFieldChange = (field: string, value: any) => {
     // DEBUG: Log field changes for media
     if (field === 'singleMedia' || field === 'variantMedia' || field === 'isMediaVariantBased') {
-      console.log('=== DEBUG: handleFieldChange for media ===');
-      console.log('field:', field);
-      console.log('value:', value);
       if (field === 'singleMedia' && Array.isArray(value)) {
         value.forEach((item: any, idx: number) => {
-          console.log(`value[${idx}]:`, item);
-          console.log(`value[${idx}].file:`, item.file);
-          console.log(`value[${idx}].file instanceof File:`, item.file instanceof File);
         });
       }
     }
@@ -645,9 +517,6 @@ export const ProductForm: React.FC<ProductFormProps> = ({
 
       // DEBUG: Log updated form data for media fields
       if (field === 'singleMedia' || field === 'variantMedia' || field === 'isMediaVariantBased') {
-        console.log('=== DEBUG: Updated formData ===');
-        console.log('newData.singleMedia:', newData.singleMedia);
-        console.log('newData.singleMedia?.length:', newData.singleMedia?.length);
       }
 
       return newData;
@@ -659,7 +528,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
     }
   };
 
-  const handleStockChange = (variants: VariantCombination[]) => {
+  const handleStockChange = (variants: []) => {
     setFormData((prev) => {
       // 1. Calculate new attributes based on remaining variants
       const currentAttributes = prev.attributes || [];
@@ -671,9 +540,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
 
       const updatedAttributes = currentAttributes.map((attr) => {
         // Find all values of this attribute that are currently used in the new variants list
-        const usedValueIds = new Set(
-          variants.map((v) => v.attributeValues[attr.id]).filter(Boolean)
-        );
+        const usedValueIds = new Set();
 
         // Keep only values that are used
         const newValues = attr.values.filter((val) => usedValueIds.has(val.id));
@@ -692,14 +559,6 @@ export const ProductForm: React.FC<ProductFormProps> = ({
     });
   };
 
-  // Check if any attribute controls pricing, media, or weight
-  const hasAttributeControllingPricing =
-    false;
-  const hasAttributeControllingMedia =
-    false;
-  const hasAttributeControllingWeight =
-    false;
-
   const calculateSalePercentage = (price: number, salePrice?: number) => {
     if (!salePrice || salePrice >= price) return 0;
     return Math.round(((price - salePrice) / price) * 100);
@@ -717,7 +576,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
             {productId && <span className="text-primary">#{productId}</span>}
           </span>
         ) : "Create New Product"}
-        description={isEditMode ? "Update product information and variants" : "Fill in the details to create a new product"}
+        description={isEditMode ? "Update product information" : "Fill in the details to create a new product"}
         extraActions={
           isEditMode && formData.slug ? (
             <Button
@@ -751,6 +610,8 @@ export const ProductForm: React.FC<ProductFormProps> = ({
         formData={{
           nameEn: formData.nameEn,
           nameAr: formData.nameAr,
+          sku: formData.sku,
+          record: formData.record,
           status: formData.status,
           categoryIds: formData.categoryIds,
           vendorId: formData.vendorId,
@@ -762,6 +623,11 @@ export const ProductForm: React.FC<ProductFormProps> = ({
           longDescriptionEn: formData.longDescriptionEn,
           longDescriptionAr: formData.longDescriptionAr,
           visible: formData.visible,
+          metaTitleEn: formData.metaTitleEn,
+          metaTitleAr: formData.metaTitleAr,
+          metaDescriptionEn: formData.metaDescriptionEn,
+          metaDescriptionAr: formData.metaDescriptionAr,
+          tags: formData.tags,
         }}
         errors={errors}
         categories={categories}
@@ -787,8 +653,8 @@ export const ProductForm: React.FC<ProductFormProps> = ({
             const updates: Partial<ProductFormData> = {
               ...prev,
               attributes,
-              isWeightVariantBased: hasAttributes ? hasWeight : false,
-              isMediaVariantBased: hasAttributes ? hasMedia : false,
+              
+              
             };
 
             const prevAttributes = prev.attributes || [];
@@ -813,20 +679,9 @@ export const ProductForm: React.FC<ProductFormProps> = ({
               }
             });
 
-            if (shouldClearMedia) updates.variantMedia = [];
-            if (shouldClearPricing) updates.variantPricing = [];
-            if (shouldClearWeight) updates.variantWeightDimensions = [];
-
+                                    
             // If switching to single (no attributes), reset all variant data
-            if (!hasAttributes) {
-              updates.variantPricing = [];
-              updates.variantWeightDimensions = [];
-              updates.variantMedia = [];
-              updates.variants = [];
-              updates.singlePricing = prev.singlePricing;
-              updates.singleWeightDimensions = prev.singleWeightDimensions;
-              updates.singleMedia = prev.singleMedia || [];
-            }
+            
 
             // Let StockSection and other sections automatically reconcile 
             // the data with the updated attributes via their internal logic 
@@ -859,65 +714,33 @@ export const ProductForm: React.FC<ProductFormProps> = ({
       {/* Stock Management */}
       <StockSection
           quantity={formData.quantity || 0}
+          lowStockThreshold={formData.low_stock_threshold || 10}
           isOutOfStock={formData.is_out_of_stock || false}
           onChangeQuantity={(q) => handleFieldChange("quantity", q)}
+          onChangeLowStockThreshold={(threshold) => handleFieldChange("low_stock_threshold", threshold)}
           onChangeIsOutOfStock={(isOut) => handleFieldChange("is_out_of_stock", isOut)}
           errors={errors}
         />
 
       {/* Pricing Configuration */}
       <PricingSection
-        attributes={formData.attributes || []}
-        variants={formData.variants || []}
-        singlePricing={formData.singlePricing}
-        variantPricing={formData.variantPricing || []}
-        onChangeSingle={(pricing: SinglePricing) =>
-          handleFieldChange("singlePricing", pricing)
-        }
-        onChangeVariant={(pricing: VariantPricing[]) =>
-          handleFieldChange("variantPricing", pricing)
-        }
+        pricing={formData.pricing}
+        onChange={(pricing) => handleFieldChange("pricing", pricing)}
         calculateSalePercentage={calculateSalePercentage}
         errors={errors}
       />
 
       {/* Weight & Dimensions */}
       <WeightDimensionsSection
-          hasVariantAttributes={(formData.attributes?.length || 0) > 0}
-                            attributes={formData.attributes || []}
-        variants={formData.variants || []}
-        isWeightVariantBased={formData.isWeightVariantBased || false}
-        singleWeightDimensions={formData.singleWeightDimensions}
-        variantWeightDimensions={formData.variantWeightDimensions || []}
-        onToggleVariantBased={(value: boolean) =>
-          handleFieldChange("isWeightVariantBased", value)
-        }
-        onChangeSingle={(data: WeightDimensions) =>
-          handleFieldChange("singleWeightDimensions", data)
-        }
-        onChangeVariant={(data: VariantWeightDimensions[]) =>
-          handleFieldChange("variantWeightDimensions", data)
-        }
+        weightDimensions={formData.weightDimensions}
+        onChange={(data) => handleFieldChange("weightDimensions", data)}
         errors={errors}
       />
 
       {/* Media Management */}
       <MediaSection
-          hasVariantAttributes={(formData.attributes?.length || 0) > 0}
-                            attributes={formData.attributes || []}
-        variants={formData.variants || []}
-        isMediaVariantBased={formData.isMediaVariantBased || false}
-        singleMedia={formData.singleMedia || []}
-        variantMedia={formData.variantMedia || []}
-        onToggleVariantBased={(value: boolean) =>
-          handleFieldChange("isMediaVariantBased", value)
-        }
-        onChangeSingle={(media: MediaItem[]) =>
-          handleFieldChange("singleMedia", media)
-        }
-        onChangeVariant={(media: VariantMedia[]) =>
-          handleFieldChange("variantMedia", media)
-        }
+        media={formData.media || []}
+        onChange={(media) => handleFieldChange("media", media)}
         errors={errors}
       />
     </div>

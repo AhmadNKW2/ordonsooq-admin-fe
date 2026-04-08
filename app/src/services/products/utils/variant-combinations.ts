@@ -72,7 +72,6 @@ export interface BaseVariantData {
 
 /**
  * Find existing variant data that best matches the given attribute values
- * This preserves data when attributes controlling the feature change
  * 
  * @param attributeValues - The attribute values to match against
  * @param variantData - Array of existing variant data
@@ -88,7 +87,6 @@ export function findMatchingVariantData<T extends BaseVariantData>(
     if (exactMatch) return exactMatch;
 
     // Try to find a match where all current attribute values are present in existing data
-    // This handles the case where we're adding/removing controlling attributes
     let bestMatch: T | undefined;
     let bestMatchScore = 0;
 

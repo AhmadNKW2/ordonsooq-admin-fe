@@ -40,6 +40,8 @@ interface BasicInformationSectionProps {
     formData: {
         nameEn?: string;
         nameAr?: string;
+        sku?: string;
+        record?: string;
         status?: ProductStatus;
         categoryIds?: string[]; // Changed from categoryId to categoryIds
         vendorId?: string;
@@ -51,6 +53,11 @@ interface BasicInformationSectionProps {
         longDescriptionEn?: string;
         longDescriptionAr?: string;
         visible?: boolean;
+        metaTitleEn?: string;
+        metaTitleAr?: string;
+        metaDescriptionEn?: string;
+        metaDescriptionAr?: string;
+        tags?: string[];
     };
     errors: Record<string, string | boolean>;
     categories: Category[];
@@ -224,6 +231,27 @@ export const BasicInformationSection: React.FC<BasicInformationSectionProps> = (
                     error={errors.nameAr}
                 />
 
+                <Input
+                    id="sku"
+                    label="SKU"
+                    value={formData.sku || ""}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                        onChange("sku", e.target.value)
+                    }
+                    error={errors.sku}
+                />
+
+                <Input
+                    id="record"
+                    label="Record Reference"
+                    value={formData.record || ""}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                        onChange("record", e.target.value)
+                    }
+                    placeholder="MIGRATED_FROM_OLD_DB_123"
+                    error={errors.record}
+                />
+
                 {/* Short Descriptions */}
                 <RichTextEditor
                     id="shortDescriptionEn"
@@ -336,6 +364,65 @@ export const BasicInformationSection: React.FC<BasicInformationSectionProps> = (
                     }
                     placeholder="https://example.com/reference"
                     error={errors.referenceLink}
+                />
+
+                <Input
+                    id="metaTitleEn"
+                    label="Meta Title (English)"
+                    value={formData.metaTitleEn || ""}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                        onChange("metaTitleEn", e.target.value)
+                    }
+                    error={errors.metaTitleEn}
+                />
+
+                <Input
+                    id="metaTitleAr"
+                    label="Meta Title (Arabic)"
+                    value={formData.metaTitleAr || ""}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                        onChange("metaTitleAr", e.target.value)
+                    }
+                    isRtl
+                    error={errors.metaTitleAr}
+                />
+
+                <Input
+                    id="metaDescriptionEn"
+                    label="Meta Description (English)"
+                    value={formData.metaDescriptionEn || ""}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                        onChange("metaDescriptionEn", e.target.value)
+                    }
+                    error={errors.metaDescriptionEn}
+                />
+
+                <Input
+                    id="metaDescriptionAr"
+                    label="Meta Description (Arabic)"
+                    value={formData.metaDescriptionAr || ""}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                        onChange("metaDescriptionAr", e.target.value)
+                    }
+                    isRtl
+                    error={errors.metaDescriptionAr}
+                />
+
+                <Input
+                    id="tags"
+                    label="Tags"
+                    value={(formData.tags || []).join(", ")}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                        onChange(
+                            "tags",
+                            e.target.value
+                                .split(",")
+                                .map((tag) => tag.trim())
+                                .filter(Boolean)
+                        )
+                    }
+                    placeholder="gaming, mouse, rgb"
+                    error={errors.tags}
                 />
 
                 <div className="col-span-2">

@@ -134,17 +134,29 @@ export const productSchema = z.object({
   brand: z.any().optional().nullable(),
   slug: z.string().optional().nullable(),
   reference_link: z.string().optional().nullable(),
+  record: z.string().optional().nullable(),
   sku: z.string(),
   is_active: z.boolean().optional(),
   average_rating: z.union([z.number(), z.string()]).optional().nullable(),
   total_ratings: z.number().optional().nullable(),
   image: z.string().optional().nullable(), // Direct image URL
   primary_image: primaryImageSchema.optional().nullable(),
+  cost: z.union([z.number(), z.string()]).optional().nullable(),
   price: z.union([z.string(), z.array(z.any()), z.any()]).optional().nullable(),
   sale_price: z.string().optional().nullable(),
+  weight: z.union([z.number(), z.string()]).optional().nullable(),
+  length: z.union([z.number(), z.string()]).optional().nullable(),
+  width: z.union([z.number(), z.string()]).optional().nullable(),
+  height: z.union([z.number(), z.string()]).optional().nullable(),
   stock: stockSummarySchema.optional().nullable(),
   quantity: z.number().optional().nullable(),
+  low_stock_threshold: z.number().optional().nullable(),
   is_out_of_stock: z.boolean().optional().nullable(),
+  meta_title_en: z.string().optional().nullable(),
+  meta_title_ar: z.string().optional().nullable(),
+  meta_description_en: z.string().optional().nullable(),
+  meta_description_ar: z.string().optional().nullable(),
+  tags: z.array(z.any()).optional().nullable(),
   variants: z.array(z.any()).optional().nullable(),
   media: z.array(z.any()).optional().nullable(),
   specifications: z.union([z.array(z.any()), z.record(z.string(), z.any())]).optional(),
@@ -285,7 +297,7 @@ export interface ProductStock {
   updated_at?: string | Date;
 }
 
-export interface ProductDetail extends Omit<Product, 'vendor' | 'category' | 'stock' | 'attributes'> {
+export interface ProductDetail extends Omit<Product, 'vendor' | 'category' | 'stock' | 'attributes' | 'weight'> {
   category?: Category | null;
   vendor?: {
     id: number;
@@ -356,6 +368,7 @@ export interface ProductFilters {
 //  Product Creation DTOs
 export interface ProductAttributeInput {
   attribute_id: number;
+  attribute_value_ids?: number[];
 }
 
 export interface SinglePricingInput {
@@ -462,9 +475,7 @@ export interface StockInputWithCombination {
 export interface MediaInputDto {
   media_id: number;        // ID from /api/media/upload
   is_primary?: boolean;    // Default: false
-  is_group_primary?: boolean; // Default: false
   sort_order?: number;     // Default: 0
-  combination?: Record<string, number>; // For variant media
 }
 
 export interface ProductSpecificationInputDto {
@@ -478,6 +489,7 @@ export interface CreateProductDto {
   name_en: string;
   name_ar: string;
   sku?: string;
+  record?: string | null;
   status?: ProductStatus;
   short_description_en: string;
   short_description_ar: string;
@@ -487,20 +499,27 @@ export interface CreateProductDto {
   vendor_id?: number;
   brand_id?: number;
   reference_link?: string | null;
+  cost?: number;
+  price?: number;
+  sale_price?: number | null;
+  weight?: number;
+  length?: number;
+  width?: number;
+  height?: number;
+  quantity?: number;
+  low_stock_threshold?: number;
+  is_out_of_stock?: boolean;
+  meta_title_en?: string;
+  meta_title_ar?: string;
+  meta_description_en?: string;
+  meta_description_ar?: string;
+  tags?: string[];
   linked_product_ids: number[];
   specifications?: ProductSpecificationInputDto[];
   visible?: boolean;
 
-  // Attributes (for variant products)
+  // Attributes
   attributes?: ProductAttributeInput[];
-
-  // Variants array (for variant products - all combinations with stock)
-  variants?: VariantInput[];
-
-  // NEW format: prices, weights, stocks, media arrays
-  prices?: PriceInput[];
-  weights?: WeightInputWithCombination[];
-  stocks?: StockInputWithCombination[];
   media?: MediaInputDto[];
 }
 
@@ -585,6 +604,7 @@ export interface UpdateProductDto {
   name_en?: string;
   name_ar?: string;
   sku?: string;
+  record?: string | null;
   status?: ProductStatus;
   short_description_en?: string;
   short_description_ar?: string;
@@ -594,19 +614,27 @@ export interface UpdateProductDto {
   vendor_id?: number;
   brand_id?: number;
   reference_link?: string | null;
+  cost?: number;
+  price?: number;
+  sale_price?: number | null;
+  weight?: number;
+  length?: number;
+  width?: number;
+  height?: number;
+  quantity?: number;
+  low_stock_threshold?: number;
+  is_out_of_stock?: boolean;
+  meta_title_en?: string;
+  meta_title_ar?: string;
+  meta_description_en?: string;
+  meta_description_ar?: string;
+  tags?: string[];
   linked_product_ids: number[];
   specifications?: ProductSpecificationInputDto[];
   visible?: boolean;
 
-  // Attributes (for variant products)
+  // Attributes
   attributes?: ProductAttributeInput[];
-
-  variants?: VariantInput[];
-
-  // NEW format: prices, weights, stocks, media arrays (same as create)
-  prices?: PriceInput[];
-  weights?: WeightInputWithCombination[];
-  stocks?: StockInputWithCombination[];
   media?: MediaInputDto[];
 }
 

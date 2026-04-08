@@ -13,7 +13,6 @@ import { ProductFormData } from "../../src/services/products/types/product-form.
 import {
   LinkedProductSummary,
   ProductDetail,
-  MediaInputDto,
   ProductSpecification as ProductSpecificationMap,
   UpdateProductDto,
 } from "../../src/services/products/types/product.types";
@@ -25,7 +24,7 @@ import { useSpecifications } from "../../src/services/specifications/hooks/use-s
 import { useProduct } from "../../src/services/products/hooks/use-products";
 import { productService } from "../../src/services/products/api/product.service";
 import { mediaService } from "../../src/services/media/api/media.service";
-import { buildProductSpecificationsPayload } from "../../src/services/products/form/transform";
+import { buildMediaArray, transformFormDataToDto, UploadedMediaReference } from "../../src/services/products/form/transform";
 import { Card } from "../../src/components/ui/card";
 import { AlertCircle, RefreshCw, Loader2 } from "lucide-react";
 import { Button } from "../../src/components/ui/button";
@@ -45,6 +44,42 @@ const parseOptionalNumber = (value: unknown) => {
 
   const numericValue = Number(value);
   return Number.isFinite(numericValue) ? numericValue : undefined;
+};
+
+const normalizeProductTags = (value: unknown): string[] => {
+  if (!value) {
+    return [];
+  }
+
+  if (typeof value === "string") {
+    return value
+      .split(",")
+      .map((tag) => tag.trim())
+      .filter(Boolean);
+  }
+
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return Array.from(
+    new Set(
+      value
+        .map((tag) => {
+          if (typeof tag === "string") {
+            return tag.trim();
+          }
+
+          if (tag && typeof tag === "object") {
+            const record = tag as Record<string, unknown>;
+            return String(record.name ?? record.label ?? record.slug ?? "").trim();
+          }
+
+          return "";
+        })
+        .filter(Boolean)
+    )
+  );
 };
 
 const normalizeProductSpecificationEntry = (
@@ -1025,7 +1060,6 @@ const transformVariantWeightDimensions = (stockVariants: any[], attrs: any[]) =>
                     type: m.type as 'image' | 'video',
                     order: m.sort_order || 0,
                     isPrimary: m.is_primary,
-                    isGroupPrimary: m.is_group_primary
                  })).sort((a: any, b: any) => a.order - b.order);
              }
          }
@@ -1043,7 +1077,6 @@ const transformVariantWeightDimensions = (stockVariants: any[], attrs: any[]) =>
         type: m.type as 'image' | 'video',
         order: m.sort_order,
         isPrimary: m.is_primary,
-        isGroupPrimary: m.is_group_primary,
       }));
   };
 
@@ -1066,7 +1099,6 @@ const transformVariantMedia = (stockVariants: any[], attrs: any[]) => {
                     type: m.type as 'image' | 'video',
                     order: m.sort_order || 0,
                     isPrimary: m.is_primary,
-                    isGroupPrimary: m.is_group_primary
                  })).sort((a: any, b: any) => a.order - b.order));
              }
          });
@@ -1122,7 +1154,6 @@ const transformVariantMedia = (stockVariants: any[], attrs: any[]) => {
         type: m.type as 'image' | 'video',
         order: m.sort_order,
         isPrimary: m.is_primary,
-        isGroupPrimary: m.is_group_primary,
       });
     });
 
@@ -1259,9 +1290,12 @@ const transformVariantMedia = (stockVariants: any[], attrs: any[]) => {
       slug: (product as any).slug,
       nameEn: product.name_en,
       nameAr: product.name_ar,
+      sku: product.sku || "",
+      record: (product as any).record || "",
       status: product.status || 'active',
-        quantity: (product.stock && product.stock[0]) ? product.stock[0].quantity : 0,
-        is_out_of_stock: (product.stock && product.stock[0]) ? product.stock[0].is_out_of_stock : ((product as any).is_out_of_stock ?? false),
+      quantity: product.quantity ?? ((product.stock && product.stock[0]) ? product.stock[0].quantity : 0),
+      low_stock_threshold: (product as any).low_stock_threshold ?? 10,
+      is_out_of_stock: (product as any).is_out_of_stock ?? ((product.stock && product.stock[0]) ? product.stock[0].is_out_of_stock : false),
       categoryIds: (product.categories && product.categories.length > 0)
         ? product.categories.map((c: any) => c.id.toString())
         : (product.category_ids?.map(id => id.toString()) || 
@@ -1279,59 +1313,39 @@ const transformVariantMedia = (stockVariants: any[], attrs: any[]) => {
       ),
       shortDescriptionEn: product.short_description_en || "",
       shortDescriptionAr: product.short_description_ar || "",
-    longDescriptionEn: product.long_description_en || "",
-    longDescriptionAr: product.long_description_ar || "",
-    visible: product.visible ?? product.is_active,
-    
-    // Attributes (for variant products)
-    attributes: attrs,
-    specifications: transformProductSpecifications(),
-    
-    // Pricing
-    singlePricing: transformSinglePricing(),
-    variantPricing: [],
-    
-    // Weight & Dimensions
-    isWeightVariantBased: isWeightVariantBased(),
-    singleWeightDimensions: transformSingleWeight(),
-    variantWeightDimensions: [],
-    
-    // Media
-    isMediaVariantBased: isMediaVariantBased(),
-    singleMedia: transformSingleMedia(),
-    variantMedia: [],
-    
-    // Stock/Variants
-    variants: stockVariants,
-  };
+      longDescriptionEn: product.long_description_en || "",
+      longDescriptionAr: product.long_description_ar || "",
+      visible: product.visible ?? product.is_active,
+      metaTitleEn: (product as any).meta_title_en || "",
+      metaTitleAr: (product as any).meta_title_ar || "",
+      metaDescriptionEn: (product as any).meta_description_en || "",
+      metaDescriptionAr: (product as any).meta_description_ar || "",
+      tags: normalizeProductTags((product as any).tags),
+
+      // Attributes
+      attributes: attrs,
+      specifications: transformProductSpecifications(),
+
+      // Pricing
+      pricing: transformSinglePricing(),
+
+      // Weight & Dimensions
+      weightDimensions: transformSingleWeight(),
+
+      // Media
+      media: transformSingleMedia(),
+
+    };
   }, [product, attributesData, specificationsData]);
 
   const handleSubmit = async (data: ProductFormData) => {
     const toastId = showLoadingToast("Updating product...");
-    console.log('=== DEBUG: Edit Product handleSubmit called ===');
-    console.log('ProductFormData received:', data);
-    console.log('data.nameEn:', data.nameEn);
-    console.log('data.nameAr:', data.nameAr);
-    console.log('data.categoryIds:', data.categoryIds);
-    console.log('data.vendorId:', data.vendorId);
-    console.log('data.visible:', data.visible);
-    console.log('data.attributes:', data.attributes);
-    console.log('data.singlePricing:', data.singlePricing);
-    console.log('data.variantPricing:', data.variantPricing);
-    console.log('data.isWeightVariantBased:', data.isWeightVariantBased);
-    console.log('data.singleWeightDimensions:', data.singleWeightDimensions);
-    console.log('data.variantWeightDimensions:', data.variantWeightDimensions);
-    console.log('data.isMediaVariantBased:', data.isMediaVariantBased);
-    console.log('data.singleMedia:', data.singleMedia);
-    console.log('data.variantMedia:', data.variantMedia);
-    console.log('data.variants:', data.variants);
-    
     try {
-      const totalUploads =
-        (data.singleMedia?.filter(m => !!m.file).length ?? 0) +
-        (data.variantMedia?.reduce((sum, group) => {
-          return sum + (group.media?.filter(m => !!m.file).length ?? 0);
-        }, 0) ?? 0);
+      const { dto, mediaFiles } = transformFormDataToDto(data, {
+        includeEmptyRelations: true,
+      });
+      const productMedia = mediaFiles.singleMedia || [];
+      const totalUploads = productMedia.filter((media) => !!media.file).length;
 
       let completedUploads = 0;
 
@@ -1348,230 +1362,10 @@ const transformVariantMedia = (stockVariants: any[], attrs: any[]) => {
           progress: 0,
         });
       }
-      // ========== DETECT ATTRIBUTE CHANGES ==========
-      const originalFormAttributes = initialData?.attributes || [];
-      const originalAttrIds = new Set(originalFormAttributes.map((attribute) => attribute.id));
-      const newAttrIds = new Set(data.attributes?.map(a => a.id) || []);
-      const attributeSelectionChanged =
-        originalAttrIds.size !== newAttrIds.size ||
-        [...originalAttrIds].some((id) => !newAttrIds.has(id));
-      const shouldClearPrices = attributeSelectionChanged;
-      const shouldClearWeights =
-        attributeSelectionChanged ||
-        Boolean(initialData?.isWeightVariantBased) !== Boolean(data.isWeightVariantBased);
-      const shouldClearMedia =
-        attributeSelectionChanged ||
-        Boolean(initialData?.isMediaVariantBased) !== Boolean(data.isMediaVariantBased);
-      const nextSpecificationsPayload = buildProductSpecificationsPayload(data.specifications);
-      const hasOriginalSpecifications =
-        normalizedProductSpecifications.length > 0 ||
-        (!!product?.specifications &&
-          !Array.isArray(product.specifications) &&
-          Object.keys(product.specifications).length > 0);
-      
-      console.log('=== DEBUG: Attribute Change Detection ===');
-      console.log('originalAttrIds:', [...originalAttrIds]);
-      console.log('newAttrIds:', [...newAttrIds]);
-      console.log('attributeSelectionChanged:', attributeSelectionChanged);
-      console.log('originalWeightVariantBased:', Boolean(initialData?.isWeightVariantBased), '-> newWeightVariantBased:', Boolean(data.isWeightVariantBased));
-      console.log('originalMediaVariantBased:', Boolean(initialData?.isMediaVariantBased), '-> newMediaVariantBased:', Boolean(data.isMediaVariantBased));
-      console.log('shouldClearPrices:', shouldClearPrices);
-      console.log('shouldClearWeights:', shouldClearWeights);
-      console.log('shouldClearMedia:', shouldClearMedia);
-      
-      // Build product payload for PUT request
-      const productPayload: UpdateProductDto = {
-        // ========== BASIC INFORMATION ==========
-        name_en: data.nameEn,
-        name_ar: data.nameAr,
-        status: data.status,
-        short_description_en: data.shortDescriptionEn || '',
-        short_description_ar: data.shortDescriptionAr || '',
-        long_description_en: data.longDescriptionEn || '',
-        long_description_ar: data.longDescriptionAr || '',
-        category_ids: (data.categoryIds || []).map(id => parseInt(id)),
-        vendor_id: data.vendorId ? parseInt(data.vendorId) : undefined,
-        brand_id: data.brandId ? parseInt(data.brandId) : undefined,
-        reference_link: data.referenceLink?.trim() || null,
-        linked_product_ids: Array.from(
-          new Set(
-            (data.linked_product_ids || [])
-              .map((linkedProductId) => parseInt(linkedProductId, 10))
-              .filter((linkedProductId) => !Number.isNaN(linkedProductId) && linkedProductId !== product_id)
-          )
-        ),
-        visible: data.visible,
-      };
+      const uploadedMedia: UploadedMediaReference[] = [];
 
-      if (nextSpecificationsPayload.length > 0) {
-        productPayload.specifications = nextSpecificationsPayload;
-      } else if (hasOriginalSpecifications) {
-        productPayload.specifications = [];
-      }
-
-
-      console.log('=== DEBUG: Basic Information Payload ===');
-      console.log('productPayload (basic):', productPayload);
-
-      // ========== ATTRIBUTES ==========
-      if (data.attributes && data.attributes.length > 0) {
-        productPayload.attributes = data.attributes.map(attr => ({
-          attribute_id: parseInt(attr.id),
-        }));
-        console.log('=== DEBUG: Attributes Payload ===');
-        console.log('productPayload.attributes:', productPayload.attributes);
-      } else {
-        // If attributes were removed entirely, send empty array to clear them
-        if (originalAttrIds.size > 0) {
-          productPayload.attributes = [];
-          console.log('=== DEBUG: Clearing all attributes ===');
-        }
-      }
-
-      // ========== PRICING ==========
-      // If pricing control changed (attributes added/removed/changed), clear old prices and use new data
-      if (shouldClearPrices) {
-        console.log('=== DEBUG: Attribute selection changed, will use only new pricing data ===');
-      }
-      
-      const hasPricingAttributes = false; // Forced single pricing
-
-      if (!hasPricingAttributes) {
-        // Single pricing - no combination (either no attributes, or attributes don't control pricing)
-        if (data.singlePricing) {
-          productPayload.prices = [{
-            cost: data.singlePricing.cost,
-            price: data.singlePricing.price,
-            sale_price: data.singlePricing.isSale === true ? data.singlePricing.salePrice : undefined,
-          }];
-          console.log('=== DEBUG: Single Pricing Payload ===');
-          console.log('productPayload.prices:', productPayload.prices);
-        } else if (shouldClearPrices) {
-          // No single pricing provided but we need to clear old variant prices
-          productPayload.prices = [];
-          console.log('=== DEBUG: Clearing prices (no single pricing provided) ===');
-        }
-      } else {
-        // Variant pricing - with combinations
-        if (data.variantPricing && data.variantPricing.length > 0) {
-          const variantAttributeIds = (data.attributes || []).map((attr) => attr.id);
-
-          console.log('=== DEBUG: Variant Pricing ===');
-          console.log('variantAttributeIds:', variantAttributeIds);
-          console.log('data.variantPricing:', data.variantPricing);
-
-          const priceMap = new Map<string, any>();
-          data.variantPricing.forEach(vp => {
-            const combination: Record<string, number> = {};
-            variantAttributeIds.forEach(attrId => {
-              const attrValueId = vp.attributeValues[attrId];
-              if (attrValueId) {
-                combination[attrId] = parseInt(attrValueId);
-              }
-            });
-
-            const key = Object.entries(combination)
-              .sort(([a], [b]) => a.localeCompare(b))
-              .map(([k, v]) => `${k}:${v}`)
-              .join('|');
-
-            if (!priceMap.has(key) && Object.keys(combination).length > 0) {
-              priceMap.set(key, {
-                combination,
-                cost: vp.cost,
-                price: vp.price,
-                // isSale defaults to false; only include salePrice when explicitly enabled
-                sale_price: vp.isSale === true ? vp.salePrice : undefined,
-              });
-            }
-          });
-          productPayload.prices = Array.from(priceMap.values());
-          console.log('productPayload.prices:', productPayload.prices);
-        } else if (shouldClearPrices) {
-          // No variant pricing provided but we need to clear old prices
-          productPayload.prices = [];
-          console.log('=== DEBUG: Clearing prices (no variant pricing provided) ===');
-        }
-      }
-
-      // ========== WEIGHT & DIMENSIONS ==========
-      console.log('=== DEBUG: Weight & Dimensions ===');
-      console.log('data.isWeightVariantBased:', data.isWeightVariantBased);
-      console.log('data.singleWeightDimensions:', data.singleWeightDimensions);
-      console.log('data.variantWeightDimensions:', data.variantWeightDimensions);
-      
-      // If weight mode changed, clear old weights and use new data
-      if (shouldClearWeights) {
-        console.log('=== DEBUG: Weight configuration changed, will use only new weight data ===');
-      }
-      
-      if (true && data.singleWeightDimensions) {
-        // Single weight - no combination
-        productPayload.weights = [{
-          weight: data.singleWeightDimensions.weight,
-          length: data.singleWeightDimensions.length,
-          width: data.singleWeightDimensions.width,
-          height: data.singleWeightDimensions.height,
-        }];
-      } else if (false && (data.variantWeightDimensions || []).length > 0) {
-        const variantAttributeIds = (data.attributes || []).map((attr) => attr.id);
-
-        // Variant weights - with combinations
-        const weightMap = new Map<string, any>();
-        (data.variantWeightDimensions || []).forEach(vw => {
-          const combination: Record<string, number> = {};
-          variantAttributeIds.forEach(attrId => {
-            const attrValueId = vw.attributeValues[attrId];
-            if (attrValueId) {
-              combination[attrId] = parseInt(attrValueId);
-            }
-          });
-
-          const key = Object.entries(combination)
-            .sort(([a], [b]) => a.localeCompare(b))
-            .map(([k, v]) => `${k}:${v}`)
-            .join('|');
-
-          if (!weightMap.has(key) && Object.keys(combination).length > 0 && vw.weight) {
-            weightMap.set(key, {
-              combination,
-              weight: vw.weight,
-              length: vw.length,
-              width: vw.width,
-              height: vw.height,
-            });
-          }
-        });
-        productPayload.weights = Array.from(weightMap.values());
-      } else if (shouldClearWeights) {
-        // No weight data provided but we need to clear old weights
-        productPayload.weights = [];
-        console.log('=== DEBUG: Clearing weights (no weight data provided) ===');
-      }
-
-      // ========== STOCK ==========
-        productPayload.stocks = [{
-          quantity: data.quantity || 0,
-          is_out_of_stock: data.is_out_of_stock || false
-        }];
-
-        // ========== MEDIA ==========
-      // New flow: upload new files first, then build complete media array
-      const mediaArray: MediaInputDto[] = [];
-      let hasSetProductPrimary = false;
-
-      const variantAttributeIds = (data.attributes || []).map((attr) => attr.id);
-
-      // If media mode changed, clear old media and use new data
-      if (shouldClearMedia) {
-        console.log('=== DEBUG: Media configuration changed, will use only new media data ===');
-      }
-
-      if (!data.isMediaVariantBased && data.singleMedia && data.singleMedia.length > 0) {
-        // Single media (non-variant)
-        for (const media of data.singleMedia) {
+      for (const media of productMedia) {
           if (media.file) {
-            // New file - upload first
             updateLoadingToast(toastId, {
               title: "Uploading media",
               subtitle: `${completedUploads + 1}/${totalUploads} files`,
@@ -1584,116 +1378,41 @@ const transformVariantMedia = (stockVariants: any[], attrs: any[]) => {
               subtitle: `${completedUploads}/${totalUploads} files`,
               progress: totalUploads > 0 ? completedUploads / totalUploads : 0,
             });
-            mediaArray.push({
-              media_id: uploadResult.data.id,
-              is_primary: media.isPrimary ? (hasSetProductPrimary ? false : (hasSetProductPrimary = true, true)) : false,
-              is_group_primary: media.isGroupPrimary,
-              sort_order: media.order,
+            uploadedMedia.push({
+              mediaId: uploadResult.data.id,
+              isPrimary: media.isPrimary,
+              sortOrder: media.order,
             });
-          } else {
-            // Existing media - use existing ID (only keep if media control didn't change)
-            const mediaId = parseInt(media.id);
-            if (!isNaN(mediaId)) {
-              mediaArray.push({
-                media_id: mediaId,
-                is_primary: media.isPrimary ? (hasSetProductPrimary ? false : (hasSetProductPrimary = true, true)) : false,
-                is_group_primary: media.isGroupPrimary,
-                sort_order: media.order,
-              });
-            }
-          }
-        }
-      } else if (false && (data.variantMedia || []).length > 0) {
-        // Variant media (with combinations)
-        for (const variantMediaData of (data.variantMedia || [])) {
-          const combination: Record<string, number> = {};
-          for (const attrId of variantAttributeIds) {
-            const valueId = variantMediaData.attributeValues[attrId];
-            if (valueId && valueId !== '') {
-              combination[attrId] = parseInt(valueId, 10);
-            }
+            continue;
           }
 
-          for (const media of variantMediaData.media) {
-            if (media.file) {
-              // New file - upload first
-              updateLoadingToast(toastId, {
-                title: "Uploading media",
-                subtitle: `${completedUploads + 1}/${totalUploads} files`,
-                progress: totalUploads > 0 ? completedUploads / totalUploads : 0,
-              });
-              const uploadResult = await mediaService.uploadMedia(media.file!);
-              completedUploads += 1;
-              updateLoadingToast(toastId, {
-                title: "Uploading media",
-                subtitle: `${completedUploads}/${totalUploads} files`,
-                progress: totalUploads > 0 ? completedUploads / totalUploads : 0,
-              });
-              mediaArray.push({
-                media_id: uploadResult.data.id,
-                is_primary: media.isPrimary ? (hasSetProductPrimary ? false : (hasSetProductPrimary = true, true)) : false,
-                is_group_primary: media.isGroupPrimary,
-                sort_order: media.order,
-                combination: Object.keys(combination).length > 0 ? combination : undefined,
-              });
-            } else {
-              // Existing media - use existing ID
-              const mediaId = parseInt(media.id);
-              if (!isNaN(mediaId)) {
-                mediaArray.push({
-                  media_id: mediaId,
-                  is_primary: media.isPrimary ? (hasSetProductPrimary ? false : (hasSetProductPrimary = true, true)) : false,
-                  is_group_primary: media.isGroupPrimary,
-                  sort_order: media.order,
-                  combination: Object.keys(combination).length > 0 ? combination : undefined,
-                });
-              }
-            }
+          const existingMediaId = parseInt(media.id, 10);
+          if (!Number.isNaN(existingMediaId)) {
+            uploadedMedia.push({
+              mediaId: existingMediaId,
+              isPrimary: media.isPrimary,
+              sortOrder: media.order,
+            });
           }
-        }
       }
 
-      // Add media array to payload - backend will sync (add new, remove missing, update existing)
-      // If shouldClearMedia and no new media, send empty array to clear all existing
-      if (mediaArray.length > 0) {
-        productPayload.media = mediaArray;
-      } else if (shouldClearMedia) {
-        productPayload.media = [];
-        console.log('=== DEBUG: Clearing media (no media data provided) ===');
-      }
+      const productPayload: UpdateProductDto = {
+        ...dto,
+        linked_product_ids: dto.linked_product_ids.filter((linkedProductId) => linkedProductId !== product_id),
+        media: productMedia.length > 0 ? buildMediaArray(uploadedMedia) : [],
+      };
 
-      console.log('=== DEBUG: Final Product Payload ===');
-      console.log('productPayload:', JSON.stringify(productPayload, null, 2));
-      console.log('productPayload.prices:', productPayload.prices);
-      console.log('productPayload.weights:', productPayload.weights);
-      console.log('productPayload.stocks:', productPayload.stocks);
-      console.log('productPayload.media:', productPayload.media);
-      console.log('productPayload.attributes:', productPayload.attributes);
-
-      console.log('=== DEBUG: Calling productService.updateProduct ===');
-      console.log('product_id:', product_id);
-      
-      // Update product with PUT request (full update including media)
       updateLoadingToast(toastId, {
         title: "Updating product",
         subtitle: "Sending request",
         progress: 0.9,
       });
-      const updateResult = await productService.updateProduct(product_id, productPayload);
-      
-      console.log('=== DEBUG: Update Result ===');
-      console.log('updateResult:', updateResult);
+      await productService.updateProduct(product_id, productPayload);
 
       finishToastSuccess(toastId, "Product updated successfully");
       router.push("/products");
       
     } catch (error: any) {
-      console.error("=== DEBUG: Error updating product ===");
-      console.error("Error:", error);
-      console.error("Error message:", error?.message);
-      console.error("Error response:", error?.response);
-      console.error("Error data:", error?.response?.data);
-
       finishToastError(toastId, error?.message || "Failed to update product");
     }
   };

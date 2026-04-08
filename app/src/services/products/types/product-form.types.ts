@@ -31,25 +31,8 @@ export interface ProductSpecificationSelection {
   order: number;
 }
 
-// Variant Combination
-export interface VariantCombination {
-  id: string;
-  attributeValues: { [attrId: string]: string };
-  is_out_of_stock: boolean;
-  active?: boolean;
-}
-
 // Pricing Configuration
-export interface SinglePricing {
-  cost?: number;
-  price: number;
-  isSale?: boolean;
-  salePrice?: number;
-}
-
-export interface VariantPricing {
-  key: string;
-  attributeValues: { [attrId: string]: string };
+export interface Pricing {
   cost?: number;
   price: number;
   isSale?: boolean;
@@ -65,31 +48,14 @@ export interface WeightDimensions {
   unit?: string;
 }
 
-export interface VariantWeightDimensions {
-  key: string;
-  attributeValues: { [attrId: string]: string };
-  weight?: number;
-  length?: number;
-  width?: number;
-  height?: number;
-  unit?: string;
-}
-
 // Media Configuration
 export interface MediaItem {
   id: string;
-  file: File | null; // Store actual File object for upload (null for existing media from URLs)
-  preview: string; // Blob URL for preview or remote URL for existing media
+  file: File | null;
+  preview: string;
   type: "image" | "video";
   order: number;
   isPrimary: boolean;
-  isGroupPrimary?: boolean;
-}
-
-export interface VariantMedia {
-  key: string;
-  attributeValues: { [attrId: string]: string };
-  media: MediaItem[];
 }
 
 // Product Form Data Schema
@@ -98,8 +64,10 @@ export const productFormSchema = z.object({
   slug: z.string().optional(),
   nameEn: z.string().min(1, "English name is required"),
   nameAr: z.string().min(1, "Arabic name is required"),
+  sku: z.string().optional(),
+  record: z.string().optional(),
   status: z.enum(["active", "archived", "updated", "review"]).default("active"),
-  categoryIds: z.array(z.string()).min(1, "At least one category is required"), // Changed from categoryId to categoryIds
+  categoryIds: z.array(z.string()).min(1, "At least one category is required"),
   vendorId: z.string().optional(),
   brandId: z.string().optional(),
   referenceLink: z.string().optional(),
@@ -112,6 +80,11 @@ export const productFormSchema = z.object({
   longDescriptionEn: z.string().optional(),
   longDescriptionAr: z.string().optional(),
   visible: z.boolean().default(true),
+  metaTitleEn: z.string().optional(),
+  metaTitleAr: z.string().optional(),
+  metaDescriptionEn: z.string().optional(),
+  metaDescriptionAr: z.string().optional(),
+  tags: z.array(z.string()).default([]),
 
   // Attributes
   attributes: z.array(
@@ -145,96 +118,34 @@ export const productFormSchema = z.object({
   ).optional(),
 
   // Pricing
-  singlePricing: z
-    .object({
-      cost: z.number().min(0).optional(),
-      price: z.number().min(0),
-      isSale: z.boolean().optional(),
-      salePrice: z.number().min(0).optional(),
-    })
-    .optional(),
-  variantPricing: z
-    .array(
-      z.object({
-        key: z.string(),
-        attributeValues: z.record(z.string(), z.string()),
-        cost: z.number().min(0).optional(),
-        price: z.number().min(0),
-        isSale: z.boolean().optional(),
-        salePrice: z.number().min(0).optional(),
-      })
-    )
-    .optional(),
+  pricing: z.object({
+    cost: z.number().min(0).optional(),
+    price: z.number().min(0),
+    isSale: z.boolean().optional(),
+    salePrice: z.number().min(0).optional(),
+  }).optional(),
 
   // Weight & Dimensions
-  isWeightVariantBased: z.boolean().default(false),
-  singleWeightDimensions: z
-    .object({
-      weight: z.number().min(0).optional(),
-      length: z.number().min(0).optional(),
-      width: z.number().min(0).optional(),
-      height: z.number().min(0).optional(),
-      unit: z.string().optional(),
-    })
-    .optional(),
-  variantWeightDimensions: z
-    .array(
-      z.object({
-        key: z.string(),
-        attributeValues: z.record(z.string(), z.string()),
-        weight: z.number().min(0).optional(),
-        length: z.number().min(0).optional(),
-        width: z.number().min(0).optional(),
-        height: z.number().min(0).optional(),
-        unit: z.string().optional(),
-      })
-    )
-    .optional(),
+  weightDimensions: z.object({
+    weight: z.number().min(0).optional(),
+    length: z.number().min(0).optional(),
+    width: z.number().min(0).optional(),
+    height: z.number().min(0).optional(),
+    unit: z.string().optional(),
+  }).optional(),
 
   // Media
-  isMediaVariantBased: z.boolean().default(false),
-  singleMedia: z
-    .array(
-      z.object({
-        id: z.string(),
-        file: z.instanceof(File).nullable(), // Nullable for existing media loaded from URLs
-        preview: z.string(),
-        type: z.enum(["image", "video"]),
-        order: z.number(),
-        isPrimary: z.boolean(),
-        isGroupPrimary: z.boolean().optional(),
-      })
-    )
-    .optional(),
-  variantMedia: z
-    .array(
-      z.object({
-        key: z.string(),
-        attributeValues: z.record(z.string(), z.string()),
-        media: z.array(
-          z.object({
-            id: z.string(),
-            file: z.instanceof(File).nullable(), // Nullable for existing media loaded from URLs
-            preview: z.string(),
-            type: z.enum(["image", "video"]),
-            order: z.number(),
-            isPrimary: z.boolean(),
-            isGroupPrimary: z.boolean().optional(),
-          })
-        ),
-      })
-    )
-    .optional(),
-
-  // Stock (variant combinations)
-  variants: z.array(
+  media: z.array(
     z.object({
       id: z.string(),
-      attributeValues: z.record(z.string(), z.string()),
-      is_out_of_stock: z.boolean().default(false),
-      active: z.boolean().optional(),
+      file: z.instanceof(File).nullable(),
+      preview: z.string(),
+      type: z.enum(["image", "video"]),
+      order: z.number(),
+      isPrimary: z.boolean(),
     })
   ).optional(),
+
 });
 
 export type ProductFormData = z.infer<typeof productFormSchema>;
@@ -268,7 +179,7 @@ export const PREDEFINED_ATTRIBUTE_VALUES: Record<string, string[]> = {
   Color: ["Red", "Blue", "Black", "White", "Green", "Yellow", "Pink", "Purple", "Orange", "Gray"],
   Size: ["XS", "S", "M", "L", "XL", "XXL", "XXXL"],
   RAM: ["2GB", "4GB", "6GB", "8GB", "12GB", "16GB", "32GB", "64GB"],
-  Storage: ["16GB", "32GB", "64GB", "128GB", "256GB", "512GB", "1TB", "2TB"],
+  Storage: ["16GB", "32GB", "64GB", "128GB", "256GB", "512GB", "1TB", "2TB"],   
   Material: ["Cotton", "Polyester", "Leather", "Wool", "Silk", "Denim", "Linen"],
   Style: ["Casual", "Formal", "Sport", "Classic", "Modern", "Vintage"],
 };

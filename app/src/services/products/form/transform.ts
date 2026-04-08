@@ -6,6 +6,7 @@ import { ProductFormData, MediaItem } from "../types/product-form.types";
 import {
   CreateProductDto,
   MediaInputDto,
+  ProductAttributeInput,
   ProductSpecificationInputDto,
 } from "../types/product.types";
 
@@ -13,11 +14,8 @@ import {
  * Media upload data structure - contains files that need to be uploaded
  */
 export interface MediaUploadData {
+  multipleMedia?: MediaItem[];
   singleMedia?: MediaItem[];
-  variantMedia?: {
-    attributeValues: Record<string, string>;
-    media: MediaItem[];
-  }[];
 }
 
 /**
@@ -26,9 +24,65 @@ export interface MediaUploadData {
 export interface UploadedMediaReference {
   mediaId: number;
   isPrimary: boolean;
-  isGroupPrimary?: boolean;
   sortOrder: number;
-  combination?: Record<string, number>;
+}
+
+interface TransformFormDataOptions {
+  includeEmptyRelations?: boolean;
+}
+
+const normalizeOptionalString = (value: string | undefined) => {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : undefined;
+};
+
+const parseOptionalId = (value: string | undefined) => {
+  if (!value) {
+    return undefined;
+  }
+
+  const parsed = parseInt(value, 10);
+  return Number.isNaN(parsed) ? undefined : parsed;
+};
+
+const normalizeTags = (tags: ProductFormData["tags"]): string[] => {
+  return Array.from(
+    new Set(
+      (tags || [])
+        .map((tag) => tag.trim())
+        .filter(Boolean)
+    )
+  );
+};
+
+export function buildProductAttributesPayload(
+  attributes: ProductFormData["attributes"]
+): ProductAttributeInput[] {
+  if (!attributes || attributes.length === 0) {
+    return [];
+  }
+
+  return attributes.flatMap((attribute) => {
+    const attributeId = parseInt(attribute.id, 10);
+    if (Number.isNaN(attributeId)) {
+      return [];
+    }
+
+    const attributeValueIds = Array.from(
+      new Set(
+        attribute.values
+          .map((value) => parseInt(value.id, 10))
+          .filter((valueId) => !Number.isNaN(valueId))
+      )
+    );
+
+    return [
+      {
+        attribute_id: attributeId,
+        attribute_value_ids: attributeValueIds,
+      },
+    ];
+  });
 }
 
 export function buildProductSpecificationsPayload(
@@ -76,9 +130,12 @@ export function buildProductSpecificationsPayload(
  * 4. Send the complete DTO to create/update product
  */
 export function transformFormDataToDto(
-  data: ProductFormData
+  data: ProductFormData,
+  options: TransformFormDataOptions = {}
 ): { dto: CreateProductDto; mediaFiles: MediaUploadData } {
+  const { includeEmptyRelations = false } = options;
   const specificationsPayload = buildProductSpecificationsPayload(data.specifications);
+  const attributesPayload = buildProductAttributesPayload(data.attributes);
   const linkedProductIds = Array.from(
     new Set(
       (data.linked_product_ids || [])
@@ -86,81 +143,63 @@ export function transformFormDataToDto(
         .filter((id) => !Number.isNaN(id))
     )
   );
+  const normalizedTags = normalizeTags(data.tags);
 
   const dto: CreateProductDto = {
     name_en: data.nameEn,
     name_ar: data.nameAr,
+    sku: normalizeOptionalString(data.sku),
+    record: normalizeOptionalString(data.record) ?? null,
     status: data.status,
     short_description_en: data.shortDescriptionEn || '',
     short_description_ar: data.shortDescriptionAr || '',
     long_description_en: data.longDescriptionEn || '',
     long_description_ar: data.longDescriptionAr || '',
-    category_ids: (data.categoryIds || []).map(id => parseInt(id)), // Changed to category_ids array
+    category_ids: (data.categoryIds || [])
+      .map((id) => parseInt(id, 10))
+      .filter((id) => !Number.isNaN(id)),
     reference_link: data.referenceLink?.trim() || null,
+    quantity: data.quantity || 0,
+    low_stock_threshold: data.low_stock_threshold || 10,
+    is_out_of_stock: data.is_out_of_stock || false,
+    meta_title_en: normalizeOptionalString(data.metaTitleEn),
+    meta_title_ar: normalizeOptionalString(data.metaTitleAr),
+    meta_description_en: normalizeOptionalString(data.metaDescriptionEn),
+    meta_description_ar: normalizeOptionalString(data.metaDescriptionAr),
+    tags: normalizedTags,
     linked_product_ids: linkedProductIds,
     visible: data.visible,
   };
 
   // Optional fields
-  if (data.vendorId) dto.vendor_id = parseInt(data.vendorId);
-  if (data.brandId) dto.brand_id = parseInt(data.brandId);
-  if (specificationsPayload.length > 0) dto.specifications = specificationsPayload;
+  const vendorId = parseOptionalId(data.vendorId);
+  const brandId = parseOptionalId(data.brandId);
 
-  // Attributes
-  if (data.attributes && data.attributes.length > 0) {
-    dto.attributes = data.attributes.map((attr) => ({
-      attribute_id: parseInt(attr.id),
-    }));
+  if (vendorId !== undefined) dto.vendor_id = vendorId;
+  if (brandId !== undefined) dto.brand_id = brandId;
+  if (specificationsPayload.length > 0 || includeEmptyRelations) {
+    dto.specifications = specificationsPayload;
+  }
+  if (attributesPayload.length > 0 || includeEmptyRelations) {
+    dto.attributes = attributesPayload;
   }
 
-  // ========== PRICING ==========
-  if (!data.attributes || data.attributes.length === 0) {
-    // Single pricing - no combination
-    if (data.singlePricing) {
-      const priceEntry: PriceItem = {
-        cost: data.singlePricing.cost,
-        price: data.singlePricing.price,
-        // isSale defaults to false; only include sale price when explicitly enabled
-        sale_price: data.singlePricing.isSale === true ? data.singlePricing.salePrice : undefined,
-      };
-      if (priceEntry.cost === undefined) delete priceEntry.cost;
-      dto.prices = [priceEntry];
-    }
-  } else {
-    // Variant pricing - with combinations
-    dto.prices = buildPrices(data);
+  if (data.pricing) {
+    dto.cost = data.pricing.cost;
+    dto.price = data.pricing.price;
+    dto.sale_price = data.pricing.isSale === true ? data.pricing.salePrice : null;
   }
 
-  // ========== WEIGHT & DIMENSIONS ==========
-  if (data.singleWeightDimensions) {
-    const weight = data.singleWeightDimensions;
-    if (weight.weight) {
-      dto.weights = [{
-        weight: weight.weight,
-        length: weight.length,
-        width: weight.width,
-        height: weight.height,
-      }];
-    }
-  } else if (false && data.variantWeightDimensions) {
-    dto.weights = buildWeights(data);
+  if (data.weightDimensions) {
+    dto.weight = data.weightDimensions.weight;
+    dto.length = data.weightDimensions.length;
+    dto.width = data.weightDimensions.width;
+    dto.height = data.weightDimensions.height;
   }
 
-  // ========== STOCK ==========
-  dto.stocks = [{
-    quantity: data.quantity || 0,
-    is_out_of_stock: data.is_out_of_stock || false
-  }];
-
-  // Extract media data for separate upload
   const mediaFiles: MediaUploadData = {};
-  
-  if (!data.isMediaVariantBased && data.singleMedia && data.singleMedia.length > 0) {
-    mediaFiles.singleMedia = data.singleMedia;
-  }
-
-  if (data.isMediaVariantBased && data.variantMedia && data.variantMedia.length > 0) {
-    mediaFiles.variantMedia = data.variantMedia;
+  if (data.media && data.media.length > 0) {
+    mediaFiles.singleMedia = data.media;
   }
 
   return { dto, mediaFiles };
@@ -173,161 +212,12 @@ export function transformFormDataToDto(
 export function buildMediaArray(
   uploadedMedia: UploadedMediaReference[]
 ): MediaInputDto[] {
-  return uploadedMedia.map(media => ({
+  const sortedMedia = [...uploadedMedia].sort((left, right) => left.sortOrder - right.sortOrder);
+  const hasExplicitPrimary = sortedMedia.some((media) => media.isPrimary);
+
+  return sortedMedia.map((media, index) => ({
     media_id: media.mediaId,
-    is_primary: media.isPrimary,
-    is_group_primary: media.isGroupPrimary,
+    is_primary: hasExplicitPrimary ? media.isPrimary : index === 0,
     sort_order: media.sortOrder,
-    combination: media.combination,
   }));
 }
-
-interface PriceItem {
-  combination?: Record<string, number>;
-  cost?: number;
-  price: number;
-  sale_price?: number;
-}
-
-interface WeightItem {
-  combination?: Record<string, number>;
-  weight: number;
-  length?: number;
-  width?: number;
-  height?: number;
-}
-
-interface StockItem {
-  combination?: Record<string, number>;
-  quantity?: number;
-  is_out_of_stock: boolean;
-}
-
-/**
- * Build prices array from form data
- * Groups by the selected product attributes
- */
-function buildPrices(data: ProductFormData): PriceItem[] {
-  const variantAttributeIds = (data.attributes || []).map((attr) => attr.id);
-
-  if (!data.variantPricing || data.variantPricing.length === 0) {
-    return [];
-  }
-
-  // Build unique prices based on pricing-controlling attributes
-  const priceMap = new Map<string, PriceItem>();
-
-  for (const pricing of data.variantPricing) {
-    const combination: Record<string, number> = {};
-    
-    for (const attrId of variantAttributeIds) {
-      const valueId = pricing.attributeValues[attrId];
-      if (valueId && valueId !== '') {
-        combination[attrId] = parseInt(valueId, 10);
-      }
-    }
-
-    // Create unique key for deduplication
-    const key = Object.entries(combination)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([k, v]) => `${k}:${v}`)
-      .join('|');
-
-    // Only add if not already exists
-    if (!priceMap.has(key) && Object.keys(combination).length > 0) {
-      const entry: PriceItem = {
-        combination,
-        cost: pricing.cost,
-        price: pricing.price,
-        // `isSale` defaults to true in the form, so only omit when explicitly false
-        sale_price: pricing.isSale === true ? pricing.salePrice : undefined,
-      };
-      if (entry.cost === undefined) delete entry.cost;
-      priceMap.set(key, entry);
-    }
-  }
-
-  return Array.from(priceMap.values());
-}
-
-/**
- * Build weights array from form data
- * Groups by the selected product attributes
- */
-function buildWeights(data: ProductFormData): WeightItem[] {
-  if (!data.variantWeightDimensions || data.variantWeightDimensions.length === 0) {
-    return [];
-  }
-
-  const variantAttributeIds = (data.attributes || []).map((attr) => attr.id);
-
-  const weightMap = new Map<string, WeightItem>();
-
-  for (const weight of data.variantWeightDimensions) {
-    const combination: Record<string, number> = {};
-
-    for (const attrId of variantAttributeIds) {
-      const valueId = weight.attributeValues[attrId];
-      if (valueId && valueId !== '') {
-        combination[attrId] = parseInt(valueId, 10);
-      }
-    }
-
-    const key = Object.entries(combination)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([k, v]) => `${k}:${v}`)
-      .join('|');
-
-    if (!weightMap.has(key) && Object.keys(combination).length > 0 && weight.weight) {
-      weightMap.set(key, {
-        combination,
-        weight: weight.weight,
-        length: weight.length,
-        width: weight.width,
-        height: weight.height,
-      });
-    }
-  }
-
-  return Array.from(weightMap.values());
-}
-
-/**
- * Build stocks array from form data
- * Each stock contains combination and quantity
- */
-function buildStocks(data: ProductFormData): StockItem[] {
-  if (!data.variants || data.variants.length === 0) {
-    return [];
-  }
-
-  const stockMap = new Map<string, StockItem>();
-
-  for (const variant of data.variants) {
-    if (variant.active === false) continue; // Only send stock for active variants
-    // Build combination from all attribute values
-    const combination: Record<string, number> = {};
-
-    for (const [attrId, valueId] of Object.entries(variant.attributeValues)) {
-      if (valueId && valueId !== '') {
-        combination[attrId] = parseInt(valueId, 10);
-      }
-    }
-
-    const key = Object.entries(combination)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([k, v]) => `${k}:${v}`)
-      .join('|');
-
-    if (!stockMap.has(key) && Object.keys(combination).length > 0) {
-      stockMap.set(key, {
-        combination,
-        quantity: 0,
-        is_out_of_stock: variant.is_out_of_stock ?? false,
-      });
-    }
-  }
-
-  return Array.from(stockMap.values());
-}
-
