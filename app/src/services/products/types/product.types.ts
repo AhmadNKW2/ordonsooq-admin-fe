@@ -114,6 +114,7 @@ export const linkedProductSummarySchema = z.object({
 });
 
 export type LinkedProductSummary = z.infer<typeof linkedProductSummarySchema>;
+export type ProductNameSummary = Pick<LinkedProductSummary, "id" | "name_en" | "name_ar">;
 
 // Product Schema for validation (matches backend)
 export const productSchema = z.object({
@@ -349,6 +350,7 @@ export interface ProductFilters {
   limit?: number;
   status?: ProductStatus;
   category_ids?: string;
+  vendor_id?: string | number;
   vendor_ids?: string;
   brand_ids?: string;
   created_by?: string;
@@ -361,6 +363,12 @@ export interface ProductFilters {
   end_date?: string;
   visible?: boolean | string;
   in_stock?: boolean | string;
+}
+
+export interface ProductNamesFilters {
+  category_ids?: string;
+  vendor_id?: string | number;
+  search?: string;
 }
 
 // ==================== DTOs ====================

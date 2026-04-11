@@ -202,6 +202,14 @@ export const BasicInformationSection: React.FC<BasicInformationSectionProps> = (
         return sortTree(categories);
     }, [categories, formData.categoryIds]);
 
+    const handleVendorChange = (value: string) => {
+        if (formData.vendorId && formData.vendorId !== value && (formData.linked_product_ids?.length || 0) > 0) {
+            onChange("linked_product_ids", []);
+        }
+
+        onChange("vendorId", value);
+    };
+
     return (
         <Card>
             <h2 className="text-xl font-semibold ">
@@ -229,27 +237,6 @@ export const BasicInformationSection: React.FC<BasicInformationSectionProps> = (
                     }
                     isRtl
                     error={errors.nameAr}
-                />
-
-                <Input
-                    id="sku"
-                    label="SKU"
-                    value={formData.sku || ""}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                        onChange("sku", e.target.value)
-                    }
-                    error={errors.sku}
-                />
-
-                <Input
-                    id="record"
-                    label="Record Reference"
-                    value={formData.record || ""}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                        onChange("record", e.target.value)
-                    }
-                    placeholder="MIGRATED_FROM_OLD_DB_123"
-                    error={errors.record}
                 />
 
                 {/* Short Descriptions */}
@@ -311,7 +298,7 @@ export const BasicInformationSection: React.FC<BasicInformationSectionProps> = (
                     id="vendorId"
                     label="Vendor"
                     value={formData.vendorId || ""}
-                    onChange={(value) => onChange("vendorId", value as string)}
+                    onChange={(value) => handleVendorChange(value as string)}
                     options={[
                         ...sortedVendors.map((vendor) => ({
                             value: vendor.id,
@@ -369,9 +356,8 @@ export const BasicInformationSection: React.FC<BasicInformationSectionProps> = (
                     id="metaTitleEn"
                     label="Meta Title (English)"
                     value={formData.metaTitleEn || ""}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                        onChange("metaTitleEn", e.target.value)
-                    }
+                    readOnly
+                    className="bg-gray-50 cursor-default"
                     error={errors.metaTitleEn}
                 />
 
@@ -379,9 +365,8 @@ export const BasicInformationSection: React.FC<BasicInformationSectionProps> = (
                     id="metaTitleAr"
                     label="Meta Title (Arabic)"
                     value={formData.metaTitleAr || ""}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                        onChange("metaTitleAr", e.target.value)
-                    }
+                    readOnly
+                    className="bg-gray-50 cursor-default"
                     isRtl
                     error={errors.metaTitleAr}
                 />
@@ -390,9 +375,8 @@ export const BasicInformationSection: React.FC<BasicInformationSectionProps> = (
                     id="metaDescriptionEn"
                     label="Meta Description (English)"
                     value={formData.metaDescriptionEn || ""}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                        onChange("metaDescriptionEn", e.target.value)
-                    }
+                    readOnly
+                    className="bg-gray-50 cursor-default"
                     error={errors.metaDescriptionEn}
                 />
 
@@ -400,28 +384,10 @@ export const BasicInformationSection: React.FC<BasicInformationSectionProps> = (
                     id="metaDescriptionAr"
                     label="Meta Description (Arabic)"
                     value={formData.metaDescriptionAr || ""}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                        onChange("metaDescriptionAr", e.target.value)
-                    }
+                    readOnly
+                    className="bg-gray-50 cursor-default"
                     isRtl
                     error={errors.metaDescriptionAr}
-                />
-
-                <Input
-                    id="tags"
-                    label="Tags"
-                    value={(formData.tags || []).join(", ")}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                        onChange(
-                            "tags",
-                            e.target.value
-                                .split(",")
-                                .map((tag) => tag.trim())
-                                .filter(Boolean)
-                        )
-                    }
-                    placeholder="gaming, mouse, rgb"
-                    error={errors.tags}
                 />
 
                 <div className="col-span-2">
@@ -429,6 +395,8 @@ export const BasicInformationSection: React.FC<BasicInformationSectionProps> = (
                         value={formData.linked_product_ids || []}
                         onChange={(value) => onChange("linked_product_ids", value)}
                         error={errors.linked_product_ids}
+                        categoryIds={formData.categoryIds}
+                        vendorId={formData.vendorId}
                         excludeProductId={currentProductId}
                         initialSelectedProducts={initialLinkedProducts}
                     />

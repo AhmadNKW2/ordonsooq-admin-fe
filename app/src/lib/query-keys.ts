@@ -95,6 +95,9 @@ export const queryKeys = {
     lists: () => [...queryKeys.products.all, "list"] as const,
     list: (params?: Record<string, any>) =>
       [...queryKeys.products.lists(), params] as const,
+    names: () => [...queryKeys.products.all, "names"] as const,
+    namesList: (params?: Record<string, any>) =>
+      [...queryKeys.products.names(), params] as const,
     details: () => [...queryKeys.products.all, "detail"] as const,
     detail: (id: string | number) =>
       [...queryKeys.products.details(), id] as const,

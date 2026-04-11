@@ -8,6 +8,8 @@ import {
   Product,
   ProductDetail,
   ProductFilters,
+  ProductNamesFilters,
+  ProductNameSummary,
   CreateProductDto,
   UpdateProductDto,
   ProductAttributeInput,
@@ -138,6 +140,15 @@ class ProductService extends BaseService<Product> {
         pagination: response.meta,
       },
     };
+  }
+
+  async getProductNames(
+    params?: ProductNamesFilters
+  ): Promise<ApiResponse<ProductNameSummary[]>> {
+    return httpClient.get<ApiResponse<ProductNameSummary[]>>(
+      `${this.endpoint}/names`,
+      params
+    );
   }
 
   /**

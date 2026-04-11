@@ -1,76 +1,39 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Select, type SelectOption } from "../../ui/select";
-import { useProducts } from "../../../services/products/hooks/use-products";
-import type { LinkedProductSummary, Product } from "../../../services/products/types/product.types";
+import { useProductNames } from "../../../services/products/hooks/use-products";
+import type { LinkedProductSummary, ProductNameSummary } from "../../../services/products/types/product.types";
 
 interface LinkedProductsFieldProps {
   value: string[];
   onChange: (value: string[]) => void;
   error?: string | boolean;
+  categoryIds?: string[];
+  vendorId?: string;
   excludeProductId?: string;
   initialSelectedProducts?: LinkedProductSummary[];
 }
 
 const SEARCH_DEBOUNCE_MS = 300;
-const SEARCH_LIMIT = 20;
-
-const getSingleValueAttributeSummary = (product: Product) => {
-  if (!product.attributes || Array.isArray(product.attributes)) {
-    return null;
-  }
-
-  const attributeSummaries = Object.values(product.attributes)
-    .flatMap((attribute) => {
-      const values = attribute?.values
-        ? Object.values(
-            attribute.values as Record<string, { name_en?: string | null; name_ar?: string | null }>
-          )
-        : [];
-      if (values.length !== 1) {
-        return [];
-      }
-
-      const attributeName = attribute.name_en || attribute.name_ar;
-      const attributeValue = values[0]?.name_en || values[0]?.name_ar;
-      if (!attributeName || !attributeValue) {
-        return [];
-      }
-
-      return [`${attributeName}: ${attributeValue}`];
-    });
-
-  if (attributeSummaries.length === 0) {
-    return null;
-  }
-
-  return attributeSummaries.join(" | ");
-};
 
 const formatLinkedProductLabel = (product: {
   id: number | string;
   name_en?: string | null;
   name_ar?: string | null;
-  sku?: string | null;
-  attributes?: Product["attributes"];
 }) => {
-  const displayName = product.name_en || product.name_ar || `Product #${product.id}`;
-  const sku = product.sku?.trim() || "N/A";
+  const englishName = product.name_en?.trim();
+  const arabicName = product.name_ar?.trim();
 
-  const attributeSummary = "attributes" in product
-    ? getSingleValueAttributeSummary(product as Product)
-    : null;
+  if (englishName && arabicName && englishName !== arabicName) {
+    return `${englishName} - ${arabicName}`;
+  }
 
-  return attributeSummary
-    ? `${displayName} - SKU: ${sku} - ${attributeSummary}`
-    : `${displayName} - SKU: ${sku}`;
+  return englishName || arabicName || `Product #${product.id}`;
 };
 
 const toSelectOption = (product: {
   id: number | string;
   name_en?: string | null;
   name_ar?: string | null;
-  sku?: string | null;
-  attributes?: Product["attributes"];
 }): SelectOption => ({
   value: String(product.id),
   label: formatLinkedProductLabel(product),
@@ -80,12 +43,23 @@ export const LinkedProductsField: React.FC<LinkedProductsFieldProps> = ({
   value,
   onChange,
   error,
+  categoryIds,
+  vendorId,
   excludeProductId,
   initialSelectedProducts = [],
 }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [knownOptions, setKnownOptions] = useState<Record<string, SelectOption>>({});
+  const categoryIdsParam = useMemo(() => {
+    const uniqueIds = Array.from(new Set((categoryIds || []).filter(Boolean)));
+    return uniqueIds.length > 0 ? uniqueIds.join(",") : undefined;
+  }, [categoryIds]);
+
+  useEffect(() => {
+    setSearchQuery("");
+    setDebouncedSearchQuery("");
+  }, [categoryIdsParam, vendorId]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -95,10 +69,10 @@ export const LinkedProductsField: React.FC<LinkedProductsFieldProps> = ({
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  const { data, isFetching } = useProducts(
+  const { data, isFetching } = useProductNames(
     {
-      page: 1,
-      limit: SEARCH_LIMIT,
+      category_ids: categoryIdsParam,
+      vendor_id: vendorId || undefined,
       search: debouncedSearchQuery || undefined,
     },
     {
@@ -107,14 +81,14 @@ export const LinkedProductsField: React.FC<LinkedProductsFieldProps> = ({
   );
 
   const searchedOptions = useMemo(() => {
-    return (data?.data.data || [])
-      .filter((product: Product) => String(product.id) !== excludeProductId)
-      .map((product: Product) => toSelectOption(product));
-  }, [data?.data.data, excludeProductId]);
+    return (data?.data || [])
+      .filter((product: ProductNameSummary) => String(product.id) !== excludeProductId)
+      .map((product: ProductNameSummary) => toSelectOption(product));
+  }, [data?.data, excludeProductId]);
 
   useEffect(() => {
     setKnownOptions((previous) => {
-      const next = { ...previous };
+      const next: Record<string, SelectOption> = {};
 
       initialSelectedProducts.forEach((product) => {
         if (String(product.id) === excludeProductId) {
@@ -130,7 +104,7 @@ export const LinkedProductsField: React.FC<LinkedProductsFieldProps> = ({
 
       value.forEach((selectedId) => {
         if (!next[selectedId]) {
-          next[selectedId] = {
+          next[selectedId] = previous[selectedId] || {
             value: selectedId,
             label: `Product #${selectedId}`,
           };

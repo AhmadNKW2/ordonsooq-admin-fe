@@ -19,12 +19,13 @@ import {
   CreateProductDto,
   UpdateProductDto,
   ProductFilters,
+  ProductNamesFilters,
+  ProductNameSummary,
   RestoreProductDto,
 } from "../types/product.types";
 import {
   ApiResponse,
   PaginatedResponse,
-  QueryParams,
   ApiError,
 } from "../../../types/common.types";
 
@@ -46,6 +47,27 @@ export function useProducts(
   return useQuery({
     queryKey: queryKeys.products.list(params),
     queryFn: () => productService.getProducts(params),
+    refetchOnMount: true,
+    staleTime: 0,
+    ...options,
+  });
+}
+
+export function useProductNames(
+  params?: ProductNamesFilters,
+  options?: Omit<
+    UseQueryOptions<
+      ApiResponse<ProductNameSummary[]>,
+      ApiError,
+      ApiResponse<ProductNameSummary[]>,
+      ReturnType<typeof queryKeys.products.namesList>
+    >,
+    "queryKey" | "queryFn"
+  >
+) {
+  return useQuery({
+    queryKey: queryKeys.products.namesList(params),
+    queryFn: () => productService.getProductNames(params),
     refetchOnMount: true,
     staleTime: 0,
     ...options,
