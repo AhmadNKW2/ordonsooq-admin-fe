@@ -31,6 +31,7 @@ export interface Attribute {
   type: string;
   is_color: boolean;
   for_all_categories?: boolean;
+  allow_ai_inference?: boolean;
   attribute_type?: string | null;
   list_separately?: boolean;
   unit_en?: string | null;
@@ -59,6 +60,7 @@ export interface CreateAttributeDto {
   parent_value_id?: number | null;
   is_color?: boolean;
   for_all_categories?: boolean;
+  allow_ai_inference?: boolean;
   is_active?: boolean;
   attribute_type?: string | null;
   list_separately?: boolean;
@@ -96,6 +98,7 @@ export interface UpdateAttributeDto {
   parent_value_id?: number | null;
   is_color?: boolean;
   for_all_categories?: boolean;
+  allow_ai_inference?: boolean;
   is_active?: boolean;
   attribute_type?: string | null;
   list_separately?: boolean;

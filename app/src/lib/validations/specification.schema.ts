@@ -56,6 +56,7 @@ export const specificationSchema = z.object({
       return Number(value);
     }),
   for_all_categories: z.boolean().optional().default(false),
+  allow_ai_inference: z.boolean().optional().default(false),
   category_ids: z.array(z.number()).optional().default([]),
   list_separately: z.boolean().optional().default(false),
   is_active: z.boolean().default(true),

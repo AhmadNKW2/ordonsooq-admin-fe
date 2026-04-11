@@ -59,6 +59,7 @@ export default function SpecificationEditPage() {
       parent_id: null,
       parent_value_id: null,
       for_all_categories: false,
+      allow_ai_inference: false,
       category_ids: [],
       is_active: true,
       list_separately: false,
@@ -76,6 +77,7 @@ export default function SpecificationEditPage() {
   const parentId = watch("parent_id");
   const parentValueId = watch("parent_value_id");
   const forAllCategories = watch("for_all_categories");
+  const allowAiInference = watch("allow_ai_inference");
   const categoryIds = watch("category_ids") || [];
   const isActive = watch("is_active");
   const listSeparately = watch("list_separately");
@@ -110,6 +112,7 @@ export default function SpecificationEditPage() {
         parent_id: specification.parent_id,
         parent_value_id: specification.parent_value_id,
         for_all_categories: specification.for_all_categories ?? false,
+        allow_ai_inference: specification.allow_ai_inference ?? false,
         category_ids: extractCategoryIds(specification),
         is_active: specification.is_active,
         list_separately: specification.list_separately ?? false,
@@ -163,6 +166,7 @@ export default function SpecificationEditPage() {
           parent_id: data.parent_id,
           parent_value_id: data.parent_value_id,
           for_all_categories: data.for_all_categories,
+          allow_ai_inference: data.allow_ai_inference,
           category_ids: data.for_all_categories ? [] : data.category_ids,
           is_active: data.is_active,
           list_separately: data.list_separately,
@@ -250,6 +254,7 @@ export default function SpecificationEditPage() {
         parentValueId={parentValueId?.toString() || ""}
         categoryIds={categoryIds.map(String)}
         forAllCategories={!!forAllCategories}
+        allowAiInference={!!allowAiInference}
         isActive={!!isActive}
         onNameEnChange={handleNameEnChange}
         onNameArChange={handleNameArChange}
@@ -259,6 +264,7 @@ export default function SpecificationEditPage() {
         onParentValueIdChange={(val) => setValue("parent_value_id", val ? Number(val) : null)}
         onCategoryIdsChange={(ids) => setValue("category_ids", ids.map(Number))}
         onForAllCategoriesChange={(value) => setValue("for_all_categories", value)}
+        onAllowAiInferenceChange={(value) => setValue("allow_ai_inference", value)}
         onIsActiveChange={(value) => setValue("is_active", value)}
         listSeparately={listSeparately}
         onListSeparatelyChange={(value) => setValue("list_separately", value)}

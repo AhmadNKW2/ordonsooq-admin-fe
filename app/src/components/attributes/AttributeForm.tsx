@@ -458,6 +458,7 @@ interface AttributeFormProps {
   parentValueId?: string;
   isColor: boolean;
   forAllCategories: boolean;
+  allowAiInference: boolean;
   isActive: boolean;
   onNameEnChange: (value: string) => void;
   onNameArChange: (value: string) => void;
@@ -469,6 +470,7 @@ interface AttributeFormProps {
   onCategoryIdsChange: (value: string[]) => void;
   onIsColorChange: (value: boolean) => void;
   onForAllCategoriesChange: (value: boolean) => void;
+  onAllowAiInferenceChange: (value: boolean) => void;
   onIsActiveChange: (value: boolean) => void;
   listSeparately?: boolean | null;
   onListSeparatelyChange?: (value: boolean) => void;
@@ -497,6 +499,7 @@ export const AttributeForm: React.FC<AttributeFormProps> = ({
   parentValueId,
   isColor,
   forAllCategories,
+  allowAiInference,
   isActive,
   onNameEnChange,
   onNameArChange,
@@ -508,6 +511,7 @@ export const AttributeForm: React.FC<AttributeFormProps> = ({
   onCategoryIdsChange,
   onIsColorChange,
   onForAllCategoriesChange,
+  onAllowAiInferenceChange,
   onIsActiveChange,
   listSeparately = false,
   onListSeparatelyChange,
@@ -756,6 +760,11 @@ export const AttributeForm: React.FC<AttributeFormProps> = ({
             checked={forAllCategories}
             onChange={onForAllCategoriesChange}
             label="All Categories"
+          />
+          <Checkbox
+            checked={allowAiInference}
+            onChange={onAllowAiInferenceChange}
+            label="Allow AI Inference"
           />
           {forAllCategories && (
             <p className="text-sm text-gray-500">

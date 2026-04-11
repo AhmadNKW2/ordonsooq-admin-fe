@@ -30,6 +30,7 @@ export default function CreateAttributePage() {
       parent_value_id: null,
       is_color: false,
       for_all_categories: false,
+      allow_ai_inference: false,
       is_active: true,
       attribute_type: "spec_attribute",
       list_separately: false,
@@ -50,6 +51,7 @@ export default function CreateAttributePage() {
   const categoryIds = watch("category_ids") || [];
   const isColor = watch("is_color");
   const forAllCategories = watch("for_all_categories");
+  const allowAiInference = watch("allow_ai_inference");
   const isActive = watch("is_active");
   const listSeparately = watch("list_separately");
 
@@ -98,6 +100,7 @@ export default function CreateAttributePage() {
         parent_value_id: data.parent_value_id,
         is_color: data.is_color,
         for_all_categories: data.for_all_categories,
+        allow_ai_inference: data.allow_ai_inference,
         is_active: data.is_active,
         attribute_type: data.attribute_type,
         list_separately: data.list_separately,
@@ -126,6 +129,7 @@ export default function CreateAttributePage() {
       categoryIds={categoryIds.map(String)}
       isColor={isColor}
       forAllCategories={!!forAllCategories}
+      allowAiInference={!!allowAiInference}
       isActive={isActive}
       onNameEnChange={handleNameEnChange}
       onNameArChange={handleNameArChange}
@@ -136,6 +140,7 @@ export default function CreateAttributePage() {
       onCategoryIdsChange={(ids) => setValue("category_ids", ids.map(Number))}
       onIsColorChange={(value) => setValue("is_color", value)}
       onForAllCategoriesChange={(value) => setValue("for_all_categories", value)}
+      onAllowAiInferenceChange={(value) => setValue("allow_ai_inference", value)}
       onIsActiveChange={(value) => setValue("is_active", value)}
       listSeparately={listSeparately}
       onListSeparatelyChange={(value) => setValue("list_separately", value)}

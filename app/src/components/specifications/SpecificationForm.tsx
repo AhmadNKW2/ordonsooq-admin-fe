@@ -349,6 +349,7 @@ interface SpecificationFormProps {
   parentValueId?: string;
   categoryIds: string[];
   forAllCategories: boolean;
+  allowAiInference: boolean;
   isActive: boolean;
   listSeparately?: boolean | null;
   onNameEnChange: (value: string) => void;
@@ -359,6 +360,7 @@ interface SpecificationFormProps {
   onParentValueIdChange: (value: string) => void;
   onCategoryIdsChange: (value: string[]) => void;
   onForAllCategoriesChange: (value: boolean) => void;
+  onAllowAiInferenceChange: (value: boolean) => void;
   onIsActiveChange: (value: boolean) => void;
   onListSeparatelyChange?: (value: boolean) => void;
   specifications?: Specification[];
@@ -382,6 +384,7 @@ export const SpecificationForm: React.FC<SpecificationFormProps> = ({
   parentValueId,
   categoryIds,
   forAllCategories,
+  allowAiInference,
   isActive,
   listSeparately = false,
   onNameEnChange,
@@ -392,6 +395,7 @@ export const SpecificationForm: React.FC<SpecificationFormProps> = ({
   onParentValueIdChange,
   onCategoryIdsChange,
   onForAllCategoriesChange,
+  onAllowAiInferenceChange,
   onIsActiveChange,
   onListSeparatelyChange,
   specifications = [],
@@ -634,6 +638,11 @@ export const SpecificationForm: React.FC<SpecificationFormProps> = ({
             checked={forAllCategories}
             onChange={onForAllCategoriesChange}
             label="All Categories"
+          />
+          <Checkbox
+            checked={allowAiInference}
+            onChange={onAllowAiInferenceChange}
+            label="Allow AI Inference"
           />
           {forAllCategories && (
             <p className="text-sm text-gray-500">
