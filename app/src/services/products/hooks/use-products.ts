@@ -21,6 +21,7 @@ import {
   ProductFilters,
   ProductNamesFilters,
   ProductNameSummary,
+  ProductStatus,
   RestoreProductDto,
 } from "../types/product.types";
 import {
@@ -281,6 +282,38 @@ export function useToggleProductStatus(
       showSuccessToast("Product status updated successfully");
 
       // Call onSuccess from options if provided
+      options?.onSuccess?.(response, variables, ...rest);
+    },
+    ...options,
+  });
+}
+
+/**
+ * Hook to update product workflow status
+ */
+export function useUpdateProductWorkflowStatus(
+  options?: UseMutationOptions<
+    ApiResponse<Product>,
+    ApiError,
+    { id: string | number; status: ProductStatus }
+  >
+) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, status }) =>
+      productService.updateProductWorkflowStatus(id, status),
+    onSuccess: (response, variables, ...rest) => {
+      queryClient.invalidateQueries({
+        queryKey: queryKeys.products.detail(variables.id),
+      });
+      queryClient.invalidateQueries({ queryKey: queryKeys.products.lists() });
+      showSuccessToast(
+        variables.status === "active"
+          ? "Product approved successfully"
+          : "Product status updated successfully"
+      );
+
       options?.onSuccess?.(response, variables, ...rest);
     },
     ...options,

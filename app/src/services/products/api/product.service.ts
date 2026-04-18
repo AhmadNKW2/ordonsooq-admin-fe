@@ -10,6 +10,7 @@ import {
   ProductFilters,
   ProductNamesFilters,
   ProductNameSummary,
+  ProductStatus,
   CreateProductDto,
   UpdateProductDto,
   ProductAttributeInput,
@@ -252,6 +253,18 @@ class ProductService extends BaseService<Product> {
     visible: boolean
   ): Promise<ApiResponse<Product>> {
     const response = await this.patch(id, { visible });
+    getQueryClient().invalidateQueries({ queryKey: queryKeys.products.all });
+    return response;
+  }
+
+  /**
+   * Update product workflow status without sending a full product payload
+   */
+  async updateProductWorkflowStatus(
+    id: string | number,
+    status: ProductStatus
+  ): Promise<ApiResponse<Product>> {
+    const response = await this.patch(id, { status });
     getQueryClient().invalidateQueries({ queryKey: queryKeys.products.all });
     return response;
   }
