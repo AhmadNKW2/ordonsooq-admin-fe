@@ -5,6 +5,7 @@ import Image from "next/image";
 import {
   AlertCircle,
   Boxes,
+  Check,
   CheckCircle2,
   ExternalLink,
   ImageOff,
@@ -17,7 +18,7 @@ import {
   Store,
   Tag,
   TriangleAlert,
-  UserRound,
+  X,
 } from "lucide-react";
 import { PageHeader } from "@/components/common/PageHeader";
 import { EmptyState } from "@/components/common/EmptyState";
@@ -35,16 +36,26 @@ import { useCategories } from "@/services/categories/hooks/use-categories";
 import {
   usePermanentDeleteProduct,
   useProducts,
+  useUpdateProduct,
   useUpdateProductWorkflowStatus,
 } from "@/services/products/hooks/use-products";
-import { Product, ProductFilters } from "@/services/products/types/product.types";
+import {
+  Product,
+  ProductFilters,
+  UpdateProductDto,
+} from "@/services/products/types/product.types";
 import { useVendors } from "@/services/vendors/hooks/use-vendors";
 
 type ProductLike = Product & Record<string, any>;
 
 type PriceSummary = {
-  currentPrice: string;
-  compareAtPrice: string | null;
+  price: string | null;
+  salePrice: string | null;
+};
+
+type EditablePriceFields = {
+  price: string;
+  salePrice: string;
 };
 
 type ProductChip = {
@@ -73,6 +84,16 @@ type QueueItem = {
   snapshot: ReviewSnapshot;
 };
 
+type PriceOverride = {
+  price: number;
+  salePrice: number | null;
+};
+
+type PriceCandidate = {
+  raw: string;
+  numericValue: number;
+};
+
 const REVIEW_STORAGE_KEY = "products_review";
 const REVIEW_FILTERS_STORAGE_KEY = `${REVIEW_STORAGE_KEY}_filters`;
 
@@ -83,7 +104,7 @@ const formatPriceValue = (value: number) => {
   });
 };
 
-const toPriceCandidate = (value: unknown) => {
+const toPriceCandidate = (value: unknown): PriceCandidate | null => {
   if (value === null || value === undefined || value === "") {
     return null;
   }
@@ -365,56 +386,69 @@ const getProductImageUrl = (product: ProductLike) => {
   return getProductGalleryUrls(product)[0] ?? null;
 };
 
-const getProductDisplayPrice = (product: ProductLike): PriceSummary | null => {
-  let basePrice = null;
-  let salePrice = null;
+const resolveProductPriceCandidates = (product: ProductLike) => {
+  let price: PriceCandidate | null = null;
+  let salePrice: PriceCandidate | null = null;
 
-  if (product.variants?.length && product.price_groups) {
-    const firstVariant = product.variants[0];
-    const priceGroup = product.price_groups[firstVariant.price_group_id];
-    if (priceGroup) {
-      basePrice = toPriceCandidate(priceGroup.price);
-      salePrice = toPriceCandidate(priceGroup.sale_price);
-    }
-  } else if (product.price_groups) {
-    const firstGroup = product.price_groups[Object.keys(product.price_groups)[0]];
-    if (firstGroup) {
-      basePrice = toPriceCandidate(firstGroup.price);
-      salePrice = toPriceCandidate(firstGroup.sale_price);
-    }
-  } else if (product.price) {
+  if (product.price !== null && product.price !== undefined && product.price !== "") {
     const legacyPrice = product.price as any;
     if (typeof legacyPrice === "object") {
-      basePrice = toPriceCandidate(legacyPrice.price);
-      salePrice = toPriceCandidate(legacyPrice.sale_price);
+      price = toPriceCandidate(legacyPrice.price);
+      salePrice = toPriceCandidate(product.sale_price ?? legacyPrice.sale_price);
     } else {
-      basePrice = toPriceCandidate(legacyPrice);
+      price = toPriceCandidate(legacyPrice);
       salePrice = toPriceCandidate(product.sale_price);
     }
-  } else {
+  } else if (product.sale_price !== null && product.sale_price !== undefined && product.sale_price !== "") {
     salePrice = toPriceCandidate(product.sale_price);
   }
 
-  if (basePrice && salePrice && basePrice.numericValue !== salePrice.numericValue) {
-    const currentPrice =
-      basePrice.numericValue <= salePrice.numericValue ? basePrice : salePrice;
-    const compareAtPrice =
-      basePrice.numericValue <= salePrice.numericValue ? salePrice : basePrice;
-
-    return {
-      currentPrice: currentPrice.raw,
-      compareAtPrice: compareAtPrice.raw,
-    };
+  if (!price && !salePrice && product.variants?.length && product.price_groups) {
+    const firstVariant = product.variants[0];
+    const priceGroup = product.price_groups[firstVariant.price_group_id];
+    if (priceGroup) {
+      price = toPriceCandidate(priceGroup.price);
+      salePrice = toPriceCandidate(priceGroup.sale_price);
+    }
+  } else if (!price && !salePrice && product.price_groups) {
+    const firstGroup = product.price_groups[Object.keys(product.price_groups)[0]];
+    if (firstGroup) {
+      price = toPriceCandidate(firstGroup.price);
+      salePrice = toPriceCandidate(firstGroup.sale_price);
+    }
   }
 
-  const currentPrice = basePrice || salePrice;
-  if (!currentPrice) {
+  return { price, salePrice };
+};
+
+const getProductDisplayPrice = (product: ProductLike): PriceSummary | null => {
+  const { price, salePrice } = resolveProductPriceCandidates(product);
+  const normalizedSalePrice =
+    price && salePrice && price.numericValue === salePrice.numericValue ? null : salePrice;
+
+  if (!price && !normalizedSalePrice) {
     return null;
   }
 
   return {
-    currentPrice: currentPrice.raw,
-    compareAtPrice: null,
+    price: price?.raw ?? normalizedSalePrice?.raw ?? null,
+    salePrice: normalizedSalePrice?.raw ?? null,
+  };
+};
+
+const getEditablePriceFields = (product: ProductLike): EditablePriceFields => {
+  const { price, salePrice } = resolveProductPriceCandidates(product);
+
+  if (!price && salePrice) {
+    return {
+      price: String(salePrice.numericValue),
+      salePrice: "",
+    };
+  }
+
+  return {
+    price: price ? String(price.numericValue) : "",
+    salePrice: salePrice ? String(salePrice.numericValue) : "",
   };
 };
 
@@ -434,18 +468,6 @@ const getVendorName = (product: ProductLike) => {
 
 const getBrandName = (product: ProductLike) => {
   return product.brand?.name_en || product.brand?.name || null;
-};
-
-const getCreatorLabel = (product: ProductLike) => {
-  if (!product.created_by) {
-    return null;
-  }
-
-  return (
-    [product.created_by.firstName, product.created_by.lastName].filter(Boolean).join(" ") ||
-    product.created_by.email ||
-    null
-  );
 };
 
 const formatProductTimestamp = (value?: string | Date | null) => {
@@ -511,6 +533,30 @@ const openExternalLink = (url?: string | null) => {
   window.open(url, "_blank", "noopener,noreferrer");
 };
 
+const getLinkedProductIds = (product: ProductLike) => {
+  const directIds = Array.isArray(product.linked_product_ids)
+    ? product.linked_product_ids
+        .map((id) => Number(id))
+        .filter((id) => Number.isInteger(id) && id !== product.id)
+    : [];
+
+  const relationIds = Array.isArray((product as any).linked_products)
+    ? (product as any).linked_products
+        .map((linkedProduct: any) => Number(linkedProduct?.id))
+        .filter((id: number) => Number.isInteger(id) && id !== product.id)
+    : [];
+
+  return Array.from(new Set([...directIds, ...relationIds]));
+};
+
+const applyLocalPriceOverride = (product: ProductLike, override: PriceOverride): ProductLike => {
+  return {
+    ...product,
+    price: String(override.price),
+    sale_price: override.salePrice !== null ? String(override.salePrice) : null,
+  };
+};
+
 function QueueStatCard({
   icon,
   label,
@@ -556,13 +602,50 @@ function ProductMetaItem({
   value: string;
 }) {
   return (
-    <div className="rounded-[18px] border border-primary/10 bg-white/90 px-3 py-3">
+    <div className="rounded-[20px] border border-primary/10 bg-white/92 px-4 py-4 shadow-[0_16px_30px_-28px_rgba(15,23,42,0.45)]">
       <div className="mb-2 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-gray-400">
         <span className="text-primary">{icon}</span>
         <span>{label}</span>
       </div>
-      <p className="text-sm font-semibold leading-6 text-gray-800">{value}</p>
+      <p className="text-[15px] font-semibold leading-6 text-gray-800">{value}</p>
     </div>
+  );
+}
+
+function ReviewActionButton({
+  icon,
+  label,
+  color,
+  variant = "outline",
+  disabled,
+  onClick,
+  href,
+  className,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  color?: string;
+  variant?: "outline" | "solid";
+  disabled?: boolean;
+  onClick?: React.MouseEventHandler<HTMLButtonElement | HTMLAnchorElement>;
+  href?: string;
+  className?: string;
+}) {
+  return (
+    <Button
+      variant={variant}
+      color={color}
+      disabled={disabled}
+      onClick={onClick}
+      href={href}
+      isSquare={true}
+      className={`h-11 w-11 rounded-2xl border-white/70 bg-white/92 p-0 shadow-[0_16px_28px_-22px_rgba(15,23,42,0.45)] backdrop-blur-sm hover:-translate-y-0.5 ${className ?? ""}`}
+    >
+      <span className="flex h-full w-full items-center justify-center">
+        {icon}
+        <span className="sr-only">{label}</span>
+      </span>
+    </Button>
   );
 }
 
@@ -656,98 +739,303 @@ function ProductGroupSection({
 function ProductReviewCard({
   item,
   onApprove,
+  onSavePrice,
   onDelete,
   isApproving,
+  isSavingPrice,
 }: {
   item: QueueItem;
   onApprove: (productId: number) => Promise<void>;
+  onSavePrice: (product: Product, values: PriceOverride) => Promise<void>;
   onDelete: (product: Product) => void;
   isApproving: boolean;
+  isSavingPrice: boolean;
 }) {
   const { product, snapshot } = item;
   const createdAt = formatProductTimestamp(product.created_at as string | Date | undefined);
-  const creator = getCreatorLabel(product as ProductLike) ?? "Unknown creator";
   const categoryName = getCategoryName(product as ProductLike) ?? "No category assigned";
   const vendorName = getVendorName(product as ProductLike) ?? "No vendor assigned";
   const brandName = getBrandName(product as ProductLike) ?? "No brand assigned";
+  const initialPriceFields = useMemo(
+    () => getEditablePriceFields(product as ProductLike),
+    [product]
+  );
+  const [isEditingPrice, setIsEditingPrice] = useState(false);
+  const [priceDraft, setPriceDraft] = useState(initialPriceFields.price);
+  const [salePriceDraft, setSalePriceDraft] = useState(initialPriceFields.salePrice);
+  const [priceError, setPriceError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isEditingPrice) {
+      setPriceDraft(initialPriceFields.price);
+      setSalePriceDraft(initialPriceFields.salePrice);
+      setPriceError(null);
+    }
+  }, [initialPriceFields.price, initialPriceFields.salePrice, isEditingPrice]);
+
+  const handleStartEditingPrice = () => {
+    setPriceDraft(initialPriceFields.price);
+    setSalePriceDraft(initialPriceFields.salePrice);
+    setPriceError(null);
+    setIsEditingPrice(true);
+  };
+
+  const handleCancelEditingPrice = () => {
+    setPriceDraft(initialPriceFields.price);
+    setSalePriceDraft(initialPriceFields.salePrice);
+    setPriceError(null);
+    setIsEditingPrice(false);
+  };
+
+  const handleSavePrice = async () => {
+    const trimmedPrice = priceDraft.trim();
+    const trimmedSalePrice = salePriceDraft.trim();
+
+    if (!trimmedPrice) {
+      setPriceError("Enter a valid store price before saving.");
+      return;
+    }
+
+    const nextPrice = Number(trimmedPrice);
+    if (!Number.isFinite(nextPrice) || nextPrice < 0) {
+      setPriceError("Enter a valid store price before saving.");
+      return;
+    }
+
+    let nextSalePrice: number | null = null;
+    if (trimmedSalePrice) {
+      const parsedSalePrice = Number(trimmedSalePrice);
+      if (!Number.isFinite(parsedSalePrice) || parsedSalePrice < 0) {
+        setPriceError("Enter a valid sale price or leave it empty.");
+        return;
+      }
+
+      nextSalePrice = parsedSalePrice;
+    }
+
+    setPriceError(null);
+
+    try {
+      await onSavePrice(product, {
+        price: nextPrice,
+        salePrice: nextSalePrice,
+      });
+      setIsEditingPrice(false);
+    } catch {
+      setPriceError("Price update failed. Try again.");
+    }
+  };
 
   return (
-    <Card className="gap-0 overflow-hidden border border-primary/10 p-0 shadow-[0_28px_65px_-40px_rgba(15,23,42,0.45)]">
-      <div className="relative overflow-hidden bg-[linear-gradient(135deg,rgba(109,75,221,0.07),rgba(240,192,63,0.16),rgba(255,255,255,0.98))] p-5 md:p-6">
-        <div className="absolute -left-8 top-8 h-28 w-28 rounded-full bg-primary/10 blur-2xl" />
-        <div className="absolute right-0 top-1/2 h-28 w-28 -translate-y-1/2 rounded-full bg-secondary/20 blur-3xl" />
+    <Card className="gap-0 overflow-hidden border border-primary/10 p-0 shadow-[0_28px_65px_-40px_rgba(15,23,42,0.45)] transition-shadow hover:shadow-[0_32px_75px_-40px_rgba(15,23,42,0.55)]">
+      <div className="relative overflow-hidden bg-[linear-gradient(135deg,rgba(109,75,221,0.07),rgba(240,192,63,0.16),rgba(255,255,255,0.98))] p-5 md:p-6 md:pb-8">
+        <div className="absolute -left-8 top-8 h-32 w-32 rounded-full bg-primary/10 blur-2xl" />
+        <div className="absolute right-0 top-1/2 h-32 w-32 -translate-y-1/2 rounded-full bg-secondary/20 blur-3xl" />
 
-        <div className="relative grid gap-5 xl:grid-cols-[minmax(0,1fr)_220px] xl:items-start">
-          <div className="grid gap-5 md:grid-cols-[132px_minmax(0,1fr)] md:items-start">
-            <div className="relative h-32 w-32 shrink-0 overflow-hidden rounded-3xl border border-white/80 bg-white shadow-[0_18px_38px_-24px_rgba(15,23,42,0.65)] ring-1 ring-white/60">
+        <div className="relative flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
+          <div className="flex flex-1 flex-col gap-6 md:flex-row md:items-start">
+            <div className="relative h-44 w-44 shrink-0 overflow-hidden rounded-[24px] border border-white/80 bg-white shadow-[0_18px_40px_-24px_rgba(15,23,42,0.65)] ring-1 ring-white/60">
               {snapshot.imageUrl ? (
                 <Image
                   src={snapshot.imageUrl}
                   alt={product.name_en || "Product image"}
                   fill
-                  className="object-cover"
+                  className="object-cover transition-transform duration-500 hover:scale-105"
                 />
               ) : (
                 <div className="flex h-full w-full items-center justify-center bg-primary/5 text-primary">
-                  <ImageOff className="h-8 w-8" />
+                  <ImageOff className="h-10 w-10 opacity-60" />
                 </div>
               )}
-              <div className="absolute left-3 top-3 rounded-full bg-black/75 px-2.5 py-1 text-xs font-semibold text-white shadow-sm">
+              <div className="absolute left-3 top-3 rounded-full bg-black/85 px-3 py-1 text-xs font-bold text-white shadow-sm backdrop-blur-md">
                 #{product.id}
               </div>
             </div>
 
-            <div className="min-w-0">
-              <div className="flex flex-wrap gap-2">
-                <Badge variant={snapshot.visible ? "default2" : "danger"}>
-                  {snapshot.visible ? "Visible" : "Hidden"}
-                </Badge>
-                <Badge variant={snapshot.outOfStock ? "warning" : "success"}>
-                  {snapshot.outOfStock ? "Out of stock" : "In stock"}
-                </Badge>
-                <Badge variant={snapshot.referenceUrl ? "success" : "warning"}>
-                  {snapshot.referenceUrl ? "Reference linked" : "Reference missing"}
-                </Badge>
-              </div>
-
-              <div className="mt-4 min-w-0 rounded-3xl bg-white/75 p-4 shadow-[0_16px_35px_-32px_rgba(15,23,42,0.45)] ring-1 ring-white/70 backdrop-blur-sm">
-                <h2 className="text-2xl font-black leading-tight tracking-tight text-gray-900 md:text-[32px]">
+            <div className="flex min-w-0 flex-col gap-5">
+              <div>
+                <div className="flex flex-wrap gap-2 mb-3">
+                  <Badge variant={snapshot.visible ? "default2" : "danger"}>
+                    {snapshot.visible ? "Visible" : "Hidden"}
+                  </Badge>
+                  <Badge variant={snapshot.outOfStock ? "warning" : "success"}>
+                    {snapshot.outOfStock ? "Out of stock" : "In stock"}
+                  </Badge>
+                  <Badge variant={snapshot.referenceUrl ? "success" : "warning"}>
+                    {snapshot.referenceUrl ? "Reference linked" : "Reference missing"}
+                  </Badge>
+                </div>
+                <h2 className="text-2xl font-black leading-tight tracking-tight text-gray-900 md:text-[30px]">
                   {product.name_en || "Untitled product"}
                 </h2>
-                <p dir="rtl" className="mt-2 text-sm leading-7 text-gray-500 md:text-base">
+                <p dir="rtl" className="mt-2.5 text-[17px] leading-relaxed text-gray-600">
                   {product.name_ar || "No Arabic name yet"}
                 </p>
               </div>
 
-              <div className="mt-4 grid gap-3 md:grid-cols-2">
+              <div className="grid gap-3 sm:grid-cols-3 xl:w-[600px]">
                 <ProductMetaItem icon={<Store className="h-4 w-4" />} label="Vendor" value={vendorName} />
                 <ProductMetaItem icon={<Tag className="h-4 w-4" />} label="Brand" value={brandName} />
                 <ProductMetaItem icon={<Boxes className="h-4 w-4" />} label="Category" value={categoryName} />
-                <ProductMetaItem icon={<UserRound className="h-4 w-4" />} label="Created By" value={creator} />
               </div>
             </div>
           </div>
 
-          <div className="shrink-0 rounded-[26px] border border-secondary/30 bg-white/90 p-5 shadow-[0_24px_40px_-30px_rgba(240,192,63,0.95)] xl:min-h-full">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-gray-400">
-              Store Price
-            </p>
-            {snapshot.displayPrice ? (
-              <div className="mt-3">
-                <p className="text-3xl font-black tracking-tight text-gray-900">
-                  {snapshot.displayPrice.currentPrice}
-                </p>
-                {snapshot.displayPrice.compareAtPrice ? (
-                  <p className="mt-1 text-sm font-semibold text-gray-400 line-through">
-                    {snapshot.displayPrice.compareAtPrice}
+          <div className="flex shrink-0 flex-col gap-5 xl:w-[360px]">
+            <div className="flex items-center justify-end gap-2 rounded-[22px] border border-white/70 bg-white/78 p-2 shadow-[0_18px_30px_-26px_rgba(15,23,42,0.55)] backdrop-blur-sm self-end">
+              <ReviewActionButton
+                icon={<ExternalLink className="h-4 w-4" />}
+                label="Open reference link"
+                color="var(--color-primary2)"
+                onClick={() => openExternalLink(snapshot.referenceUrl)}
+                disabled={!snapshot.referenceUrl || isSavingPrice}
+                className="border-primary/12 text-primary2 hover:bg-primary2 hover:text-white"
+              />
+              <ReviewActionButton
+                icon={<PencilLine className="h-4 w-4" />}
+                label="Open product editor"
+                href={`/products/${product.id}`}
+                color="#64748b"
+                disabled={isSavingPrice}
+                className="border-slate-200 text-slate-600 hover:bg-slate-600 hover:text-white"
+              />
+              <ReviewActionButton
+                icon={<TriangleAlert className="h-4 w-4" />}
+                label="Delete product permanently"
+                color="var(--color-danger)"
+                onClick={() => onDelete(product)}
+                disabled={isApproving || isSavingPrice}
+                className="border-danger/25 text-danger hover:bg-danger hover:text-white"
+              />
+              <ReviewActionButton
+                icon={
+                  isApproving ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <CheckCircle2 className="h-4 w-4" />
+                  )
+                }
+                label="Approve and activate product"
+                variant="solid"
+                color="var(--color-success)"
+                onClick={() => onApprove(product.id)}
+                disabled={isApproving || isSavingPrice || isEditingPrice}
+                className="border-success/30 bg-success text-white hover:bg-success hover:opacity-85 shadow-[0_8px_20px_-8px_var(--color-success)]"
+              />
+            </div>
+
+            <div className="rounded-[28px] border border-secondary/30 bg-white/92 p-5 shadow-[0_24px_40px_-30px_rgba(240,192,63,0.95)]">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-gray-400">
+                    Pricing Settings
                   </p>
+                </div>
+
+              {!isEditingPrice ? (
+                <ReviewActionButton
+                  icon={<PencilLine className="h-4 w-4" />}
+                  label="Edit product pricing"
+                  color="var(--color-primary)"
+                  onClick={handleStartEditingPrice}
+                  disabled={isApproving || isSavingPrice}
+                  className="border-primary/15 text-primary hover:bg-primary hover:text-white"
+                />
+              ) : null}
+            </div>
+
+            {isEditingPrice ? (
+              <form
+                className="mt-4 space-y-3"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  void handleSavePrice();
+                }}
+              >
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <Input
+                    label="Store price"
+                    size="sm"
+                    type="number"
+                    inputMode="decimal"
+                    step="0.01"
+                    min="0"
+                    value={priceDraft}
+                    onChange={(event) => setPriceDraft(event.target.value)}
+                  />
+                  <Input
+                    label="Sale price"
+                    size="sm"
+                    type="number"
+                    inputMode="decimal"
+                    step="0.01"
+                    min="0"
+                    value={salePriceDraft}
+                    onChange={(event) => setSalePriceDraft(event.target.value)}
+                  />
+                </div>
+
+                <p className="text-xs leading-5 text-gray-500">
+                  Leave sale price empty if this product should not show a discounted value.
+                </p>
+
+                {priceError ? (
+                  <p className="text-sm font-semibold text-danger">{priceError}</p>
                 ) : null}
-              </div>
+
+                <div className="flex items-center justify-end gap-2">
+                  <ReviewActionButton
+                    icon={<X className="h-4 w-4" />}
+                    label="Cancel price editing"
+                    color="#64748b"
+                    onClick={handleCancelEditingPrice}
+                    disabled={isSavingPrice}
+                    className="border-slate-200 text-slate-600 hover:bg-slate-600 hover:text-white"
+                  />
+                  <ReviewActionButton
+                    icon={
+                      isSavingPrice ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Check className="h-4 w-4" />
+                      )
+                    }
+                    label="Save product pricing"
+                    variant="solid"
+                    color="var(--color-success)"
+                    onClick={() => void handleSavePrice()}
+                    disabled={isSavingPrice}
+                    className="border-success/30 bg-success text-white hover:bg-success hover:opacity-85"
+                  />
+                </div>
+              </form>
             ) : (
-              <p className="mt-3 text-sm font-semibold text-danger">Price not set</p>
+              <div className="mt-4 space-y-3">
+                <div className="rounded-[22px] border border-primary/10 bg-[linear-gradient(180deg,rgba(109,75,221,0.06),rgba(255,255,255,0.98))] px-4 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.75)]">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-400">
+                    Store price
+                  </p>
+                  <p className="mt-2 text-3xl font-black tracking-tight text-gray-900">
+                    {snapshot.displayPrice?.price ?? "Not set"}
+                  </p>
+                </div>
+
+                <div className="rounded-[22px] border border-primary/10 bg-white px-4 py-4 shadow-[0_14px_28px_-24px_rgba(15,23,42,0.4)]">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-gray-400">
+                    Sale price
+                  </p>
+                  {snapshot.displayPrice?.salePrice ? (
+                    <p className="mt-2 text-xl font-bold tracking-tight text-primary">
+                      {snapshot.displayPrice.salePrice}
+                    </p>
+                  ) : (
+                    <p className="mt-2 text-sm font-semibold text-gray-400">No sale price</p>
+                  )}
+                </div>
+              </div>
             )}
 
-            <div className="mt-5 rounded-[20px] border border-primary/10 bg-[linear-gradient(180deg,rgba(109,75,221,0.06),rgba(255,255,255,0.95))] px-4 py-4 text-sm text-gray-600 shadow-[inset_0_1px_0_rgba(255,255,255,0.75)]">
+            <div className="mt-4 rounded-[20px] border border-primary/10 bg-[linear-gradient(180deg,rgba(109,75,221,0.06),rgba(255,255,255,0.95))] px-4 py-4 text-sm text-gray-600 shadow-[inset_0_1px_0_rgba(255,255,255,0.75)]">
               {createdAt ? (
                 <>
                   <p className="font-semibold text-gray-800">{createdAt.date}</p>
@@ -760,9 +1048,10 @@ function ProductReviewCard({
           </div>
         </div>
       </div>
+      </div>
 
-        <div className="flex flex-col gap-4 p-5 md:p-6">
-        <div className="grid gap-4 xl:grid-cols-2">
+        <div className="flex w-full flex-col gap-6 p-5 md:p-8 bg-white/40 border-t border-primary/5">
+        <div className="grid w-full gap-6 xl:grid-cols-2">
           <ProductGroupSection
             title="Attributes"
             groups={snapshot.attributes}
@@ -781,60 +1070,6 @@ function ProductReviewCard({
             iconClassName="bg-primary"
             chipClassName="border-primary/12 bg-primary/8"
           />
-        </div>
-
-        <div className="rounded-3xl border border-primary/10 bg-[linear-gradient(180deg,rgba(248,247,255,0.96),rgba(255,255,255,1))] p-3 shadow-[0_22px_45px_-36px_rgba(15,23,42,0.45)]">
-          <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-            <div className="grid gap-3 sm:grid-cols-2 xl:flex xl:flex-wrap">
-              <Button
-                variant="outline"
-                color="var(--color-primary2)"
-                onClick={() => openExternalLink(snapshot.referenceUrl)}
-                disabled={!snapshot.referenceUrl}
-                className="border-primary/12 bg-white text-[15px] font-semibold shadow-[0_14px_30px_-24px_rgba(15,23,42,0.45)] hover:-translate-y-0.5 hover:bg-primary2 hover:text-white"
-              >
-                <ExternalLink className="mr-2 inline h-4 w-4" />
-                Reference Link
-              </Button>
-
-              <Button
-                variant="outline"
-                href={`/products/${product.id}`}
-                color="#64748b"
-                className="border-slate-200 bg-white text-[15px] font-semibold shadow-[0_14px_30px_-24px_rgba(15,23,42,0.45)] hover:-translate-y-0.5 hover:bg-slate-600 hover:text-white"
-              >
-                <PencilLine className="mr-2 inline h-4 w-4" />
-                Open editor
-              </Button>
-
-              <Button
-                variant="outline"
-                onClick={() => onDelete(product)}
-                color="var(--color-danger)"
-                className="border-danger/30 bg-white text-[15px] font-semibold shadow-[0_14px_30px_-24px_rgba(15,23,42,0.45)] hover:-translate-y-0.5 hover:bg-danger hover:text-white"
-              >
-                <TriangleAlert className="mr-2 inline h-4 w-4" />
-                Delete Permanently
-              </Button>
-
-            </div>
-
-            <div className="xl:min-w-62.5">
-              <Button
-                onClick={() => onApprove(product.id)}
-                disabled={isApproving}
-                color="var(--color-success)"
-                className="w-full text-[16px] font-semibold shadow-[0_22px_40px_-26px_rgba(107,209,39,0.9)] hover:-translate-y-0.5"
-              >
-                {isApproving ? (
-                  <Loader2 className="mr-2 inline h-4 w-4 animate-spin" />
-                ) : (
-                  <CheckCircle2 className="mr-2 inline h-4 w-4" />
-                )}
-                Approve & Activate
-              </Button>
-            </div>
-          </div>
         </div>
       </div>
     </Card>
@@ -884,9 +1119,11 @@ export function ProductReviewPage() {
   );
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
+  const [priceOverrides, setPriceOverrides] = useState<Partial<Record<number, PriceOverride>>>({});
 
   const { data, isLoading, isFetching, isError, error, refetch } = useProducts(queryParams);
   const approveProduct = useUpdateProductWorkflowStatus();
+  const updateProduct = useUpdateProduct();
   const permanentDeleteProduct = usePermanentDeleteProduct({
     onSuccess: () => {
       setDeleteModalOpen(false);
@@ -942,11 +1179,17 @@ export function ProductReviewPage() {
   }, [vendorsData?.data]);
 
   const queueItems = useMemo<QueueItem[]>(() => {
-    return products.map((product) => ({
-      product,
-      snapshot: buildReviewSnapshot(product as ProductLike),
-    }));
-  }, [products]);
+    return products.map((product) => {
+      const nextProduct = priceOverrides[product.id]
+        ? applyLocalPriceOverride(product as ProductLike, priceOverrides[product.id] as PriceOverride)
+        : (product as ProductLike);
+
+      return {
+        product: nextProduct as Product,
+        snapshot: buildReviewSnapshot(nextProduct),
+      };
+    });
+  }, [priceOverrides, products]);
 
   const queueStats = useMemo(() => {
     return {
@@ -1006,6 +1249,29 @@ export function ProductReviewPage() {
     }
   };
 
+  const handleSavePrice = async (product: Product, values: PriceOverride) => {
+    const payload: UpdateProductDto = {
+      price: values.price,
+      sale_price: values.salePrice,
+      linked_product_ids: getLinkedProductIds(product as ProductLike),
+    };
+
+    try {
+      await updateProduct.mutateAsync({
+        id: product.id,
+        data: payload,
+      });
+
+      setPriceOverrides((previous) => ({
+        ...previous,
+        [product.id]: values,
+      }));
+    } catch (priceError) {
+      console.error("Failed to update product pricing", priceError);
+      throw priceError;
+    }
+  };
+
   const handleDeleteRequest = (product: Product) => {
     setProductToDelete(product);
     setDeleteModalOpen(true);
@@ -1045,7 +1311,7 @@ export function ProductReviewPage() {
   }
 
   return (
-    <div className="flex flex-col items-center gap-5 p-5">
+    <div className="flex w-full flex-col items-stretch gap-6 p-5 md:p-8">
       <PageHeader
         icon={<Shield />}
         title="Products Review"
@@ -1055,7 +1321,7 @@ export function ProductReviewPage() {
             variant="outline"
             color="var(--color-primary2)"
             onClick={() => refetch()}
-            className="h-11 px-4 text-sm font-semibold"
+            className="h-12 rounded-full px-5 text-[15px] font-bold shadow-sm"
           >
             <RefreshCw
               className={`mr-2 inline h-4 w-4 ${isFetching && !isLoading ? "animate-spin" : ""}`}
@@ -1065,7 +1331,7 @@ export function ProductReviewPage() {
         }
       />
 
-      <Card className="overflow-hidden border border-primary/10 bg-[linear-gradient(135deg,rgba(109,75,221,0.08),rgba(255,255,255,0.96),rgba(240,192,63,0.12))] p-0 shadow-[0_30px_70px_-46px_rgba(15,23,42,0.55)]">
+      <Card className="w-full overflow-hidden rounded-[32px] border border-primary/10 bg-[linear-gradient(135deg,rgba(109,75,221,0.08),rgba(255,255,255,0.96),rgba(240,192,63,0.12))] p-0 shadow-[0_30px_70px_-46px_rgba(15,23,42,0.55)]">
         <div className="relative overflow-hidden p-6 md:p-7">
           <div className="absolute -left-10 top-10 h-32 w-32 rounded-full bg-primary/15 blur-3xl" />
           <div className="absolute right-8 top-4 h-28 w-28 rounded-full bg-secondary/20 blur-3xl" />
@@ -1107,7 +1373,7 @@ export function ProductReviewPage() {
       </Card>
 
       {(products.length > 0 || hasActiveFilters) && (
-        <Card className="border border-primary/10 shadow-[0_24px_50px_-38px_rgba(15,23,42,0.45)]">
+        <Card className="w-full rounded-[28px] border border-primary/10 shadow-[0_24px_50px_-38px_rgba(15,23,42,0.45)] p-4 md:p-6">
           <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
             <div className="grid w-full gap-4 xl:grid-cols-[minmax(0,1.2fr)_minmax(240px,0.8fr)_minmax(280px,1fr)]">
               <Input
@@ -1160,7 +1426,7 @@ export function ProductReviewPage() {
 
       {!isLoading && queueItems.length === 0 ? (
         hasActiveFilters ? (
-          <Card className="border border-primary/10 py-14 text-center shadow-[0_24px_50px_-38px_rgba(15,23,42,0.45)]">
+          <Card className="w-full rounded-[32px] border border-primary/10 py-20 text-center shadow-[0_24px_50px_-38px_rgba(15,23,42,0.45)] transition-all hover:bg-white/60">
             <div className="mx-auto flex max-w-xl flex-col items-center gap-4">
               <div className="rounded-full bg-primary/8 p-4 text-primary">
                 <Shield className="h-8 w-8" />
@@ -1184,17 +1450,22 @@ export function ProductReviewPage() {
           />
         )
       ) : (
-        <div className="grid w-full gap-5 xl:grid-cols-2">
+        <div className="flex w-full flex-col gap-8">
           {queueItems.map((item) => (
-            <ProductReviewCard
-              key={item.product.id}
-              item={item}
-              onApprove={handleApproveProduct}
-              onDelete={handleDeleteRequest}
-              isApproving={
-                approveProduct.isPending && approveProduct.variables?.id === item.product.id
-              }
-            />
+            <div className="w-full" key={item.product.id}>
+              <ProductReviewCard
+                item={item}
+                onApprove={handleApproveProduct}
+                onSavePrice={handleSavePrice}
+                onDelete={handleDeleteRequest}
+                isApproving={
+                  approveProduct.isPending && approveProduct.variables?.id === item.product.id
+                }
+                isSavingPrice={
+                  updateProduct.isPending && updateProduct.variables?.id === item.product.id
+                }
+              />
+            </div>
           ))}
         </div>
       )}

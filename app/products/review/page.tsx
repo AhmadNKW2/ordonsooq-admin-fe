@@ -1,7 +1,7 @@
 "use client";
 
-import { ProductReviewPage } from "../../src/components/products/ProductReviewPage";
+import { ProductReviewWorkspace } from "../../src/components/products/ProductReviewWorkspace";
 
 export default function ReviewProductsPage() {
-  return <ProductReviewPage />;
+  return <ProductReviewWorkspace />;
 }
