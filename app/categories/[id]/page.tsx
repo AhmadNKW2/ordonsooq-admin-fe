@@ -23,6 +23,7 @@ import { ImageUploadItem } from "../../src/components/ui/image-upload";
 import { RefreshCw, AlertCircle } from "lucide-react";
 import { validateCategoryForm } from "../../src/lib/validations";
 import { ProductItem } from "../../src/components/common/ProductsTableSection";
+import { mapProductToProductItem } from "../../src/components/common/product-table-utils";
 
 const extractLinkedIds = (directIds: unknown, relations: unknown): number[] => {
   const normalizedIds = Array.isArray(directIds)
@@ -84,17 +85,7 @@ export default function EditCategoryPage() {
   // Get assigned products from category response
   const assignedProducts: ProductItem[] = useMemo(() => {
     const products = (category as any)?.products || [];
-    return products.map((p: any) => ({
-      id: p.id,
-      name_en: p.name_en,
-      name_ar: p.name_ar,
-      sku: p.sku,
-      slug: p.slug,
-      primary_image: p.primary_image,
-      price: p.price,
-      category: p.category ? { name: p.category.name } : null,
-      vendor: p.vendor ? { name: p.vendor.name } : null,
-    }));
+    return products.map((product: any) => mapProductToProductItem(product));
   }, [category]);
 
   // Initialize form when category loads
@@ -166,8 +157,8 @@ export default function EditCategoryPage() {
             description_ar: descriptionAr || undefined,
             visible: visible,
             parent_id: parentId,
-            attribute_ids,
-            specification_ids,
+            // attribute_ids,
+            // specification_ids,
             // Only send new file if one was uploaded
             image: image?.file || undefined,
           },

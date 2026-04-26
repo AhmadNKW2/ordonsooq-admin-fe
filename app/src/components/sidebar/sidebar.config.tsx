@@ -242,6 +242,21 @@ export const sidebarConfig = {
           ),
         },
         {
+          href: '/partners',
+          label: 'Partners',
+          roles: ['admin'] as SidebarRole[],
+          icon: (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M7 21h10M9 8h6M10 12h4M6 21V7a2 2 0 012-2h8a2 2 0 012 2v14M9 5V3h6v2"
+              />
+            </svg>
+          ),
+        },
+        {
           href: '/notes',
           label: 'Notes',
           roles: ['admin'] as SidebarRole[],

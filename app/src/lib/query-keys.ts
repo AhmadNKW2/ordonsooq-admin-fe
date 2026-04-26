@@ -179,4 +179,15 @@ export const queryKeys = {
     detail: (id: string | number) =>
       [...queryKeys.notes.details(), id] as const,
   },
+
+  // Partners
+  partners: {
+    all: ["partners"] as const,
+    lists: () => [...queryKeys.partners.all, "list"] as const,
+    list: (params?: Record<string, any>) =>
+      [...queryKeys.partners.lists(), params] as const,
+    details: () => [...queryKeys.partners.all, "detail"] as const,
+    detail: (id: string | number) =>
+      [...queryKeys.partners.details(), id] as const,
+  },
 } as const;
