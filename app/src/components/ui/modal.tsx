@@ -14,8 +14,10 @@ interface ModalProps {
   children: React.ReactNode;
   closeOnBackdrop?: boolean;
   footer?: React.ReactNode;
-  className?: string;
+  className?: string; // Appended to the wrapper div
+  contentClassName?: string; // Appended to the inner content container div
   variant?: 'default' | 'transparent';
+  scrollable?: boolean; // Defaults to true. If false, wrapper becomes overflow-visible and inner container loses overflow-y-auto
 }
 
 export const Modal: React.FC<ModalProps> = ({
@@ -24,7 +26,9 @@ export const Modal: React.FC<ModalProps> = ({
   children,
   closeOnBackdrop = true,
   className = "",
+  contentClassName = "",
   variant = 'default',
+  scrollable = true,
 }) => {
   const [isVisible, setIsVisible] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
@@ -57,12 +61,15 @@ export const Modal: React.FC<ModalProps> = ({
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === "Escape" && isOpen) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
         onClose();
       }
     };
 
-    document.addEventListener("keydown", handleEscape);
-    return () => document.removeEventListener("keydown", handleEscape);
+    // Use capture phase to intercept before next.js router or other handlers
+    document.addEventListener("keydown", handleEscape, { capture: true });
+    return () => document.removeEventListener("keydown", handleEscape, { capture: true });
   }, [isOpen, onClose]);
 
   // Prevent body scroll when modal is open
@@ -89,7 +96,7 @@ export const Modal: React.FC<ModalProps> = ({
   return (
     <div
       className={`
-        fixed inset-0 z-50 flex items-center justify-center
+        fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6
         bg-black/50 backdrop-blur-sm
         transition-opacity duration-300 ease-out
         ${isAnimating ? 'opacity-100' : 'opacity-0'}
@@ -98,28 +105,28 @@ export const Modal: React.FC<ModalProps> = ({
     >
       <div
         className={`
-          relative max-md:max-h-[90vh] rounded-r1 shadow-s1
-          flex flex-col justify-center items-center gap-5
+          relative w-full max-h-[95vh] rounded-xl shadow-xl
+          flex flex-col ${scrollable ? 'overflow-hidden' : 'overflow-visible'}
           transition-all duration-300 ease-out
-          ${variant === 'default' ? 'p-10 bg-white' : ''}
+          ${variant === 'default' ? 'bg-white' : ''}
           ${isAnimating
             ? 'opacity-100 scale-100 translate-y-0'
-            : 'opacity-0 scale-95 -translate-y-4'
+            : 'opacity-0 scale-95 translate-y-4'
           } ${className}`}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Content */}
+        {/* Header/Close Button Section (if we want close button absolutely positioned, we can keep it here, 
+            but using a flex layout with overflow-y-auto is better) */}
         <IconButton
           onClick={onClose}
           variant="cancel"
-          className="absolute top-3 right-3"
+          className="absolute top-4 right-4 z-10 bg-white/50 hover:bg-gray-100 rounded-full"
         />
 
-        {/* Content */}
-
-        {/* Content */}
-        {children}
-
+        {/* Content Container */}
+        <div className={`flex flex-col flex-1 ${scrollable ? 'overflow-y-auto' : ''} ${variant === 'default' ? 'p-6 md:p-8' : ''} ${contentClassName}`}>
+          {children}
+        </div>
       </div>
     </div>
   );

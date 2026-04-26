@@ -11,6 +11,8 @@ const TableContext = React.createContext<{
 interface TableProps {
   children: React.ReactNode;
   className?: string;
+  wrapperClassName?: string;
+  innerWrapperClassName?: string;
   emptyMessage?: string;
   pagination?: PaginationData;
   onPageChange?: (page: number) => void;
@@ -19,9 +21,11 @@ interface TableProps {
   noPagination?: boolean;
 }
 
-export const Table: React.FC<TableProps> = ({ 
-  children, 
-  className = '', 
+export const Table: React.FC<TableProps> = ({
+  children,
+  className = '',
+  wrapperClassName = '',
+  innerWrapperClassName = '',
   emptyMessage = "No data available",
   pagination,
   onPageChange,
@@ -32,7 +36,7 @@ export const Table: React.FC<TableProps> = ({
   const [isEmpty, setIsEmpty] = React.useState(false);
 
   return (
-    <div className="flex flex-col gap-4 w-full">
+    <div className={`flex flex-col gap-4 w-full ${wrapperClassName}`}>
       <TableContext.Provider value={{ isEmpty, setIsEmpty }}>
         {isEmpty && (
           <div className="w-full rounded-r1 border border-primary/20 shadow-s1 bg-white">
@@ -49,7 +53,7 @@ export const Table: React.FC<TableProps> = ({
           </div>
         )}
         
-        <div className={`w-full overflow-x-auto overflow-y-visible rounded-r1 border border-primary/20 shadow-s1 ${isEmpty ? 'hidden' : ''}`}>
+        <div className={`w-full overflow-x-auto overflow-y-visible rounded-r1 border border-primary/20 shadow-s1 ${isEmpty ? 'hidden' : ''} ${innerWrapperClassName}`}>
           <table className={`w-full border-collapse bg-white ${className}`} style={{ tableLayout: 'fixed' }}>
             {children}
           </table>
