@@ -12,6 +12,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Tag, Palette, GripVertical, Layers, ListFilter } from "lucide-react";
 import { Card } from "../ui/card";
 import { Button } from "../ui/button";
+import { Checkbox } from "../ui/checkbox";
 import { Input } from "../ui/input";
 import { Select } from "../ui/select";
 import { Toggle } from "../ui/toggle";
@@ -32,6 +33,8 @@ import {
   type AttributeValueFormData,
   type AttributeValueFormOutput,
 } from "../../lib/validations/attribute.schema";
+import { CategoryTreeSelect } from "../products/CategoryTreeSelect";
+import { Category } from "../../services/categories/types/category.types";
 
 // DnD Kit imports
 import {
@@ -279,7 +282,7 @@ const SortableValueRow: React.FC<SortableValueRowProps> = ({
           {value.color_code ? (
             <div className="flex items-center gap-2">
               <div
-                className="w-6 h-6 rounded-full flex-shrink-0 shadow-s1 border border-black/20"
+                className="w-6 h-6 rounded-full shrink-0 shadow-s1 border border-black/20"
                 style={{ backgroundColor: value.color_code }}
               />
               <span className="text-sm text-gray-500">{value.color_code}</span>
@@ -454,6 +457,8 @@ interface AttributeFormProps {
   parentId?: string;
   parentValueId?: string;
   isColor: boolean;
+  forAllCategories: boolean;
+  allowAiInference: boolean;
   isActive: boolean;
   onNameEnChange: (value: string) => void;
   onNameArChange: (value: string) => void;
@@ -461,13 +466,16 @@ interface AttributeFormProps {
   onUnitArChange: (value: string) => void;
   onParentIdChange: (value: string) => void;
   onParentValueIdChange: (value: string) => void;
+  categoryIds: string[];
+  onCategoryIdsChange: (value: string[]) => void;
   onIsColorChange: (value: boolean) => void;
+  onForAllCategoriesChange: (value: boolean) => void;
+  onAllowAiInferenceChange: (value: boolean) => void;
   onIsActiveChange: (value: boolean) => void;
-  attributeType?: "spec_attribute" | "variant_attribute" | null;
   listSeparately?: boolean | null;
-  onAttributeTypeChange?: (value: "spec_attribute" | "variant_attribute") => void;
   onListSeparatelyChange?: (value: boolean) => void;
   attributes?: Attribute[]; // List of available attributes for parent selection
+  categories?: Category[];
   // Validation - now using React Hook Form
   formErrors?: { name_en?: string; name_ar?: string };
   // Values (for both create and edit modes - managed locally)
@@ -490,6 +498,8 @@ export const AttributeForm: React.FC<AttributeFormProps> = ({
   parentId,
   parentValueId,
   isColor,
+  forAllCategories,
+  allowAiInference,
   isActive,
   onNameEnChange,
   onNameArChange,
@@ -497,13 +507,16 @@ export const AttributeForm: React.FC<AttributeFormProps> = ({
   onUnitArChange,
   onParentIdChange,
   onParentValueIdChange,
+  categoryIds,
+  onCategoryIdsChange,
   onIsColorChange,
+  onForAllCategoriesChange,
+  onAllowAiInferenceChange,
   onIsActiveChange,
-  attributeType = "spec_attribute",
   listSeparately = false,
-  onAttributeTypeChange,
   onListSeparatelyChange,
   attributes = [], // Default to empty array
+  categories = [],
   formErrors,
   values,
   onValuesChange,
@@ -711,16 +724,7 @@ export const AttributeForm: React.FC<AttributeFormProps> = ({
           />
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-4">
-          <Select
-            label="Attribute Type *"
-            value={attributeType || "spec_attribute"}
-            onChange={(val) => onAttributeTypeChange?.(val as "spec_attribute" | "variant_attribute")}
-            options={[
-              { value: "spec_attribute", label: "Spec Attribute" },
-              { value: "variant_attribute", label: "Variant Attribute" },
-            ]}
-          />
+        <div className="mt-4">
           <Select
             label="Parent Attribute (Optional)"
             value={parentId || ""}
@@ -739,6 +743,34 @@ export const AttributeForm: React.FC<AttributeFormProps> = ({
               onParentValueIdChange("");
             }}
           />
+        </div>
+
+        <div className="mt-4">
+          <CategoryTreeSelect
+            label="Categories"
+            categories={categories}
+            selectedIds={forAllCategories ? [] : categoryIds}
+            onChange={onCategoryIdsChange}
+            disabled={forAllCategories}
+          />
+        </div>
+
+        <div className="mt-4 flex flex-col gap-2">
+          <Checkbox
+            checked={forAllCategories}
+            onChange={onForAllCategoriesChange}
+            label="All Categories"
+          />
+          <Checkbox
+            checked={allowAiInference}
+            onChange={onAllowAiInferenceChange}
+            label="Allow AI Inference"
+          />
+          {forAllCategories && (
+            <p className="text-sm text-gray-500">
+              This attribute will be available for every category. Specific category selection will be ignored when you save.
+            </p>
+          )}
         </div>
 
         <div className="flex items-center gap-8 mt-5">

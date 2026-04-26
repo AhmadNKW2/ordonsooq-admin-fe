@@ -47,10 +47,26 @@ export interface ArchivedSubcategory {
   archivedSubcategoriesCount: number;
 }
 
+export interface CategoryAttributeSummary {
+  id: number;
+  name_en?: string | null;
+  name_ar?: string | null;
+}
+
+export interface CategorySpecificationSummary {
+  id: number;
+  name_en?: string | null;
+  name_ar?: string | null;
+}
+
 // Category type with optional children and archived data
 export type Category = z.infer<typeof baseCategorySchema> & {
   children?: Category[];
   parent?: Category | null;
+  attribute_ids?: number[];
+  specification_ids?: number[];
+  attributes?: CategoryAttributeSummary[];
+  specifications?: CategorySpecificationSummary[];
   // Included in archived category list response
   archivedProducts?: ArchivedCategoryProduct[];
   archivedSubcategories?: ArchivedSubcategory[];
@@ -74,6 +90,8 @@ export interface CreateCategoryDto {
   parent_id?: number | null;
   image?: File | null;
   product_ids?: number[]; // Assign products during creation
+  attribute_ids?: number[];
+  specification_ids?: number[];
 }
 
 // Update Category DTO
@@ -87,6 +105,8 @@ export interface UpdateCategoryDto {
   parent_id?: number | null;
   image?: File | null;
   product_ids?: number[]; // Sync products during update
+  attribute_ids?: number[];
+  specification_ids?: number[];
 }
 
 // Filter Categories DTO

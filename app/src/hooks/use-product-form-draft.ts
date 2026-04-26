@@ -13,7 +13,7 @@
  */
 
 import { useEffect, useRef, useCallback } from "react";
-import { ProductFormData, MediaItem, VariantMedia } from "../services/products/types/product-form.types";
+import { ProductFormData, MediaItem } from "../services/products/types/product-form.types";
 
 const DRAFT_KEY = "product_create_draft";
 const DEBOUNCE_MS = 600;
@@ -34,11 +34,7 @@ function stripMediaItem(item: MediaItem): MediaItem {
 function serializeFormData(data: Partial<ProductFormData>): string {
   const serializable: Partial<ProductFormData> = {
     ...data,
-    singleMedia: (data.singleMedia ?? []).map(stripMediaItem),
-    variantMedia: (data.variantMedia ?? []).map((vm: VariantMedia) => ({
-      ...vm,
-      media: vm.media.map(stripMediaItem),
-    })),
+    media: (data.media ?? []).map(stripMediaItem),
   };
   return JSON.stringify(serializable);
 }

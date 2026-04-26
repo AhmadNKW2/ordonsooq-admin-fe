@@ -12,6 +12,7 @@ import { useRouter } from "@/hooks/use-loading-router";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useLoading } from "../../src/providers/loading-provider";
+import { useCategories } from "../../src/services/categories/hooks/use-categories";
 import {
   useAttribute,
   useAttributes,
@@ -25,6 +26,21 @@ import { DeleteConfirmationModal } from "../../src/components/common/DeleteConfi
 import { AttributeValue, Attribute } from "../../src/services/attributes/types/attribute.types";
 import { AttributeForm } from "../../src/components/attributes/AttributeForm";
 import { attributeSchema, type AttributeFormData, type AttributeFormOutput } from "../../src/lib/validations/attribute.schema";
+
+const extractCategoryIds = (attribute?: Attribute | null): number[] => {
+  if (!attribute) {
+    return [];
+  }
+
+  const directIds = Array.isArray(attribute.category_ids) ? attribute.category_ids : [];
+  const relatedIds = Array.isArray(attribute.categories)
+    ? attribute.categories
+        .map((category) => category.id)
+        .filter((categoryId): categoryId is number => typeof categoryId === "number")
+    : [];
+
+  return [...new Set([...directIds, ...relatedIds])];
+};
 
 export default function AttributeEditPage() {
   const params = useParams();
@@ -43,9 +59,12 @@ export default function AttributeEditPage() {
       parent_id: null,
       parent_value_id: null,
       is_color: false,
+      for_all_categories: false,
+      allow_ai_inference: false,
       is_active: true,
       attribute_type: "spec_attribute",
       list_separately: false,
+      category_ids: [],
     },
     mode: "onSubmit",
   });
@@ -59,9 +78,11 @@ export default function AttributeEditPage() {
   const unitAr = watch("unit_ar");
   const parentId = watch("parent_id");
   const parentValueId = watch("parent_value_id");
+  const categoryIds = watch("category_ids") || [];
   const isColor = watch("is_color");
+  const forAllCategories = watch("for_all_categories");
+  const allowAiInference = watch("allow_ai_inference");
   const isActive = watch("is_active");
-  const attributeType = watch("attribute_type");
   const listSeparately = watch("list_separately");
 
   // Local state for values (managed locally, sent with save)
@@ -79,6 +100,7 @@ export default function AttributeEditPage() {
     { enabled: !!attributeId }
   );
   const { data: allAttributes = [] } = useAttributes();
+  const { data: categories = [] } = useCategories();
   const updateAttribute = useUpdateAttribute();
   const deleteValue = useDeleteAttributeValue();
 
@@ -93,9 +115,12 @@ export default function AttributeEditPage() {
         parent_id: attribute.parent_id,
         parent_value_id: attribute.parent_value_id,
         is_color: attribute.is_color ?? false,
+        for_all_categories: attribute.for_all_categories ?? false,
+        allow_ai_inference: attribute.allow_ai_inference ?? false,
         is_active: attribute.is_active,
         attribute_type: attribute.attribute_type ?? "spec_attribute",
         list_separately: attribute.list_separately ?? false,
+        category_ids: extractCategoryIds(attribute),
       });
       const sortedValues = [...(attribute.values || [])].sort((a, b) => a.sort_order - b.sort_order);
       setLocalValues(sortedValues);
@@ -147,9 +172,12 @@ export default function AttributeEditPage() {
           parent_id: data.parent_id,
           parent_value_id: data.parent_value_id,
           is_color: data.is_color,
+          for_all_categories: data.for_all_categories,
+          allow_ai_inference: data.allow_ai_inference,
           is_active: data.is_active,
           attribute_type: data.attribute_type,
           list_separately: data.list_separately,
+          category_ids: data.for_all_categories ? [] : data.category_ids,
           values: valuesPayload,
         },
       });
@@ -232,7 +260,10 @@ export default function AttributeEditPage() {
         unitAr={unitAr || ""}
         parentId={parentId?.toString() || ""}
         parentValueId={parentValueId?.toString() || ""}
+        categoryIds={categoryIds.map(String)}
         isColor={isColor}
+        forAllCategories={!!forAllCategories}
+        allowAiInference={!!allowAiInference}
         isActive={isActive}
         onNameEnChange={handleNameEnChange}
         onNameArChange={handleNameArChange}
@@ -240,11 +271,12 @@ export default function AttributeEditPage() {
         onUnitArChange={(val) => setValue("unit_ar", val)}
         onParentIdChange={(val) => setValue("parent_id", val ? Number(val) : null)}
         onParentValueIdChange={(val) => setValue("parent_value_id", val ? Number(val) : null)}
+        onCategoryIdsChange={(ids) => setValue("category_ids", ids.map(Number))}
         onIsColorChange={(value) => setValue("is_color", value)}
+        onForAllCategoriesChange={(value) => setValue("for_all_categories", value)}
+        onAllowAiInferenceChange={(value) => setValue("allow_ai_inference", value)}
         onIsActiveChange={(value) => setValue("is_active", value)}
-        attributeType={attributeType}
         listSeparately={listSeparately}
-        onAttributeTypeChange={(value) => setValue("attribute_type", value)}
         onListSeparatelyChange={(value) => setValue("list_separately", value)}
         formErrors={{
           name_en: errors.name_en?.message,
@@ -257,6 +289,7 @@ export default function AttributeEditPage() {
         isSubmitting={updateAttribute.isPending}
         submitButtonText="Save Changes"
         attributes={allAttributes.filter((attr: Attribute) => attr.id !== attributeId)}
+        categories={categories}
       />
 
       {/* Delete Confirmation Modal */}

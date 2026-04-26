@@ -12,6 +12,10 @@ export const API_CONFIG = {
   timeout: 30000,
 } as const;
 
+export const STOREFRONT_CONFIG = {
+  baseUrl: process.env.NEXT_PUBLIC_STOREFRONT_URL || "https://ordonsooq.com",
+} as const;
+
 export const QUERY_CONFIG = {
   staleTime: 5 * 60 * 1000, // 5 minutes
   cacheTime: 10 * 60 * 1000, // 10 minutes

@@ -2,11 +2,12 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Input } from "../../ui/input";
 import { RichTextEditor } from "../../ui/rich-text-editor";
 import { Select } from "../../ui/select";
-import { Checkbox } from "../../ui/checkbox";
 import { Card } from "@/components/ui";
 import { Toggle } from "@/components/ui/toggle";
 import { Category } from "../../../services/categories/types/category.types";
 import { CategoryTreeSelect } from "../CategoryTreeSelect";
+import type { LinkedProductSummary, ProductStatus } from "../../../services/products/types/product.types";
+import { LinkedProductsField } from "./LinkedProductsField";
 
 const RECENT_VENDOR_KEY = 'recent_vendor_ids';
 const RECENT_BRAND_KEY = 'recent_brand_ids';
@@ -39,20 +40,32 @@ interface BasicInformationSectionProps {
     formData: {
         nameEn?: string;
         nameAr?: string;
+        sku?: string;
+        record?: string;
+        status?: ProductStatus;
         categoryIds?: string[]; // Changed from categoryId to categoryIds
         vendorId?: string;
         brandId?: string;
+        referenceLink?: string;
+        linked_product_ids?: string[];
         shortDescriptionEn?: string;
         shortDescriptionAr?: string;
         longDescriptionEn?: string;
         longDescriptionAr?: string;
         visible?: boolean;
+        metaTitleEn?: string;
+        metaTitleAr?: string;
+        metaDescriptionEn?: string;
+        metaDescriptionAr?: string;
+        tags?: string[];
     };
     errors: Record<string, string | boolean>;
     categories: Category[];
     vendors: Array<{ id: string; name: string; nameEn?: string; nameAr?: string }>;
     brands: Array<{ id: string; name: string; nameEn?: string; nameAr?: string }>;
     onChange: (field: string, value: any) => void;
+    currentProductId?: string;
+    initialLinkedProducts?: LinkedProductSummary[];
 }
 
 export const BasicInformationSection: React.FC<BasicInformationSectionProps> = ({
@@ -62,6 +75,8 @@ export const BasicInformationSection: React.FC<BasicInformationSectionProps> = (
     vendors,
     brands,
     onChange,
+    currentProductId,
+    initialLinkedProducts,
 }) => {
     // Save to localStorage when selected
     useEffect(() => {
@@ -187,6 +202,14 @@ export const BasicInformationSection: React.FC<BasicInformationSectionProps> = (
         return sortTree(categories);
     }, [categories, formData.categoryIds]);
 
+    const handleVendorChange = (value: string) => {
+        if (formData.vendorId && formData.vendorId !== value && (formData.linked_product_ids?.length || 0) > 0) {
+            onChange("linked_product_ids", []);
+        }
+
+        onChange("vendorId", value);
+    };
+
     return (
         <Card>
             <h2 className="text-xl font-semibold ">
@@ -275,7 +298,7 @@ export const BasicInformationSection: React.FC<BasicInformationSectionProps> = (
                     id="vendorId"
                     label="Vendor"
                     value={formData.vendorId || ""}
-                    onChange={(value) => onChange("vendorId", value as string)}
+                    onChange={(value) => handleVendorChange(value as string)}
                     options={[
                         ...sortedVendors.map((vendor) => ({
                             value: vendor.id,
@@ -304,6 +327,80 @@ export const BasicInformationSection: React.FC<BasicInformationSectionProps> = (
                     search={true}
                     error={errors.brandId}
                 />
+
+                <Select
+                    id="status"
+                    label="Status"
+                    value={formData.status || "active"}
+                    onChange={(value) => onChange("status", value as ProductStatus)}
+                    options={[
+                        { value: "active", label: "Active" },
+                        { value: "archived", label: "Archived" },
+                        { value: "updated", label: "Updated" },
+                        { value: "review", label: "Review" },
+                    ]}
+                    error={errors.status}
+                />
+
+                <Input
+                    id="referenceLink"
+                    label="Reference Link"
+                    value={formData.referenceLink || ""}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                        onChange("referenceLink", e.target.value)
+                    }
+                    error={errors.referenceLink}
+                />
+
+                <Input
+                    id="metaTitleEn"
+                    label="Meta Title (English)"
+                    value={formData.metaTitleEn || ""}
+                    readOnly
+                    className="bg-gray-50 cursor-default"
+                    error={errors.metaTitleEn}
+                />
+
+                <Input
+                    id="metaTitleAr"
+                    label="Meta Title (Arabic)"
+                    value={formData.metaTitleAr || ""}
+                    readOnly
+                    className="bg-gray-50 cursor-default"
+                    isRtl
+                    error={errors.metaTitleAr}
+                />
+
+                <Input
+                    id="metaDescriptionEn"
+                    label="Meta Description (English)"
+                    value={formData.metaDescriptionEn || ""}
+                    readOnly
+                    className="bg-gray-50 cursor-default"
+                    error={errors.metaDescriptionEn}
+                />
+
+                <Input
+                    id="metaDescriptionAr"
+                    label="Meta Description (Arabic)"
+                    value={formData.metaDescriptionAr || ""}
+                    readOnly
+                    className="bg-gray-50 cursor-default"
+                    isRtl
+                    error={errors.metaDescriptionAr}
+                />
+
+                <div className="col-span-2">
+                    <LinkedProductsField
+                        value={formData.linked_product_ids || []}
+                        onChange={(value) => onChange("linked_product_ids", value)}
+                        error={errors.linked_product_ids}
+                        categoryIds={formData.categoryIds}
+                        vendorId={formData.vendorId}
+                        excludeProductId={currentProductId}
+                        initialSelectedProducts={initialLinkedProducts}
+                    />
+                </div>
 
                 {/* Visibility Status */}
                 <div className="flex items-center justify-between bg-gray-50 rounded-lg p-3">

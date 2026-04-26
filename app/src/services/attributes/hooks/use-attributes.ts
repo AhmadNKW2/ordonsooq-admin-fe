@@ -13,11 +13,19 @@ import {
   UpdateAttributeValueDto,
 } from "../types/attribute.types";
 
+interface AttributeQueryParams {
+  category_ids?: string;
+}
+
 // Get all attributes
-export const useAttributes = () => {
+export const useAttributes = (
+  params?: AttributeQueryParams,
+  options?: { enabled?: boolean }
+) => {
   return useQuery({
-    queryKey: [queryKeys.attributes.all],
-    queryFn: () => attributeService.getAttributes(),
+    queryKey: queryKeys.attributes.list(params),
+    queryFn: () => attributeService.getAttributes(params),
+    enabled: options?.enabled ?? true,
     select: (data) => {
       // Handle both array and object with data property
       if (Array.isArray(data)) return data;

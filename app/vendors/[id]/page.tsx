@@ -19,6 +19,7 @@ import { ImageUploadItem } from "../../src/components/ui/image-upload";
 import { RefreshCw, AlertCircle } from "lucide-react";
 import { validateVendorForm } from "../../src/lib/validations";
 import { ProductItem } from "../../src/components/common/ProductsTableSection";
+import { mapProductToProductItem } from "../../src/components/common/product-table-utils";
 
 export default function EditVendorPage() {
   const router = useRouter();
@@ -56,16 +57,7 @@ export default function EditVendorPage() {
   // Get assigned products from vendor response
   const assignedProducts: ProductItem[] = useMemo(() => {
     const products = (vendor as any)?.products || [];
-    return products.map((p: any) => ({
-      id: p.id,
-      name_en: p.name_en,
-      name_ar: p.name_ar,
-      sku: p.sku,
-      primary_image: p.primary_image,
-      price: p.price,
-      category: p.category ? { name: p.category.name } : null,
-      vendor: p.vendor ? { name: p.vendor.name } : null,
-    }));
+    return products.map((product: any) => mapProductToProductItem(product));
   }, [vendor]);
 
   // Initialize form when vendor loads
@@ -203,6 +195,7 @@ export default function EditVendorPage() {
   return (
     <VendorForm
       mode="edit"
+      vendorId={vendorId}
       nameEn={nameEn}
       nameAr={nameAr}
       descriptionEn={descriptionEn}

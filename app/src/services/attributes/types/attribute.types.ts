@@ -17,6 +17,12 @@ export interface AttributeValue {
   updated_at?: string;
 }
 
+export interface AttributeCategorySummary {
+  id: number;
+  name_en?: string | null;
+  name_ar?: string | null;
+}
+
 // Attribute type (matches backend)
 export interface Attribute {
   id: number;
@@ -24,6 +30,8 @@ export interface Attribute {
   name_ar: string;
   type: string;
   is_color: boolean;
+  for_all_categories?: boolean;
+  allow_ai_inference?: boolean;
   attribute_type?: string | null;
   list_separately?: boolean;
   unit_en?: string | null;
@@ -32,6 +40,8 @@ export interface Attribute {
   parent_value_id?: number | null;
   sort_order: number;
   is_active: boolean;
+  category_ids?: number[];
+  categories?: AttributeCategorySummary[];
   created_at?: string;
   updated_at?: string;
   values?: AttributeValue[];
@@ -49,9 +59,12 @@ export interface CreateAttributeDto {
   parent_id?: number | null;
   parent_value_id?: number | null;
   is_color?: boolean;
+  for_all_categories?: boolean;
+  allow_ai_inference?: boolean;
   is_active?: boolean;
   attribute_type?: string | null;
   list_separately?: boolean;
+  category_ids?: number[];
   values?: CreateAttributeValueDto[];
 }
 
@@ -84,9 +97,12 @@ export interface UpdateAttributeDto {
   parent_id?: number | null;
   parent_value_id?: number | null;
   is_color?: boolean;
+  for_all_categories?: boolean;
+  allow_ai_inference?: boolean;
   is_active?: boolean;
   attribute_type?: string | null;
   list_separately?: boolean;
+  category_ids?: number[];
   sort_order?: number;
   values?: UpdateAttributeValueInDto[];
 }

@@ -28,7 +28,7 @@ export interface User {
   permissions?: string[];
 }
 
-export type UserRole = "user" | "admin" | "catalog_manager";
+export type UserRole = "user" | "admin" | "constant_token_admin" | "catalog_manager";
 
 export interface AuthState {
   user: User | null;

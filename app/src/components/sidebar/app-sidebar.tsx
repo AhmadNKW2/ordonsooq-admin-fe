@@ -20,6 +20,7 @@ interface SidebarLinkItem {
   label: string;
   icon: ReactNode;
   badge?: string | number;
+  exact?: boolean;
   roles?: SidebarRole[];
 }
 
@@ -53,7 +54,8 @@ function AppSidebarInner({ groups, header, footer }: AppSidebarProps) {
   const canSeeLink = (link: SidebarLinkItem): boolean => {
     if (!link.roles) return true; // No restriction — visible to all authenticated users
     if (!userRole) return false;
-    return link.roles.includes(userRole as SidebarRole);
+    const effectiveRole = userRole === 'constant_token_admin' ? 'admin' : userRole;
+    return link.roles.includes(effectiveRole as SidebarRole);
   };
 
   const userDisplayName = user
@@ -103,6 +105,7 @@ function AppSidebarInner({ groups, header, footer }: AppSidebarProps) {
                     icon={link.icon}
                     label={link.label}
                     badge={link.badge}
+                    exact={link.exact}
                   />
                 ))}
               </SidebarGroup>

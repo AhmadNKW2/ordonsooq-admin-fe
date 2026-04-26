@@ -60,6 +60,72 @@ export const sidebarConfig = {
     //     },
     //   ],
     // },
+
+    {
+      label: 'Products',
+      icon: (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
+          />
+        </svg>
+      ),
+      defaultOpen: true,
+      links: [
+        {
+          href: '/products',
+          label: 'Products List',
+          exact: true,
+          roles: ['admin', 'catalog_manager'] as SidebarRole[],
+          icon: (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"
+              />
+            </svg>
+          ),
+        },
+        {
+          href: '/products/review',
+          label: 'Products Review',
+          exact: true,
+          roles: ['admin', 'catalog_manager'] as SidebarRole[],
+          icon: (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+              />
+            </svg>
+          ),
+        },
+        {
+          href: '/products/updated',
+          label: 'Updated Products',
+          exact: true,
+          roles: ['admin', 'catalog_manager'] as SidebarRole[],
+          icon: (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+              />
+            </svg>
+          ),
+        },
+      ],
+    },
+
     {
       label: 'E-Commerce',
       icon: (
@@ -74,21 +140,6 @@ export const sidebarConfig = {
       ),
       defaultOpen: true,
       links: [
-        {
-          href: '/products',
-          label: 'Products',
-          roles: ['admin', 'catalog_manager'] as SidebarRole[],
-          icon: (
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
-              />
-            </svg>
-          ),
-        },
         {
           href: '/banners',
           label: 'Banners',
@@ -111,6 +162,21 @@ export const sidebarConfig = {
                 strokeLinejoin="round"
                 strokeWidth={2}
                 d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"
+              />
+            </svg>
+          ),
+        },
+        {
+          href: '/specifications',
+          label: 'Specifications',
+          roles: ['admin', 'catalog_manager'] as SidebarRole[],
+          icon: (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"
               />
             </svg>
           ),
@@ -172,6 +238,31 @@ export const sidebarConfig = {
                 strokeWidth={2}
                 d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
               />
+            </svg>
+          ),
+        },
+        {
+          href: '/partners',
+          label: 'Partners',
+          roles: ['admin'] as SidebarRole[],
+          icon: (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M7 21h10M9 8h6M10 12h4M6 21V7a2 2 0 012-2h8a2 2 0 012 2v14M9 5V3h6v2"
+              />
+            </svg>
+          ),
+        },
+        {
+          href: '/notes',
+          label: 'Notes',
+          roles: ['admin'] as SidebarRole[],
+          icon: (
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
             </svg>
           ),
         },

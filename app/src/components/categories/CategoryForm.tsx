@@ -29,6 +29,8 @@ interface CategoryFormProps {
   visible: boolean;
   parentId: number | null;
   product_ids: number[];
+  attributeIds: string[];
+  specificationIds: string[];
   onNameEnChange: (value: string) => void;
   onNameArChange: (value: string) => void;
   onDescriptionEnChange?: (value: string) => void;
@@ -37,6 +39,8 @@ interface CategoryFormProps {
   onVisibleChange: (value: boolean) => void;
   onParentIdChange: (value: number | null) => void;
   onProductIdsChange: (value: number[]) => void;
+  onAttributeIdsChange: (value: string[]) => void;
+  onSpecificationIdsChange: (value: string[]) => void;
   formErrors: {
     name_en?: string;
     name_ar?: string;
@@ -45,6 +49,8 @@ interface CategoryFormProps {
     image?: string;
   };
   parentCategories?: Category[];
+  allAttributes?: Array<{ id: number; name_en: string; name_ar?: string | null }>;
+  allSpecifications?: Array<{ id: number; name_en: string; name_ar?: string | null }>;
   allProducts?: ProductItem[];
   assignedProducts?: ProductItem[];
   onSubmit: () => void;
@@ -63,6 +69,8 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({
   visible,
   parentId,
   product_ids,
+  attributeIds,
+  specificationIds,
   onNameEnChange,
   onNameArChange,
   onDescriptionEnChange,
@@ -71,8 +79,12 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({
   onVisibleChange,
   onParentIdChange,
   onProductIdsChange,
+  onAttributeIdsChange,
+  onSpecificationIdsChange,
   formErrors,
   parentCategories = [],
+  allAttributes = [],
+  allSpecifications = [],
   allProducts = [],
   assignedProducts = [],
   onSubmit,
@@ -195,6 +207,44 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({
           previewSize="lg"
         />
 
+      </Card>
+
+      <Card>
+        <h2 className="text-lg font-semibold">Category Attributes & Specifications</h2>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <Select
+            label="Attributes"
+            value={attributeIds}
+            onChange={(value) => onAttributeIdsChange((value as string[]) || [])}
+            onClear={() => onAttributeIdsChange([])}
+            options={allAttributes.map((attribute) => ({
+              value: attribute.id.toString(),
+              label: attribute.name_ar
+                ? `${attribute.name_en} - ${attribute.name_ar}`
+                : attribute.name_en,
+            }))}
+            search={true}
+            multiple={true}
+            placeholder="Select attributes"
+          />
+
+          <Select
+            label="Specifications"
+            value={specificationIds}
+            onChange={(value) => onSpecificationIdsChange((value as string[]) || [])}
+            onClear={() => onSpecificationIdsChange([])}
+            options={allSpecifications.map((specification) => ({
+              value: specification.id.toString(),
+              label: specification.name_ar
+                ? `${specification.name_en} - ${specification.name_ar}`
+                : specification.name_en,
+            }))}
+            search={true}
+            multiple={true}
+            placeholder="Select specifications"
+          />
+        </div>
       </Card>
 
       {/* Products Section */}

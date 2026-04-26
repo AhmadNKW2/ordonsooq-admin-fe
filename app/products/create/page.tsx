@@ -14,12 +14,13 @@ import { useCategories } from "../../src/services/categories/hooks/use-categorie
 import { useVendors } from "../../src/services/vendors/hooks/use-vendors";
 import { useBrands } from "../../src/services/brands/hooks/use-brands";
 import { useAttributes } from "../../src/services/attributes/hooks/use-attributes";
+import { useSpecifications } from "../../src/services/specifications/hooks/use-specifications";
 import { productService } from "../../src/services/products/api/product.service";
 import { mediaService } from "../../src/services/media/api/media.service";
-import { transformFormDataToDto, UploadedMediaReference } from "../../src/services/products/form/transform";
+import { buildMediaArray, transformFormDataToDto, UploadedMediaReference } from "../../src/services/products/form/transform";
 import { queryKeys } from "../../src/lib/query-keys";
-import { MediaInputDto } from "../../src/services/products/types/product.types";
 import { Attribute, AttributeValue } from "../../src/services/attributes/types/attribute.types";
+import { Specification, SpecificationValue } from "../../src/services/specifications/types/specification.types";
 import { finishToastError, finishToastSuccess, showLoadingToast, updateLoadingToast } from "../../src/lib/toast";
 
 export default function CreateProductPage() {
@@ -29,6 +30,7 @@ export default function CreateProductPage() {
   const { data: vendorsData, isLoading: vendorsLoading } = useVendors();
   const { data: brandsData, isLoading: brandsLoading } = useBrands();
   const { data: attributesData, isLoading: attributesLoading } = useAttributes();
+  const { data: specificationsData, isLoading: specificationsLoading } = useSpecifications();
 
   // Transform backend data to frontend format
   const categories = categoriesData || [];
@@ -61,17 +63,26 @@ export default function CreateProductPage() {
     })) || [],
   })) || [];
 
+  const specifications = specificationsData?.map((specification: Specification) => ({
+    id: specification.id.toString(),
+    parentId: specification.parent_id?.toString(),
+    parentValueId: specification.parent_value_id?.toString(),
+    name: specification.name_en,
+    displayName: specification.name_ar,
+    values: specification.values.map((value: SpecificationValue) => ({
+      id: value.id.toString(),
+      parentId: value.parent_value_id?.toString(),
+      value: value.value_en,
+      displayValue: value.value_ar,
+    })),
+  })) || [];
+
   const handleSubmit = async (data: ProductFormData) => {
     const toastId = showLoadingToast("Creating product...");
     try {
-      // Transform form data to DTO and extract media files
       const { dto, mediaFiles } = transformFormDataToDto(data);
-
-      const totalUploads =
-        (mediaFiles.singleMedia?.filter(m => !!m.file).length ?? 0) +
-        (mediaFiles.variantMedia?.reduce((sum, group) => {
-          return sum + (group.media?.filter(m => !!m.file).length ?? 0);
-        }, 0) ?? 0);
+      const productMedia = mediaFiles.singleMedia || [];
+      const totalUploads = productMedia.filter((media) => !!media.file).length;
 
       let completedUploads = 0;
 
@@ -89,12 +100,10 @@ export default function CreateProductPage() {
         });
       }
       
-      // Step 1: Upload all media files first and collect media IDs
-      const uploadedMedia: MediaInputDto[] = [];
-      
-      // Upload single media (non-variant)
-      if (mediaFiles.singleMedia && mediaFiles.singleMedia.length > 0) {
-        for (const media of mediaFiles.singleMedia) {
+      const uploadedMedia: UploadedMediaReference[] = [];
+
+      if (productMedia.length > 0) {
+        for (const media of productMedia) {
           if (media.file) {
             updateLoadingToast(toastId, {
               title: "Uploading media",
@@ -109,64 +118,28 @@ export default function CreateProductPage() {
               progress: totalUploads > 0 ? completedUploads / totalUploads : 0,
             });
             uploadedMedia.push({
-              media_id: uploadResult.data.id,
-              is_primary: media.isPrimary,
-              is_group_primary: media.isGroupPrimary,
-              sort_order: media.order,
+              mediaId: uploadResult.data.id,
+              isPrimary: media.isPrimary,
+              sortOrder: media.order,
+            });
+            continue;
+          }
+
+          const existingMediaId = parseInt(media.id, 10);
+          if (!Number.isNaN(existingMediaId)) {
+            uploadedMedia.push({
+              mediaId: existingMediaId,
+              isPrimary: media.isPrimary,
+              sortOrder: media.order,
             });
           }
         }
       }
 
-      // Upload variant media (with combinations)
-      if (mediaFiles.variantMedia && mediaFiles.variantMedia.length > 0) {
-        // Get media-controlling attribute IDs
-        const mediaControllingAttrIds = (data.attributes || [])
-          .filter(attr => attr.controlsMedia)
-          .map(attr => attr.id);
-
-        for (const variantMediaData of mediaFiles.variantMedia) {
-          // Build combination object with only media-controlling attributes
-          const combination: Record<string, number> = {};
-          for (const attrId of mediaControllingAttrIds) {
-            const valueId = variantMediaData.attributeValues[attrId];
-            if (valueId && valueId !== '') {
-              combination[attrId] = parseInt(valueId, 10);
-            }
-          }
-
-          for (const media of variantMediaData.media) {
-            if (media.file) {
-              updateLoadingToast(toastId, {
-                title: "Uploading media",
-                subtitle: `${completedUploads + 1}/${totalUploads} files`,
-                progress: totalUploads > 0 ? completedUploads / totalUploads : 0,
-              });
-              const uploadResult = await mediaService.uploadMedia(media.file);
-              completedUploads += 1;
-              updateLoadingToast(toastId, {
-                title: "Uploading media",
-                subtitle: `${completedUploads}/${totalUploads} files`,
-                progress: totalUploads > 0 ? completedUploads / totalUploads : 0,
-              });
-              uploadedMedia.push({
-                media_id: uploadResult.data.id,
-                is_primary: media.isPrimary,
-                is_group_primary: media.isGroupPrimary,
-                sort_order: media.order,
-                combination: Object.keys(combination).length > 0 ? combination : undefined,
-              });
-            }
-          }
-        }
+      if (productMedia.length > 0) {
+        dto.media = buildMediaArray(uploadedMedia);
       }
 
-      // Step 2: Add uploaded media to DTO
-      if (uploadedMedia.length > 0) {
-        dto.media = uploadedMedia;
-      }
-      
-      // Step 3: Create product with all data including media
       updateLoadingToast(toastId, {
         title: "Creating product",
         subtitle: "Sending request",
@@ -203,6 +176,7 @@ export default function CreateProductPage() {
       vendors={vendors}
       brands={brands}
       attributes={attributes}
+      specifications={specifications}
     />
   );
 }

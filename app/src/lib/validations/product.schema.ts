@@ -8,6 +8,13 @@ import { z } from "zod";
 // Regex patterns for language validation
 const ENGLISH_PATTERN = /^[a-zA-Z0-9\s\p{P}]+$/u;
 const ARABIC_PATTERN = /^[\u0600-\u06FF0-9\s\p{P}]+$/u;
+const isValidUrl = (value?: string) => {
+  if (!value) {
+    return true;
+  }
+
+  return z.string().url().safeParse(value).success;
+};
 
 // ============================================
 // Basic Information Schema
@@ -21,9 +28,12 @@ export const basicInformationSchema = z.object({
   nameAr: z
     .string()
     .min(1, "Required"),
+  status: z.enum(["active", "archived", "updated", "review"]).default("active"),
   categoryIds: z.array(z.string()).min(1, "At least one category is required"),
   vendorId: z.string().min(1, "Required"),
   brandId: z.string().optional().default("").pipe(z.string().min(1, "Required")),
+  referenceLink: z.string().optional().refine(isValidUrl, "Must be a valid URL"),
+  linked_product_ids: z.array(z.string()).default([]),
   shortDescriptionEn: z
     .string()
     .min(1, "Required")
@@ -55,9 +65,19 @@ export const productAttributeSchema = z.object({
   name: z.string(),
   values: z.array(productAttributeValueSchema),
   order: z.number(),
-  controlsPricing: z.boolean(),
-  controlsWeightDimensions: z.boolean(),
-  controlsMedia: z.boolean(),
+});
+
+export const productSpecificationSelectionValueSchema = z.object({
+  id: z.string(),
+  label: z.string(),
+  order: z.number(),
+});
+
+export const productSpecificationSelectionSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  values: z.array(productSpecificationSelectionValueSchema),
+  order: z.number(),
 });
 
 // ============================================
@@ -105,7 +125,6 @@ export const mediaItemSchema = z.object({
   type: z.enum(["image", "video"]),
   order: z.number(),
   isPrimary: z.boolean(),
-  isGroupPrimary: z.boolean().optional(),
 });
 
 export const variantMediaSchema = z.object({
@@ -149,17 +168,24 @@ export const createProductSchema = (config: ProductFormConfig) => {
     slug: z.string().optional(),
     nameEn: z.string().min(1, "Required"),
     nameAr: z.string().min(1, "Required"),
+    status: z.enum(["active", "archived", "updated", "review"]).default("active"),
     categoryIds: z.array(z.string()).min(1, "At least one category is required"),
     vendorId: z.string().min(1, "Required"),
     brandId: z.string().optional().default("").pipe(z.string().min(1, "Required")),
+    referenceLink: z.string().optional().refine(isValidUrl, "Must be a valid URL"),
+    linked_product_ids: z.array(z.string()).default([]),
     shortDescriptionEn: z.string().min(1, "Required"),
     shortDescriptionAr: z.string().min(1, "Required"),
     longDescriptionEn: z.string().min(1, "Required"),
     longDescriptionAr: z.string().min(1, "Required"),
     visible: z.boolean().default(true),
+    quantity: z.number().min(0, "Must be 0 or greater").optional().default(0),
+    low_stock_threshold: z.number().min(0, "Must be 0 or greater").optional().default(10),
+    is_out_of_stock: z.boolean().default(false),
 
     // Attributes - optional
     attributes: z.array(productAttributeSchema).optional(),
+    specifications: z.array(productSpecificationSelectionSchema).optional(),
 
     // Flags
     isWeightVariantBased: z.boolean().default(false),
@@ -169,49 +195,23 @@ export const createProductSchema = (config: ProductFormConfig) => {
     variants: z.array(variantCombinationSchema).optional(),
   });
 
-  // Add pricing validation based on whether pricing is variant-based
-  if (config.hasPricingAttributes) {
-    // Variant pricing required
-    schema = schema.extend({
-      singlePricing: singlePricingSchema.optional(),
-      variantPricing: z.array(variantPricingSchema)
-        .min(config.expectedPricingCount, `Expected ${config.expectedPricingCount} pricing variants`),
-    });
-  } else {
-    // Single pricing required
-    schema = schema.extend({
-      singlePricing: singlePricingSchema,
-      variantPricing: z.array(variantPricingSchema).optional(),
-    });
-  }
+  // Variant pricing no longer used, force single pricing
+  schema = schema.extend({
+    singlePricing: singlePricingSchema,
+    variantPricing: z.array(variantPricingSchema).optional(),
+  });
 
-  // Add weight/dimensions validation
-  if (config.isWeightVariantBased) {
-    schema = schema.extend({
-      singleWeightDimensions: weightDimensionsSchema.partial().optional(),
-      variantWeightDimensions: z.array(variantWeightDimensionsSchema)
-        .min(config.expectedWeightCount, `Expected ${config.expectedWeightCount} weight variants`),
-    });
-  } else {
-    schema = schema.extend({
-      singleWeightDimensions: weightDimensionsSchema.optional(),
-      variantWeightDimensions: z.array(variantWeightDimensionsSchema).optional(),
-    });
-  }
+  // Weight/dimensions validation - variants removed
+  schema = schema.extend({
+    singleWeightDimensions: weightDimensionsSchema.optional(),
+    variantWeightDimensions: z.array(variantWeightDimensionsSchema).optional(),
+  });
 
-  // Add media validation
-  if (config.isMediaVariantBased) {
-    schema = schema.extend({
-      singleMedia: z.array(mediaItemSchema).optional(),
-      variantMedia: z.array(variantMediaSchema)
-        .min(config.expectedMediaCount, `Expected ${config.expectedMediaCount} media variants`),
-    });
-  } else {
-    schema = schema.extend({
-      singleMedia: z.array(mediaItemSchema).min(1, "Required"),
-      variantMedia: z.array(variantMediaSchema).optional(),
-    });
-  }
+  // Media validation - variants removed
+  schema = schema.extend({
+    singleMedia: z.array(mediaItemSchema).min(1, "Required"),
+    variantMedia: z.array(variantMediaSchema).optional(),
+  });
 
   return schema;
 };

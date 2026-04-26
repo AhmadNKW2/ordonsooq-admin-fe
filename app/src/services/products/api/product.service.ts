@@ -8,6 +8,9 @@ import {
   Product,
   ProductDetail,
   ProductFilters,
+  ProductNamesFilters,
+  ProductNameSummary,
+  ProductStatus,
   CreateProductDto,
   UpdateProductDto,
   ProductAttributeInput,
@@ -43,9 +46,6 @@ import { queryKeys } from "../../../lib/query-keys";
 // Product Attributes
 export interface ProductAttributeDto {
   attribute_id: number;
-  controls_pricing: boolean;
-  controls_media: boolean;
-  controls_weight: boolean;
 }
 
 export interface AddProductAttributesDto {
@@ -141,6 +141,15 @@ class ProductService extends BaseService<Product> {
         pagination: response.meta,
       },
     };
+  }
+
+  async getProductNames(
+    params?: ProductNamesFilters
+  ): Promise<ApiResponse<ProductNameSummary[]>> {
+    return httpClient.get<ApiResponse<ProductNameSummary[]>>(
+      `${this.endpoint}/names`,
+      params
+    );
   }
 
   /**
@@ -244,6 +253,18 @@ class ProductService extends BaseService<Product> {
     visible: boolean
   ): Promise<ApiResponse<Product>> {
     const response = await this.patch(id, { visible });
+    getQueryClient().invalidateQueries({ queryKey: queryKeys.products.all });
+    return response;
+  }
+
+  /**
+   * Update product workflow status without sending a full product payload
+   */
+  async updateProductWorkflowStatus(
+    id: string | number,
+    status: ProductStatus
+  ): Promise<ApiResponse<Product>> {
+    const response = await this.patch(id, { status });
     getQueryClient().invalidateQueries({ queryKey: queryKeys.products.all });
     return response;
   }

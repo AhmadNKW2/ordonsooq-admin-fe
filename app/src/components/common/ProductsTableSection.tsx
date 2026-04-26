@@ -1,37 +1,14 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
-import Image from "next/image";
-import { Package, Pencil, Eye, Edit } from "lucide-react";
+import React, { useEffect, useMemo, useState } from "react";
+import { Package } from "lucide-react";
 import { Button } from "../ui/button";
-import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableRow,
-  TableHead,
-  TableCell,
-} from "../ui/table";
-import { Pagination } from "../ui/pagination";
 import { ProductSelectionModal } from "./ProductSelectionModal";
-import { ProductViewModal } from "../products/ProductViewModal";
-import { IconButton } from "../ui/icon-button";
 import { Badge } from "../ui/badge";
-import { useProduct } from "../../services/products/hooks/use-products";
-// We no longer need import { useRouter } if we just use window.location or next/navigation
-import { useRouter } from "next/navigation";
+import { ProductCatalogTable } from "./ProductCatalogTable";
+import type { ProductItem } from "./product-table-utils";
 
-export interface ProductItem {
-  id: number;
-  name_en: string;
-  name_ar: string;
-  sku?: string;
-  primary_image?: { url: string; alt_text?: string | null } | null;
-  price?: string | null;
-  category?: { name?: string; name_en?: string } | null;
-  vendor?: { name?: string; name_en?: string } | null;
-  visible?: boolean;
-}
+export type { ProductItem } from "./product-table-utils";
 
 interface ProductsTableSectionProps {
   title?: string;
@@ -55,40 +32,83 @@ export const ProductsTableSection: React.FC<ProductsTableSectionProps> = ({
   modalTitle = "Select Products",
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [viewProductId, setViewProductId] = useState<number | null>(null);
-  const router = useRouter();
-
-  const { data: viewProductData } = useProduct(viewProductId!, { enabled: !!viewProductId });
 
   // Local pagination
   const [page, setPage] = useState(1);
-  const pageSize = 10;
+  const [pageSize, setPageSize] = useState(10);
 
-  const currentProductIds = useMemo(() => products.map((p) => p.id), [products]);
+  const [displayProducts, setDisplayProducts] = useState<ProductItem[]>(products);
+  const [selectedProductIds, setSelectedProductIds] = useState<number[]>(() =>
+    products.map((product) => product.id)
+  );
+
+  useEffect(() => {
+    setDisplayProducts(products);
+    setSelectedProductIds(products.map((product) => product.id));
+  }, [products]);
+
+  const selectedProducts = useMemo(() => {
+    const selectedIdSet = new Set(selectedProductIds);
+    return displayProducts.filter((product) => selectedIdSet.has(product.id));
+  }, [displayProducts, selectedProductIds]);
 
   const paginatedProducts = useMemo(() => {
     const startIndex = (page - 1) * pageSize;
-    return products.slice(startIndex, startIndex + pageSize);
-  }, [products, page, pageSize]);
+    return selectedProducts.slice(startIndex, startIndex + pageSize);
+  }, [page, pageSize, selectedProducts]);
 
-  const totalPages = Math.ceil(products.length / pageSize) || 1;
+  const totalPages = Math.ceil(selectedProducts.length / pageSize) || 1;
 
-  const handleSelectionChange = (productIds: number[]) => {
+  useEffect(() => {
+    if (page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [page, totalPages]);
+
+  const updateSelection = (productIds: number[], nextProducts?: ProductItem[]) => {
+    setSelectedProductIds(productIds);
+    setDisplayProducts((prevProducts) => {
+      if (nextProducts) {
+        return nextProducts;
+      }
+
+      return prevProducts.filter((product) => productIds.includes(product.id));
+    });
     onProductsChange(productIds);
+  };
+
+  const handleSelectionChange = (productIds: number[], nextProducts?: ProductItem[]) => {
+    updateSelection(productIds, nextProducts);
+  };
+
+  const handleToggleProduct = (productId: number) => {
+    const nextIds = selectedProductIds.includes(productId)
+      ? selectedProductIds.filter((id) => id !== productId)
+      : [...selectedProductIds, productId];
+
+    updateSelection(nextIds);
+  };
+
+  const handleToggleAll = (currentPageIds: number[], allSelected: boolean) => {
+    const nextIds = allSelected
+      ? selectedProductIds.filter((id) => !currentPageIds.includes(id))
+      : [...new Set([...selectedProductIds, ...currentPageIds])];
+
+    updateSelection(nextIds);
   };
 
   return (
     <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold">{title} <Badge variant="secondary" className="ml-2">{products.length}</Badge></h3>
+        <h3 className="text-lg font-semibold">{title} <Badge variant="secondary" className="ml-2">{selectedProducts.length}</Badge></h3>
         <Button variant="solid" onClick={() => setIsModalOpen(true)} disabled={isLoading}>
           {editButtonText}
         </Button>
       </div>
 
       {/* Products Table */}
-      {products.length === 0 ? (
+      {selectedProducts.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-10 bg-gray-50/50 rounded-xl border-2 border-dashed border-gray-200">
           <div className="bg-white p-4 rounded-full shadow-sm mb-3">
             <Package className="h-8 w-8 text-gray-400" />
@@ -100,82 +120,26 @@ export const ProductsTableSection: React.FC<ProductsTableSectionProps> = ({
         </div>
       ) : (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-          <Table noPagination={true}>
-            <TableHeader>
-              <TableRow isHeader>
-                <TableHead>Product</TableHead>
-                <TableHead>SKU</TableHead>
-                <TableHead>Price</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {paginatedProducts.map((product) => (
-                <TableRow key={product.id} className="hover:bg-gray-50/50 transition-colors">
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 relative rounded-lg overflow-hidden bg-gray-100 border border-gray-200 flex-shrink-0">
-                        {product.primary_image?.url ? (
-                          <Image
-                            src={product.primary_image.url}
-                            alt={product.primary_image.alt_text || product.name_en}
-                            fill
-                            className="object-cover"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center">
-                            <Package className="h-5 w-5 text-gray-400" />
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex flex-col">
-                        <span className="font-semibold text-sm line-clamp-1">{product.name_en}</span>
-                        <span className="text-xs text-gray-500 line-clamp-1 mt-0.5">{product.name_ar}</span>
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    {product.sku ? (
-                       <Badge variant="default" className="font-mono text-xs text-gray-600 bg-gray-50">{product.sku}</Badge>
-                    ) : (
-                       <span className="text-gray-400 text-sm">—</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <span className="font-semibold text-sm">
-                      {product.price ? `$${parseFloat(product.price).toFixed(2)}` : "—"}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center justify-end gap-2">
-                       <IconButton 
-
-                          title="View / Edit" 
-                          variant="view" 
-                          onClick={() => setViewProductId(product.id)}
-                       />
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-          
-          {totalPages > 1 && (
-            <div className="border-t border-gray-100">
-                             <Pagination
-                 pagination={{
-                   currentPage: page,
-                   totalPages: totalPages,
-                   pageSize: pageSize,
-                   totalItems: products.length,
-                   hasNextPage: page < totalPages,
-                   hasPreviousPage: page > 1
-                 }}
-                 onPageChange={setPage}
-               />
-            </div>
-          )}
+          <ProductCatalogTable
+            products={paginatedProducts}
+            pagination={{
+              currentPage: page,
+              totalPages,
+              pageSize,
+              totalItems: selectedProducts.length,
+              hasNextPage: page < totalPages,
+              hasPreviousPage: page > 1,
+            }}
+            onPageChange={setPage}
+            onPageSizeChange={(nextPageSize) => {
+              setPageSize(nextPageSize);
+              setPage(1);
+            }}
+            selectable={true}
+            selectedProductIds={selectedProductIds}
+            onToggleProduct={handleToggleProduct}
+            onToggleAll={handleToggleAll}
+          />
         </div>
       )}
 
@@ -183,26 +147,18 @@ export const ProductsTableSection: React.FC<ProductsTableSectionProps> = ({
       <ProductSelectionModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
-        selectedProductIds={currentProductIds}
+        selectedProductIds={selectedProductIds}
+        selectedProducts={selectedProducts}
         onSelectionChange={handleSelectionChange}
         title={modalTitle}
       />
-
-      {/* Product View/Edit Modal */}
-      {viewProductId && (
-        <ProductViewModal
-          isOpen={!!viewProductId}
-          onClose={() => setViewProductId(null)}
-          product={viewProductData?.data || null}
-          onEdit={() => {
-            setViewProductId(null);
-                        router.push(`/products/${viewProductId}`);
-          }}
-        />
-      )}
     </div>
   );
 };
+
+
+
+
 
 
 

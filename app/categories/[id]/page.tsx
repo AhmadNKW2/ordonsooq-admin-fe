@@ -8,6 +8,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useParams } from "next/navigation";
 import { useRouter } from "@/hooks/use-loading-router";
 import { useLoading } from "../../src/providers/loading-provider";
+import { useAttributes } from "../../src/services/attributes/hooks/use-attributes";
 import {
   useCategory,
   useUpdateCategory,
@@ -15,12 +16,30 @@ import {
 } from "../../src/services/categories/hooks/use-categories";
 import { CategoryForm } from "../../src/components/categories/CategoryForm";
 import { productService } from "../../src/services/products/api/product.service";
+import { useSpecifications } from "../../src/services/specifications/hooks/use-specifications";
 import { Card } from "../../src/components/ui/card";
 import { Button } from "../../src/components/ui/button";
 import { ImageUploadItem } from "../../src/components/ui/image-upload";
 import { RefreshCw, AlertCircle } from "lucide-react";
 import { validateCategoryForm } from "../../src/lib/validations";
 import { ProductItem } from "../../src/components/common/ProductsTableSection";
+import { mapProductToProductItem } from "../../src/components/common/product-table-utils";
+
+const extractLinkedIds = (directIds: unknown, relations: unknown): number[] => {
+  const normalizedIds = Array.isArray(directIds)
+    ? directIds.filter((id): id is number => typeof id === "number")
+    : [];
+
+  const relationIds = Array.isArray(relations)
+    ? relations
+        .map((item) =>
+          typeof item === "object" && item !== null && "id" in item ? (item as { id?: unknown }).id : undefined
+        )
+        .filter((id): id is number => typeof id === "number")
+    : [];
+
+  return [...new Set([...normalizedIds, ...relationIds])];
+};
 
 export default function EditCategoryPage() {
   const router = useRouter();
@@ -37,6 +56,8 @@ export default function EditCategoryPage() {
   const [visible, setVisible] = useState(true);
   const [parentId, setParentId] = useState<number | null>(null);
   const [product_ids, setProductIds] = useState<number[]>([]);
+  const [attribute_ids, setAttributeIds] = useState<number[]>([]);
+  const [specification_ids, setSpecificationIds] = useState<number[]>([]);
   const [formErrors, setFormErrors] = useState<{
     name_en?: string;
     name_ar?: string;
@@ -55,23 +76,16 @@ export default function EditCategoryPage() {
     refetch,
   } = useCategory(categoryId);
 
+  const { data: attributes = [] } = useAttributes();
   const { data: allCategories } = useCategories();
+  const { data: specifications = [] } = useSpecifications();
 
   const updateCategory = useUpdateCategory();
 
   // Get assigned products from category response
   const assignedProducts: ProductItem[] = useMemo(() => {
     const products = (category as any)?.products || [];
-    return products.map((p: any) => ({
-      id: p.id,
-      name_en: p.name_en,
-      name_ar: p.name_ar,
-      sku: p.sku,
-      primary_image: p.primary_image,
-      price: p.price,
-      category: p.category ? { name: p.category.name } : null,
-      vendor: p.vendor ? { name: p.vendor.name } : null,
-    }));
+    return products.map((product: any) => mapProductToProductItem(product));
   }, [category]);
 
   // Initialize form when category loads
@@ -95,6 +109,8 @@ export default function EditCategoryPage() {
       }
       setVisible(category.visible ?? true);
       setParentId(category.parent_id || null);
+      setAttributeIds(extractLinkedIds((category as any).attribute_ids, (category as any).attributes));
+      setSpecificationIds(extractLinkedIds((category as any).specification_ids, (category as any).specifications));
     }
   }, [category]);
 
@@ -141,6 +157,8 @@ export default function EditCategoryPage() {
             description_ar: descriptionAr || undefined,
             visible: visible,
             parent_id: parentId,
+            // attribute_ids,
+            // specification_ids,
             // Only send new file if one was uploaded
             image: image?.file || undefined,
           },
@@ -243,6 +261,8 @@ export default function EditCategoryPage() {
       visible={visible}
       parentId={parentId}
       product_ids={product_ids}
+      attributeIds={attribute_ids.map(String)}
+      specificationIds={specification_ids.map(String)}
       onNameEnChange={(value) => {
         setNameEn(value);
         if (formErrors.name_en) {
@@ -271,8 +291,12 @@ export default function EditCategoryPage() {
       onVisibleChange={setVisible}
       onParentIdChange={setParentId}
       onProductIdsChange={setProductIds}
+      onAttributeIdsChange={(value) => setAttributeIds(value.map(Number))}
+      onSpecificationIdsChange={(value) => setSpecificationIds(value.map(Number))}
       formErrors={formErrors}
       parentCategories={allCategories || []}
+      allAttributes={attributes}
+      allSpecifications={specifications}
       assignedProducts={assignedProducts}
       onSubmit={handleSubmit}
       isSubmitting={isSubmitting || updateCategory.isPending}

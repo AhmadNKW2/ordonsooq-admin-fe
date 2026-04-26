@@ -19,6 +19,7 @@ import { ImageUploadItem } from "../../src/components/ui/image-upload";
 import { RefreshCw, AlertCircle } from "lucide-react";
 import { validateBrandForm } from "../../src/lib/validations";
 import { ProductItem } from "../../src/components/common/ProductsTableSection";
+import { mapProductToProductItem } from "../../src/components/common/product-table-utils";
 
 export default function EditBrandPage() {
   const router = useRouter();
@@ -54,16 +55,7 @@ export default function EditBrandPage() {
   // Get assigned products from brand response
   const assignedProducts: ProductItem[] = useMemo(() => {
     const products = (brand as any)?.products || [];
-    return products.map((p: any) => ({
-      id: p.id,
-      name_en: p.name_en,
-      name_ar: p.name_ar,
-      sku: p.sku,
-      primary_image: p.primary_image,
-      price: p.price,
-      category: p.category ? { name: p.category.name } : null,
-      vendor: p.vendor ? { name: p.vendor.name } : null,
-    }));
+    return products.map((product: any) => mapProductToProductItem(product));
   }, [brand]);
 
   useEffect(() => {
