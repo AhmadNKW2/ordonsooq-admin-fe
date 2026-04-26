@@ -8,7 +8,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Package } from "lucide-react";
 import { Modal } from "../ui/modal";
-import { ProductViewModal } from "../products/ProductViewModal";
 import { Button } from "../ui/button";
 import { IconButton } from "../ui/icon-button";
 import { Input } from "../ui/input";
