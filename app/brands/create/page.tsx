@@ -12,6 +12,7 @@ import { BrandForm } from "../../src/components/brands/BrandForm";
 import { ImageUploadItem } from "../../src/components/ui/image-upload";
 import { validateBrandForm } from "../../src/lib/validations";
 import { ProductItem } from "../../src/components/common/ProductsTableSection";
+import { buildCreateProductChanges } from "@/lib/product-changes";
 
 export default function CreateBrandPage() {
   const router = useRouter();
@@ -82,7 +83,7 @@ export default function CreateBrandPage() {
         description_ar: descriptionAr || undefined,
         visible,
         logo: logo?.file || undefined,
-        product_ids,
+        product_changes: buildCreateProductChanges(product_ids),
       });
 
       router.push("/brands");

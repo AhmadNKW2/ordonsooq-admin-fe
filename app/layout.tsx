@@ -7,6 +7,7 @@ import { QueryProvider } from "./src/providers/query-provider";
 import { LoadingProvider } from "./src/providers/loading-provider";
 import { AuthProvider } from "./src/contexts/auth.context";
 import { AppShell } from "./src/components/layout/AppShell";
+import { DevSsrApiLogReset } from "./src/components/common/DevSsrApiLogReset";
 import { ToastContainer, Slide } from "react-toastify";
 
 const lato = Lato({
@@ -39,6 +40,7 @@ export default function RootLayout({
         className={`${lato.variable} ${almarai.variable} antialiased`}
       >
         <QueryProvider>
+          {process.env.NODE_ENV !== "production" ? <DevSsrApiLogReset /> : null}
           <LoadingProvider>
             <AuthProvider>
               <AppShell>{children}</AppShell>

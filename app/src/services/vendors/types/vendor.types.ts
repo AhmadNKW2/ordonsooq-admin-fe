@@ -4,6 +4,7 @@
  */
 
 import { z } from "zod";
+import { ProductChangesPayload } from "../../../lib/product-changes";
 
 // Archived Product (included in archived vendor response)
 export interface ArchivedVendorProduct {
@@ -47,7 +48,7 @@ export interface CreateVendorDto {
   description_ar?: string;
   visible?: boolean;
   logo?: File | null;
-  product_ids?: number[]; // Assign products during creation
+  product_changes?: ProductChangesPayload;
 }
 
 // Update Vendor DTO
@@ -58,7 +59,7 @@ export interface UpdateVendorDto {
   description_ar?: string;
   visible?: boolean;
   logo?: File | null;
-  product_ids?: number[]; // Sync products during update
+  product_changes?: ProductChangesPayload;
 }
 
 // Reorder Vendors DTO

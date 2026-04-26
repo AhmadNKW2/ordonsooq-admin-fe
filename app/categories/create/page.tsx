@@ -17,6 +17,7 @@ import { CategoryForm } from "../../src/components/categories/CategoryForm";
 import { ImageUploadItem } from "../../src/components/ui/image-upload";
 import { validateCategoryForm } from "../../src/lib/validations";
 import { ProductItem } from "../../src/components/common/ProductsTableSection";
+import { buildCreateProductChanges } from "@/lib/product-changes";
 
 export default function CreateCategoryPage() {
   const router = useRouter();
@@ -98,7 +99,7 @@ export default function CreateCategoryPage() {
         visible: visible,
         parent_id: parentId,
         image: image?.file || undefined,
-        product_ids,
+        product_changes: buildCreateProductChanges(product_ids),
         // attribute_ids,
         // specification_ids,
       });

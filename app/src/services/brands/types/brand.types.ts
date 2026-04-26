@@ -4,6 +4,7 @@
  */
 
 import { z } from "zod";
+import { ProductChangesPayload } from "../../../lib/product-changes";
 
 // Archived Product (included in archived brand response)
 export interface ArchivedBrandProduct {
@@ -46,7 +47,7 @@ export interface CreateBrandDto {
   description_ar?: string;
   visible?: boolean;
   logo?: File | null;
-  product_ids?: number[]; // Assign products during creation
+  product_changes?: ProductChangesPayload;
 }
 
 // Update Brand DTO
@@ -57,7 +58,7 @@ export interface UpdateBrandDto {
   description_ar?: string;
   visible?: boolean;
   logo?: File | null;
-  product_ids?: number[]; // Sync products during update
+  product_changes?: ProductChangesPayload;
 }
 
 // Reorder Brands DTO

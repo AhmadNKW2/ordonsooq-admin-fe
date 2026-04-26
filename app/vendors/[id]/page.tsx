@@ -20,6 +20,7 @@ import { RefreshCw, AlertCircle } from "lucide-react";
 import { validateVendorForm } from "../../src/lib/validations";
 import { ProductItem } from "../../src/components/common/ProductsTableSection";
 import { mapProductToProductItem } from "../../src/components/common/product-table-utils";
+import { buildUpdateProductChanges } from "@/lib/product-changes";
 
 export default function EditVendorPage() {
   const router = useRouter();
@@ -58,6 +59,11 @@ export default function EditVendorPage() {
   const assignedProducts: ProductItem[] = useMemo(() => {
     const products = (vendor as any)?.products || [];
     return products.map((product: any) => mapProductToProductItem(product));
+  }, [vendor]);
+
+  const originalProductIds = useMemo(() => {
+    const products = (vendor as any)?.products || [];
+    return products.map((product: { id: number }) => product.id);
   }, [vendor]);
 
   // Initialize form when vendor loads
@@ -123,7 +129,7 @@ export default function EditVendorPage() {
           visible: visible,
           // Only send new file if one was uploaded
           logo: logo?.file || undefined,
-          product_ids: product_ids,
+          product_changes: buildUpdateProductChanges(originalProductIds, product_ids),
         },
       });
       

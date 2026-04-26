@@ -4,6 +4,7 @@
  */
 
 import { httpClient } from "../../../lib/api/http-client";
+import { appendProductChangesField } from "../../../lib/product-changes";
 import { ApiResponse } from "../../../types/common.types";
 import {
   Category,
@@ -93,9 +94,7 @@ class CategoryService {
       formData.append("image", data.image);
     }
 
-    if (data.product_ids !== undefined) {
-        formData.append("product_ids", JSON.stringify(data.product_ids));
-      }
+    appendProductChangesField(formData, data.product_changes);
 
     if (data.attribute_ids !== undefined) {
       formData.append("attribute_ids", JSON.stringify(data.attribute_ids));
@@ -153,9 +152,7 @@ class CategoryService {
       formData.append("image", data.image);
     }
 
-    if (data.product_ids !== undefined) {
-        formData.append("product_ids", JSON.stringify(data.product_ids));
-      }
+    appendProductChangesField(formData, data.product_changes);
 
     if (data.attribute_ids !== undefined) {
       formData.append("attribute_ids", JSON.stringify(data.attribute_ids));

@@ -15,7 +15,6 @@ import {
   useCategories,
 } from "../../src/services/categories/hooks/use-categories";
 import { CategoryForm } from "../../src/components/categories/CategoryForm";
-import { productService } from "../../src/services/products/api/product.service";
 import { useSpecifications } from "../../src/services/specifications/hooks/use-specifications";
 import { Card } from "../../src/components/ui/card";
 import { Button } from "../../src/components/ui/button";
@@ -24,6 +23,7 @@ import { RefreshCw, AlertCircle } from "lucide-react";
 import { validateCategoryForm } from "../../src/lib/validations";
 import { ProductItem } from "../../src/components/common/ProductsTableSection";
 import { mapProductToProductItem } from "../../src/components/common/product-table-utils";
+import { buildUpdateProductChanges } from "@/lib/product-changes";
 
 const extractLinkedIds = (directIds: unknown, relations: unknown): number[] => {
   const normalizedIds = Array.isArray(directIds)
@@ -88,6 +88,11 @@ export default function EditCategoryPage() {
     return products.map((product: any) => mapProductToProductItem(product));
   }, [category]);
 
+  const originalProductIds = useMemo(() => {
+    const products = (category as any)?.products || [];
+    return products.map((product: { id: number }) => product.id);
+  }, [category]);
+
   // Initialize form when category loads
   useEffect(() => {
     if (category) {
@@ -145,40 +150,22 @@ export default function EditCategoryPage() {
 
     try {
       setIsSubmitting(true);
-      const apiCalls: Promise<any>[] = [];
-
-      apiCalls.push(
-        updateCategory.mutateAsync({
-          id: categoryId,
-          data: {
-            name_en: nameEn,
-            name_ar: nameAr,
-            description_en: descriptionEn || undefined,
-            description_ar: descriptionAr || undefined,
-            visible: visible,
-            parent_id: parentId,
-            // attribute_ids,
-            // specification_ids,
-            // Only send new file if one was uploaded
-            image: image?.file || undefined,
-          },
-        })
-      );
-
-      const originalProductIds: number[] = ((category as any)?.products || []).map((p: any) => p.id);
-      
-      const productsToAdd = product_ids.filter(id => !originalProductIds.includes(id));
-      const productsToRemove = originalProductIds.filter(id => !product_ids.includes(id));
-
-      if (productsToAdd.length > 0) {
-        apiCalls.push(productService.assignToCategory(categoryId, productsToAdd));
-      }
-
-      if (productsToRemove.length > 0) {
-         apiCalls.push(productService.removeFromCategory(categoryId, productsToRemove));
-      }
-
-      await Promise.all(apiCalls);
+      await updateCategory.mutateAsync({
+        id: categoryId,
+        data: {
+          name_en: nameEn,
+          name_ar: nameAr,
+          description_en: descriptionEn || undefined,
+          description_ar: descriptionAr || undefined,
+          visible: visible,
+          parent_id: parentId,
+          // attribute_ids,
+          // specification_ids,
+          // Only send new file if one was uploaded
+          image: image?.file || undefined,
+          product_changes: buildUpdateProductChanges(originalProductIds, product_ids),
+        },
+      });
 
       router.push("/categories");
     } catch (error) {

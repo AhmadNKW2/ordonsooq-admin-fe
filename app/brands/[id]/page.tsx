@@ -20,6 +20,7 @@ import { RefreshCw, AlertCircle } from "lucide-react";
 import { validateBrandForm } from "../../src/lib/validations";
 import { ProductItem } from "../../src/components/common/ProductsTableSection";
 import { mapProductToProductItem } from "../../src/components/common/product-table-utils";
+import { buildUpdateProductChanges } from "@/lib/product-changes";
 
 export default function EditBrandPage() {
   const router = useRouter();
@@ -56,6 +57,11 @@ export default function EditBrandPage() {
   const assignedProducts: ProductItem[] = useMemo(() => {
     const products = (brand as any)?.products || [];
     return products.map((product: any) => mapProductToProductItem(product));
+  }, [brand]);
+
+  const originalProductIds = useMemo(() => {
+    const products = (brand as any)?.products || [];
+    return products.map((product: { id: number }) => product.id);
   }, [brand]);
 
   useEffect(() => {
@@ -118,7 +124,7 @@ export default function EditBrandPage() {
           description_ar: descriptionAr || undefined,
           visible,
           logo: logo?.file || undefined,
-          product_ids,
+          product_changes: buildUpdateProductChanges(originalProductIds, product_ids),
         },
       });
 

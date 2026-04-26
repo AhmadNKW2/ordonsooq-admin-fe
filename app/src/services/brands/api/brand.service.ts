@@ -4,6 +4,7 @@
  */
 
 import { httpClient } from "../../../lib/api/http-client";
+import { appendProductChangesField } from "../../../lib/product-changes";
 import { ApiResponse, PaginatedApiResponse } from "../../../types/common.types";
 import {
   Brand,
@@ -49,8 +50,7 @@ class BrandService {
       formData.append("logo", data.logo);
     }
 
-    // Always send product_ids, even when empty
-    formData.append("product_ids", JSON.stringify(data.product_ids ?? []));
+    appendProductChangesField(formData, data.product_changes);
 
     return httpClient.postFormData<ApiResponse<Brand>>(this.endpoint, formData);
   }
@@ -82,8 +82,7 @@ class BrandService {
       formData.append("logo", data.logo);
     }
 
-    // Always send product_ids, even when empty
-    formData.append("product_ids", JSON.stringify(data.product_ids ?? []));
+    appendProductChangesField(formData, data.product_changes);
 
     return httpClient.patchFormData<ApiResponse<Brand>>(`${this.endpoint}/${id}`.trim(), formData);
   }

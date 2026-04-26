@@ -12,6 +12,7 @@ import { VendorForm } from "../../src/components/vendors/VendorForm";
 import { ImageUploadItem } from "../../src/components/ui/image-upload";
 import { validateVendorForm } from "../../src/lib/validations";
 import { ProductItem } from "../../src/components/common/ProductsTableSection";
+import { buildCreateProductChanges } from "@/lib/product-changes";
 
 export default function CreateVendorPage() {
   const router = useRouter();
@@ -85,7 +86,7 @@ export default function CreateVendorPage() {
         description_ar: descriptionAr || undefined,
         visible: visible,
         logo: logo?.file || undefined,
-        product_ids,
+        product_changes: buildCreateProductChanges(product_ids),
       });
       
       router.push("/vendors");

@@ -4,6 +4,7 @@
  */
 
 import { z } from "zod";
+import { ProductChangesPayload } from "../../../lib/product-changes";
 
 // Base Category Schema (without children for self-reference)
 const baseCategorySchema = z.object({
@@ -89,7 +90,7 @@ export interface CreateCategoryDto {
   is_active?: boolean;
   parent_id?: number | null;
   image?: File | null;
-  product_ids?: number[]; // Assign products during creation
+  product_changes?: ProductChangesPayload;
   attribute_ids?: number[];
   specification_ids?: number[];
 }
@@ -104,7 +105,7 @@ export interface UpdateCategoryDto {
   is_active?: boolean;
   parent_id?: number | null;
   image?: File | null;
-  product_ids?: number[]; // Sync products during update
+  product_changes?: ProductChangesPayload;
   attribute_ids?: number[];
   specification_ids?: number[];
 }
