@@ -786,19 +786,30 @@ function ProductReviewCard({
         <Card className="w-full overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-[0_20px_60px_-38px_rgba(15,23,42,0.35)] grid gap-0 xl:grid-cols-[minmax(0,1fr)_320px]">
             <section className="min-w-0">
                 <div className="grid gap-4 md:grid-cols-[160px_minmax(0,1fr)] md:items-start mb-4">
-                    <div className="relative aspect-square overflow-hidden rounded-[20px] border border-slate-200 bg-white">
-                        {snapshot.imageUrl ? (
-                            <Image
-                                src={snapshot.imageUrl}
-                                alt={product.name_en || "Product image"}
-                                fill
-                                className="object-cover transition-transform duration-500 hover:scale-105"
-                            />
-                        ) : (
-                            <div className="flex h-full w-full items-center justify-center text-slate-300">
-                                <ImageOff className="h-10 w-10" />
+                    <div className="flex flex-col gap-2">
+                        <div className="px-1">
+                            <div className="mt-1 flex items-center gap-3">
+                                <p className="font-mono text-lg font-semibold tracking-[0.12em] text-slate-900">
+                                    #{product.id}
+                                </p>
+                                <div className="h-px flex-1 bg-linear-to-r from-slate-200 to-transparent" />
                             </div>
-                        )}
+                        </div>
+
+                        <div className="relative aspect-square overflow-hidden rounded-[20px] border border-slate-200 bg-white">
+                            {snapshot.imageUrl ? (
+                                <Image
+                                    src={snapshot.imageUrl}
+                                    alt={product.name_en || "Product image"}
+                                    fill
+                                    className="object-cover transition-transform duration-500 hover:scale-105"
+                                />
+                            ) : (
+                                <div className="flex h-full w-full items-center justify-center text-slate-300">
+                                    <ImageOff className="h-10 w-10" />
+                                </div>
+                            )}
+                        </div>
                     </div>
                     <div>
                         <div className="flex items-center justify-between gap-2">
@@ -829,7 +840,6 @@ function ProductReviewCard({
                 </div>
 
                 <div className="flex min-w-0 flex-col gap-4">
-
 
                     <div className="grid gap-2 sm:grid-cols-3">
                         <div className="rounded-[18px] border border-slate-200 bg-white px-3 py-2.5 shadow-[0_10px_24px_-20px_rgba(15,23,42,0.25)]">

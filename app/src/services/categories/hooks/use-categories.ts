@@ -18,7 +18,7 @@ import { showSuccessToast, showWarningToast } from "../../../lib/toast";
 export const useCategories = () => {
   return useQuery({
     queryKey: [queryKeys.categories.all],
-    queryFn: () => categoryService.getCategories(),
+    queryFn: () => categoryService.getCategoryTree(),
     select: (response) => response.data,
   });
 };

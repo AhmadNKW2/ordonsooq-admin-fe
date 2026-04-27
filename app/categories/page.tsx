@@ -24,6 +24,26 @@ import { CategoryViewModal } from "../src/components/categories/CategoryViewModa
 import CategoryAccordion from "../src/components/categories/CategoryAccordion";
 import { Category } from "../src/services/categories/types/category.types";
 
+const findCategoryById = (
+  categories: Category[] | undefined,
+  id: number
+): Category | null => {
+  if (!categories) return null;
+
+  for (const category of categories) {
+    if (category.id === id) {
+      return category;
+    }
+
+    const nestedMatch = findCategoryById(category.children, id);
+    if (nestedMatch) {
+      return nestedMatch;
+    }
+  }
+
+  return null;
+};
+
 export default function CategoriesPage() {
   const router = useRouter();
   const { setShowOverlay } = useLoading();
@@ -75,7 +95,7 @@ export default function CategoriesPage() {
   // Get parent category for view modal
   const parentCategory = useMemo(() => {
     if (!categoryToView?.parent_id || !categories) return null;
-    return categories.find((cat) => cat.id === categoryToView.parent_id) || null;
+    return findCategoryById(categories, categoryToView.parent_id);
   }, [categoryToView, categories]);
 
   const handleView = (category: Category) => {

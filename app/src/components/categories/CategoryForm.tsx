@@ -19,6 +19,32 @@ import { ProductsTableSection, ProductItem } from "../common/ProductsTableSectio
 import { CategoryTreeSelect } from "../products/CategoryTreeSelect";
 import { useEnterToSubmit } from "../../hooks/use-enter-to-submit";
 
+const removeCategoryBranch = (
+  categories: Category[],
+  blockedCategoryId: number
+): Category[] => {
+  return categories.reduce((acc, category) => {
+    if (category.id === blockedCategoryId) {
+      return acc;
+    }
+
+    const nextChildren = category.children
+      ? removeCategoryBranch(category.children, blockedCategoryId)
+      : undefined;
+
+    acc.push(
+      nextChildren === category.children
+        ? category
+        : {
+            ...category,
+            children: nextChildren,
+          }
+    );
+
+    return acc;
+  }, [] as Category[]);
+};
+
 interface CategoryFormProps {
   mode: "create" | "edit";
   nameEn: string;
@@ -99,11 +125,10 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({
     router.push("/categories");
   };
 
-  // Filter out current category and its children from parent options if in edit mode
-  const availableParents = parentCategories.filter((cat) => {
-    if (!currentCategoryId) return true;
-    return cat.id !== currentCategoryId;
-  });
+  // Remove the current category branch so it can't become its own parent.
+  const availableParents = currentCategoryId
+    ? removeCategoryBranch(parentCategories, currentCategoryId)
+    : parentCategories;
 
   return (
     <div className="flex flex-col justify-center items-center gap-5 p-5">
