@@ -8,6 +8,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "@/hooks/use-loading-router";
 import { useLoading } from "../src/providers/loading-provider";
+import { useCategories } from "../src/services/categories/hooks/use-categories";
 import {
   useSpecifications,
   useDeleteSpecification,
@@ -31,7 +32,13 @@ import {
 } from "../src/components/ui/table";
 import { DeleteConfirmationModal } from "../src/components/common/DeleteConfirmationModal";
 import { SpecificationViewModal } from "../src/components/specifications/SpecificationViewModal";
+import { CategoryTreeSelect } from "../src/components/products/CategoryTreeSelect";
 import { Specification } from "../src/services/specifications/types/specification.types";
+import {
+  ALL_CATEGORIES_LABEL,
+  buildCategoryNameMap,
+  getEntityCategoryLabels,
+} from "../src/lib/category-display";
 
 // DnD Kit imports
 import {
@@ -56,11 +63,12 @@ import { CSS } from "@dnd-kit/utilities";
 // Sortable Row Component
 const SortableRow: React.FC<{
   specification: Specification;
+  categoryLabels: string[];
   displayIndex: number;
   onView: (specification: Specification) => void;
   onEdit: (specification: Specification) => void;
   onDelete: (specification: Specification) => void;
-}> = ({ specification, displayIndex, onView, onEdit, onDelete }) => {
+}> = ({ specification, categoryLabels, displayIndex, onView, onEdit, onDelete }) => {
   const {
     attributes: dndAttributes,
     listeners,
@@ -111,6 +119,19 @@ const SortableRow: React.FC<{
         </div>
       </TableCell>
       <TableCell>
+        {categoryLabels.length > 0 ? (
+          <div className="flex max-w-md flex-wrap gap-1">
+            {categoryLabels.map((label) => (
+              <Badge key={`${specification.id}-${label}`} variant="default">
+                {label}
+              </Badge>
+            ))}
+          </div>
+        ) : (
+          <span className="text-sm text-gray-500">No categories</span>
+        )}
+      </TableCell>
+      <TableCell>
         <Badge variant={specification.is_active ? "success" : "danger"}>
           {specification.is_active ? "Active" : "Inactive"}
         </Badge>
@@ -151,6 +172,7 @@ export default function SpecificationsPage() {
   const router = useRouter();
   const { setShowOverlay } = useLoading();
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [specificationToDelete, setSpecificationToDelete] = useState<Specification | null>(
@@ -160,7 +182,15 @@ export default function SpecificationsPage() {
     null
   );
 
-  const { data: specifications, isLoading, isError, error, refetch } = useSpecifications();
+  const categoryIdsQuery = useMemo(() => {
+    const uniqueIds = Array.from(new Set(selectedCategoryIds.filter(Boolean)));
+    return uniqueIds.length > 0 ? uniqueIds.join(",") : undefined;
+  }, [selectedCategoryIds]);
+
+  const { data: categories = [] } = useCategories();
+  const { data: specifications, isLoading, isError, error, refetch } = useSpecifications(
+    categoryIdsQuery ? { category_ids: categoryIdsQuery } : undefined
+  );
   const deleteSpecification = useDeleteSpecification();
 
   // Show loading overlay while data is loading
@@ -186,6 +216,8 @@ export default function SpecificationsPage() {
     if (!specifications || !Array.isArray(specifications)) return [];
     return [...specifications].sort((a, b) => a.sort_order - b.sort_order);
   }, [specifications]);
+
+  const categoryNameMap = useMemo(() => buildCategoryNameMap(categories), [categories]);
 
   // Filter specifications based on search
   const filteredSpecifications = useMemo(() => {
@@ -260,11 +292,16 @@ export default function SpecificationsPage() {
     setSearchTerm(value);
   };
 
-  const handleClearFilters = () => {
-    setSearchTerm("");
+  const handleCategoryChange = (ids: string[]) => {
+    setSelectedCategoryIds(ids);
   };
 
-  const hasActiveFilters = !!searchTerm;
+  const handleClearFilters = () => {
+    setSearchTerm("");
+    setSelectedCategoryIds([]);
+  };
+
+  const hasActiveFilters = !!searchTerm || selectedCategoryIds.length > 0;
 
   if (isError) {
     return (
@@ -304,13 +341,23 @@ export default function SpecificationsPage() {
       {(filteredSpecifications.length > 0 || hasActiveFilters) && (
         <Card>
           <h2 className="text-lg font-semibold ">Filters</h2>
-          <div className="flex items-center gap-5">
+          <div className="flex flex-col gap-4 md:flex-row md:items-start">
             <div className="relative flex-1 max-w-sm">
               <Input
                 value={searchTerm}
                 onChange={(e) => handleSearchChange(e.target.value)}
                 label="Search"
                 variant="search"
+              />
+            </div>
+
+            <div className="relative z-50 flex-1">
+              <CategoryTreeSelect
+                label="Categories"
+                categories={categories}
+                selectedIds={selectedCategoryIds}
+                onChange={handleCategoryChange}
+                disabled={categories.length === 0}
               />
             </div>
 
@@ -352,6 +399,7 @@ export default function SpecificationsPage() {
                 <TableHead className="w-12">{""}</TableHead>
                 <TableHead className="w-12">#</TableHead>
                 <TableHead >Specification Name</TableHead>
+                <TableHead>Categories</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
@@ -365,6 +413,13 @@ export default function SpecificationsPage() {
                   <SortableRow
                     key={specification.id}
                     specification={specification}
+                    categoryLabels={specification.for_all_categories
+                      ? [ALL_CATEGORIES_LABEL]
+                      : getEntityCategoryLabels(
+                          specification.category_ids,
+                          specification.categories,
+                          categoryNameMap
+                        )}
                     displayIndex={index + 1}
                     onView={handleView}
                     onEdit={handleEdit}
