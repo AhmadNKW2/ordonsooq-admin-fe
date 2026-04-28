@@ -22,10 +22,23 @@ interface VendorCategoryUrlsSectionProps {
   onDirtyChange?: (isDirty: boolean) => void;
 }
 
+interface PersistedMappingRef {
+  id: number;
+  categoryId: string;
+  sortOrder?: number;
+}
+
 interface MappingRow {
   localId: string;
-  id?: number;
+  categoryIds: string[];
+  persistedMappings: PersistedMappingRef[];
+  url: string;
+}
+
+interface NormalizedMapping {
+  id: number;
   categoryId: string;
+  sortOrder?: number;
   url: string;
 }
 
@@ -69,9 +82,18 @@ const createLocalRowId = () =>
 
 const createEmptyRow = (): MappingRow => ({
   localId: createLocalRowId(),
-  categoryId: "",
+  categoryIds: [],
+  persistedMappings: [],
   url: "",
 });
+
+const normalizeCategoryIds = (categoryIds: string[]) => {
+  const normalizedIds = categoryIds
+    .map((categoryId) => categoryId.trim())
+    .filter(Boolean);
+
+  return Array.from(new Set(normalizedIds));
+};
 
 const normalizeNumber = (...values: unknown[]): number | undefined => {
   for (const value of values) {
@@ -100,7 +122,9 @@ const normalizeString = (...values: unknown[]): string => {
   return "";
 };
 
-const toMappingRow = (mapping: CategoryUrlMapping | Record<string, unknown>): MappingRow | null => {
+const toNormalizedMapping = (
+  mapping: CategoryUrlMapping | Record<string, unknown>
+): NormalizedMapping | null => {
   const mappingRecord = mapping as Record<string, unknown>;
   const mappingId = normalizeNumber(
     mappingRecord.id,
@@ -123,17 +147,55 @@ const toMappingRow = (mapping: CategoryUrlMapping | Record<string, unknown>): Ma
     mappingRecord.custom_url,
     mappingRecord.slug
   ).trim();
+  const sortOrder = normalizeNumber(mappingRecord.sort_order, mappingRecord.sortOrder);
 
-  if (!mappingId && !categoryId && url.length === 0) {
+  if (mappingId === undefined || categoryId === undefined || url.length === 0) {
     return null;
   }
 
   return {
-    localId: `vendor-category-url-${mappingId ?? createLocalRowId()}`,
     id: mappingId,
     categoryId: categoryId ? String(categoryId) : "",
+    sortOrder,
     url,
   };
+};
+
+const groupMappingsByUrl = (mappings: NormalizedMapping[]): MappingRow[] => {
+  const groupedRows = new Map<string, MappingRow>();
+
+  for (const mapping of mappings) {
+    const groupKey = mapping.url;
+    const existingRow = groupedRows.get(groupKey);
+
+    if (!existingRow) {
+      groupedRows.set(groupKey, {
+        localId: `vendor-category-url-${mapping.id}`,
+        categoryIds: mapping.categoryId ? [mapping.categoryId] : [],
+        persistedMappings: [
+          {
+            id: mapping.id,
+            categoryId: mapping.categoryId,
+            sortOrder: mapping.sortOrder,
+          },
+        ],
+        url: mapping.url,
+      });
+      continue;
+    }
+
+    existingRow.categoryIds = normalizeCategoryIds([
+      ...existingRow.categoryIds,
+      mapping.categoryId,
+    ]);
+    existingRow.persistedMappings.push({
+      id: mapping.id,
+      categoryId: mapping.categoryId,
+      sortOrder: mapping.sortOrder,
+    });
+  }
+
+  return Array.from(groupedRows.values());
 };
 
 const findInTree = (categories: Category[], id: string): Category | undefined => {
@@ -153,29 +215,21 @@ const findInTree = (categories: Category[], id: string): Category | undefined =>
   return undefined;
 };
 
-const areRowsEqual = (left?: MappingRow, right?: MappingRow) => {
-  if (!left || !right) {
-    return false;
-  }
-
-  return left.categoryId === right.categoryId && left.url.trim() === right.url.trim();
-};
-
 const isRowFilled = (row?: MappingRow) => {
   if (!row) {
     return false;
   }
 
-  return row.categoryId.trim().length > 0 && row.url.trim().length > 0;
+  return row.categoryIds.length > 0 && row.url.trim().length > 0;
 };
 
 const toComparableRows = (rows: MappingRow[]) => {
   return rows
     .map((row) => ({
-      categoryId: row.categoryId.trim(),
+      categoryIds: [...normalizeCategoryIds(row.categoryIds)].sort(),
       url: row.url.trim(),
     }))
-    .filter((row) => row.categoryId || row.url);
+    .filter((row) => row.categoryIds.length > 0 || row.url);
 };
 
 export const VendorCategoryUrlsSection: React.FC<VendorCategoryUrlsSectionProps> = ({
@@ -194,53 +248,48 @@ export const VendorCategoryUrlsSection: React.FC<VendorCategoryUrlsSectionProps>
     { enabled: !isDisabled }
   );
 
-  const normalizedPersistedRows = useMemo(() => {
-    const normalizedRows = vendorMappings
-      .map((mapping) => toMappingRow(mapping))
-      .filter((row): row is MappingRow => row !== null);
-
-    return normalizedRows;
+  const normalizedPersistedMappings = useMemo(() => {
+    return vendorMappings
+      .map((mapping) => toNormalizedMapping(mapping))
+      .filter((mapping): mapping is NormalizedMapping => mapping !== null);
   }, [vendorMappings]);
 
   const persistedRows = useMemo(
-    () => (normalizedPersistedRows.length > 0 ? normalizedPersistedRows : [createEmptyRow()]),
-    [normalizedPersistedRows]
+    () => {
+      const groupedRows = groupMappingsByUrl(normalizedPersistedMappings);
+      return groupedRows.length > 0 ? groupedRows : [createEmptyRow()];
+    },
+    [normalizedPersistedMappings]
   );
 
   const [rows, setRows] = useState<MappingRow[]>(() => [createEmptyRow()]);
-  const [deletedIds, setDeletedIds] = useState<number[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const lastRow = rows[rows.length - 1];
   const canAddRow = isRowFilled(lastRow);
   const currentComparableRows = useMemo(() => toComparableRows(rows), [rows]);
   const persistedComparableRows = useMemo(
-    () => toComparableRows(normalizedPersistedRows),
-    [normalizedPersistedRows]
+    () => toComparableRows(persistedRows),
+    [persistedRows]
   );
   const hasUnsavedChanges = useMemo(() => {
     if (isDisabled) {
       return false;
     }
 
-    return (
-      deletedIds.length > 0 ||
-      JSON.stringify(currentComparableRows) !== JSON.stringify(persistedComparableRows)
-    );
-  }, [currentComparableRows, deletedIds.length, isDisabled, persistedComparableRows]);
+    return JSON.stringify(currentComparableRows) !== JSON.stringify(persistedComparableRows);
+  }, [currentComparableRows, isDisabled, persistedComparableRows]);
   const selectedCategoryIds = useMemo(
-    () => rows.map((row) => row.categoryId).filter(Boolean),
+    () => Array.from(new Set(rows.flatMap((row) => row.categoryIds).filter(Boolean))),
     [rows]
   );
 
   useEffect(() => {
     if (isDisabled) {
       setRows([createEmptyRow()]);
-      setDeletedIds([]);
       return;
     }
 
     setRows(persistedRows);
-    setDeletedIds([]);
   }, [isDisabled, persistedRows]);
 
   useEffect(() => {
@@ -353,9 +402,9 @@ export const VendorCategoryUrlsSection: React.FC<VendorCategoryUrlsSectionProps>
     return sortTree(categories);
   }, [categories, selectedCategoryIds]);
 
-  const persistedRowsById = useMemo(
-    () => new Map(persistedRows.filter((row) => row.id).map((row) => [row.id as number, row])),
-    [persistedRows]
+  const persistedMappingsById = useMemo(
+    () => new Map(normalizedPersistedMappings.map((mapping) => [mapping.id, mapping])),
+    [normalizedPersistedMappings]
   );
 
   const handleRowChange = (localId: string, updates: Partial<MappingRow>) => {
@@ -381,14 +430,6 @@ export const VendorCategoryUrlsSection: React.FC<VendorCategoryUrlsSectionProps>
   };
 
   const handleRemoveRow = (rowToRemove: MappingRow) => {
-    if (rowToRemove.id) {
-      setDeletedIds((currentIds) =>
-        currentIds.includes(rowToRemove.id as number)
-          ? currentIds
-          : [...currentIds, rowToRemove.id as number]
-      );
-    }
-
     setRows((currentRows) => {
       const nextRows = currentRows.filter((row) => row.localId !== rowToRemove.localId);
       return nextRows.length > 0 ? nextRows : [createEmptyRow()];
@@ -402,37 +443,62 @@ export const VendorCategoryUrlsSection: React.FC<VendorCategoryUrlsSectionProps>
 
     const normalizedRows = rows.map((row) => ({
       ...row,
-      categoryId: row.categoryId.trim(),
+      categoryIds: normalizeCategoryIds(row.categoryIds),
       url: row.url.trim(),
     }));
 
-    const activeRows = normalizedRows.filter((row) => row.categoryId || row.url);
-    const hasIncompleteRow = activeRows.some((row) => !row.categoryId || !row.url);
+    const activeRows = normalizedRows.filter((row) => row.categoryIds.length > 0 || row.url);
+    const hasIncompleteRow = activeRows.some((row) => row.categoryIds.length === 0 || !row.url);
 
     if (hasIncompleteRow) {
-      showErrorToast("Select a category and enter a URL for each category URL mapping.");
+      showErrorToast("Select at least one category and enter a URL for each category URL mapping.");
       return;
     }
 
-    const uniqueCategoryIds = new Set<string>();
-    for (const row of activeRows) {
-      if (uniqueCategoryIds.has(row.categoryId)) {
-        showErrorToast("Each category can only be mapped once per vendor.");
+    const desiredMappings = activeRows.flatMap((row) =>
+      row.categoryIds.map((categoryId) => ({
+        id: row.persistedMappings.find((mapping) => mapping.categoryId === categoryId)?.id,
+        categoryId,
+        url: row.url,
+      }))
+    );
+
+    const uniqueMappingKeys = new Set<string>();
+    for (const mapping of desiredMappings) {
+      const mappingKey = `${mapping.categoryId}::${mapping.url}`;
+      if (uniqueMappingKeys.has(mappingKey)) {
+        showErrorToast("Duplicate category URL mappings are not allowed for the same category and URL.");
         return;
       }
 
-      uniqueCategoryIds.add(row.categoryId);
+      uniqueMappingKeys.add(mappingKey);
     }
 
-    const rowsToCreate = activeRows.filter((row) => !row.id);
-    const rowsToUpdate = activeRows.filter((row) => {
-      if (!row.id) {
+    const desiredMappingIds = new Set(
+      desiredMappings
+        .map((mapping) => mapping.id)
+        .filter((mappingId): mappingId is number => typeof mappingId === "number")
+    );
+
+    const rowsToCreate = desiredMappings.filter((mapping) => !mapping.id);
+    const rowsToUpdate = desiredMappings.filter((mapping) => {
+      if (!mapping.id) {
         return false;
       }
 
-      return !areRowsEqual(row, persistedRowsById.get(row.id));
+      const persistedMapping = persistedMappingsById.get(mapping.id);
+      if (!persistedMapping) {
+        return false;
+      }
+
+      return (
+        persistedMapping.categoryId !== mapping.categoryId ||
+        persistedMapping.url !== mapping.url
+      );
     });
-    const idsToDelete = Array.from(new Set(deletedIds));
+    const idsToDelete = normalizedPersistedMappings
+      .filter((mapping) => !desiredMappingIds.has(mapping.id))
+      .map((mapping) => mapping.id);
 
     if (rowsToCreate.length === 0 && rowsToUpdate.length === 0 && idsToDelete.length === 0) {
       showInfoToast("No category URL changes to save.");
@@ -470,8 +536,6 @@ export const VendorCategoryUrlsSection: React.FC<VendorCategoryUrlsSectionProps>
           queryKey: queryKeys.categories.urls(),
         }),
       ]);
-
-      setDeletedIds([]);
 
       showSuccessToast("Category URL mappings saved successfully.");
     } catch (error) {
@@ -565,12 +629,12 @@ export const VendorCategoryUrlsSection: React.FC<VendorCategoryUrlsSectionProps>
               className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)_auto]"
             >
               <CategoryTreeSelect
-                label="Category"
+                label="Categories"
                 categories={sortedCategories}
                 recentCategories={recentCategoriesList}
-                selectedIds={row.categoryId ? [row.categoryId] : []}
-                onChange={(ids) => handleRowChange(row.localId, { categoryId: ids[0] || "" })}
-                singleSelect={true}
+                selectedIds={row.categoryIds}
+                onChange={(ids) => handleRowChange(row.localId, { categoryIds: normalizeCategoryIds(ids) })}
+                singleSelect={false}
                 disabled={isDisabled || isSaving || isCategoriesLoading}
               />
 

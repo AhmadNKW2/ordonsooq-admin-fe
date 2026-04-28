@@ -5,6 +5,7 @@ export interface CategoryUrlMapping {
   category_id: number;
   vendor_id: number;
   url: string;
+  sort_order?: number | null;
   category?: Pick<Category, "id" | "name_en" | "name_ar"> | null;
   vendor?: {
     id: number;
@@ -19,12 +20,14 @@ export interface CreateCategoryUrlMappingDto {
   category_id: number;
   vendor_id: number;
   url: string;
+  sort_order?: number;
 }
 
 export interface UpdateCategoryUrlMappingDto {
   category_id?: number;
   vendor_id?: number;
   url?: string;
+  sort_order?: number;
 }
 
 export interface CategoryUrlMappingsQueryParams {
