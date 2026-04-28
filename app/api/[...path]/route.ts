@@ -100,6 +100,52 @@ async function readResponseBodyForLog(resp: Response) {
   return decodeBody(body, resp.headers.get("content-type"));
 }
 
+function splitCombinedSetCookieHeader(headerValue: string): string[] {
+  const cookies: string[] = [];
+  let current = "";
+  let inQuotes = false;
+  let inExpires = false;
+
+  for (let index = 0; index < headerValue.length; index += 1) {
+    const char = headerValue[index];
+
+    if (char === '"') {
+      inQuotes = !inQuotes;
+      current += char;
+      continue;
+    }
+
+    if (!inQuotes) {
+      const expiresToken = headerValue.slice(index, index + 8).toLowerCase();
+      if (!inExpires && expiresToken === "expires=") {
+        inExpires = true;
+      }
+
+      if (char === ";" && inExpires) {
+        inExpires = false;
+      }
+
+      if (char === "," && !inExpires) {
+        const trimmed = current.trim();
+        if (trimmed) {
+          cookies.push(trimmed);
+        }
+        current = "";
+        continue;
+      }
+    }
+
+    current += char;
+  }
+
+  const trailing = current.trim();
+  if (trailing) {
+    cookies.push(trailing);
+  }
+
+  return cookies;
+}
+
 function getSetCookieHeaders(resp: Response): string[] {
   const getSetCookie = (resp.headers as any).getSetCookie as undefined | (() => string[]);
   if (typeof getSetCookie === "function") {
@@ -107,7 +153,7 @@ function getSetCookieHeaders(resp: Response): string[] {
   }
 
   const single = resp.headers.get("set-cookie");
-  return single ? [single] : [];
+  return single ? splitCombinedSetCookieHeader(single) : [];
 }
 
 function serializeError(error: unknown) {

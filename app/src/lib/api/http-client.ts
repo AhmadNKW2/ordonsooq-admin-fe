@@ -158,8 +158,28 @@ class HttpClient {
     return true;
   }
 
+  private resolveBaseUrl(configuredBaseUrl: string): string {
+    const normalizedBaseUrl = configuredBaseUrl.replace(/\/$/, "") || "/api";
+
+    if (typeof window === "undefined") {
+      return normalizedBaseUrl;
+    }
+
+    try {
+      const resolvedUrl = new URL(normalizedBaseUrl, window.location.origin);
+
+      if (resolvedUrl.origin !== window.location.origin) {
+        return "/api";
+      }
+
+      return resolvedUrl.pathname.replace(/\/$/, "") || "/api";
+    } catch {
+      return normalizedBaseUrl;
+    }
+  }
+
   private constructor() {
-    this.baseURL = API_CONFIG.baseUrl;
+    this.baseURL = this.resolveBaseUrl(API_CONFIG.baseUrl);
     this.defaultHeaders = {
       "Content-Type": "application/json",
     };
