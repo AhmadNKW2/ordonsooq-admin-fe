@@ -1,8 +1,26 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import {
+  DndContext,
+  closestCenter,
+  DragEndEvent,
+  KeyboardSensor,
+  MeasuringStrategy,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { useQueryClient } from "@tanstack/react-query";
-import { Link2, Plus, Save, Trash2 } from "lucide-react";
+import { GripVertical, Link2, Plus, Save, Trash2 } from "lucide-react";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Card } from "../ui/card";
@@ -122,6 +140,11 @@ const normalizeString = (...values: unknown[]): string => {
   return "";
 };
 
+const getSortOrderValue = (sortOrder?: number) =>
+  typeof sortOrder === "number" && Number.isFinite(sortOrder)
+    ? sortOrder
+    : Number.MAX_SAFE_INTEGER;
+
 const toNormalizedMapping = (
   mapping: CategoryUrlMapping | Record<string, unknown>
 ): NormalizedMapping | null => {
@@ -164,7 +187,16 @@ const toNormalizedMapping = (
 const groupMappingsByUrl = (mappings: NormalizedMapping[]): MappingRow[] => {
   const groupedRows = new Map<string, MappingRow>();
 
-  for (const mapping of mappings) {
+  for (const mapping of [...mappings].sort((left, right) => {
+    const sortOrderDifference =
+      getSortOrderValue(left.sortOrder) - getSortOrderValue(right.sortOrder);
+
+    if (sortOrderDifference !== 0) {
+      return sortOrderDifference;
+    }
+
+    return left.id - right.id;
+  })) {
     const groupKey = mapping.url;
     const existingRow = groupedRows.get(groupKey);
 
@@ -195,7 +227,39 @@ const groupMappingsByUrl = (mappings: NormalizedMapping[]): MappingRow[] => {
     });
   }
 
-  return Array.from(groupedRows.values());
+  return Array.from(groupedRows.values())
+    .map((row) => {
+      const sortedPersistedMappings = [...row.persistedMappings].sort(
+        (left, right) => {
+          const sortOrderDifference =
+            getSortOrderValue(left.sortOrder) - getSortOrderValue(right.sortOrder);
+
+          if (sortOrderDifference !== 0) {
+            return sortOrderDifference;
+          }
+
+          return left.id - right.id;
+        }
+      );
+
+      return {
+        ...row,
+        categoryIds: normalizeCategoryIds(
+          sortedPersistedMappings.map((mapping) => mapping.categoryId)
+        ),
+        persistedMappings: sortedPersistedMappings,
+      };
+    })
+    .sort((left, right) => {
+      const leftSortOrder = getSortOrderValue(left.persistedMappings[0]?.sortOrder);
+      const rightSortOrder = getSortOrderValue(right.persistedMappings[0]?.sortOrder);
+
+      if (leftSortOrder !== rightSortOrder) {
+        return leftSortOrder - rightSortOrder;
+      }
+
+      return left.localId.localeCompare(right.localId);
+    });
 };
 
 const findInTree = (categories: Category[], id: string): Category | undefined => {
@@ -232,6 +296,125 @@ const toComparableRows = (rows: MappingRow[]) => {
     .filter((row) => row.categoryIds.length > 0 || row.url);
 };
 
+interface SortableMappingRowProps {
+  row: MappingRow;
+  displayIndex: number;
+  categories: Category[];
+  recentCategories: Category[];
+  disabled: boolean;
+  isSaving: boolean;
+  isCategoriesLoading: boolean;
+  canDrag: boolean;
+  onChange: (localId: string, updates: Partial<MappingRow>) => void;
+  onRemove: (row: MappingRow) => void;
+}
+
+const SortableMappingRow: React.FC<SortableMappingRowProps> = ({
+  row,
+  displayIndex,
+  categories,
+  recentCategories,
+  disabled,
+  isSaving,
+  isCategoriesLoading,
+  canDrag,
+  onChange,
+  onRemove,
+}) => {
+  const {
+    attributes: dndAttributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id: row.localId,
+    disabled: !canDrag,
+  });
+
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition: "transform 250ms cubic-bezier(0.25, 1, 0.5, 1), opacity 200ms ease",
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 50 : undefined,
+    position: isDragging ? "relative" : undefined,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`rounded-r1 border p-4 transition-all duration-200 ${
+        isDragging
+          ? "border-primary bg-primary/5 shadow-lg ring-2 ring-primary/20"
+          : "border-primary/10 bg-white"
+      }`}
+    >
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[auto_auto_minmax(0,1fr)_minmax(0,1.3fr)_auto] lg:items-center">
+        <div className="space-y-2">
+          <button
+            type="button"
+            aria-label={`Reorder category URL mapping ${displayIndex}`}
+            className={`flex h-11 w-11 items-center justify-center rounded-r1 border transition-all duration-200 ${
+              canDrag
+                ? "cursor-grab active:cursor-grabbing hover:bg-primary/10"
+                : "cursor-not-allowed opacity-60"
+            } ${
+              isDragging
+                ? "border-primary bg-primary/20 shadow-sm"
+                : "border-primary/15 bg-white"
+            }`}
+            disabled={!canDrag}
+            {...dndAttributes}
+            {...listeners}
+          >
+            <GripVertical
+              className={`h-5 w-5 transition-colors duration-200 ${
+                isDragging ? "text-primary" : "text-primary/50"
+              }`}
+            />
+          </button>
+        </div>
+
+        <div className="space-y-2">
+          <div className="flex h-11 min-w-16 items-center justify-center rounded-r1 border border-primary/15 bg-gray-50 px-3 font-mono text-sm text-gray-600">
+            {displayIndex}
+          </div>
+        </div>
+
+        <CategoryTreeSelect
+          label="Categories"
+          categories={categories}
+          recentCategories={recentCategories}
+          selectedIds={row.categoryIds}
+          onChange={(ids) => onChange(row.localId, { categoryIds: normalizeCategoryIds(ids) })}
+          singleSelect={false}
+          disabled={disabled || isSaving || isCategoriesLoading}
+        />
+
+        <Input
+          label="URL"
+          value={row.url}
+          onChange={(event) => onChange(row.localId, { url: event.target.value })}
+          disabled={disabled || isSaving}
+        />
+
+        <div className="flex items-end gap-2">
+          <Button
+            variant="outline"
+            isSquare
+            onClick={() => onRemove(row)}
+            disabled={disabled || isSaving}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export const VendorCategoryUrlsSection: React.FC<VendorCategoryUrlsSectionProps> = ({
   mode,
   vendorId,
@@ -264,8 +447,19 @@ export const VendorCategoryUrlsSection: React.FC<VendorCategoryUrlsSectionProps>
 
   const [rows, setRows] = useState<MappingRow[]>(() => [createEmptyRow()]);
   const [isSaving, setIsSaving] = useState(false);
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
   const lastRow = rows[rows.length - 1];
   const canAddRow = isRowFilled(lastRow);
+  const canReorderRows = !isDisabled && !isSaving && rows.length > 1;
   const currentComparableRows = useMemo(() => toComparableRows(rows), [rows]);
   const persistedComparableRows = useMemo(
     () => toComparableRows(persistedRows),
@@ -436,6 +630,25 @@ export const VendorCategoryUrlsSection: React.FC<VendorCategoryUrlsSectionProps>
     });
   };
 
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (!over || active.id === over.id) {
+      return;
+    }
+
+    setRows((currentRows) => {
+      const oldIndex = currentRows.findIndex((row) => row.localId === active.id);
+      const newIndex = currentRows.findIndex((row) => row.localId === over.id);
+
+      if (oldIndex === -1 || newIndex === -1) {
+        return currentRows;
+      }
+
+      return arrayMove(currentRows, oldIndex, newIndex);
+    });
+  };
+
   const handleSave = async () => {
     if (!vendorId) {
       return;
@@ -455,10 +668,11 @@ export const VendorCategoryUrlsSection: React.FC<VendorCategoryUrlsSectionProps>
       return;
     }
 
-    const desiredMappings = activeRows.flatMap((row) =>
+    const desiredMappings = activeRows.flatMap((row, index) =>
       row.categoryIds.map((categoryId) => ({
         id: row.persistedMappings.find((mapping) => mapping.categoryId === categoryId)?.id,
         categoryId,
+        sortOrder: index,
         url: row.url,
       }))
     );
@@ -493,7 +707,8 @@ export const VendorCategoryUrlsSection: React.FC<VendorCategoryUrlsSectionProps>
 
       return (
         persistedMapping.categoryId !== mapping.categoryId ||
-        persistedMapping.url !== mapping.url
+        persistedMapping.url !== mapping.url ||
+        getSortOrderValue(persistedMapping.sortOrder) !== mapping.sortOrder
       );
     });
     const idsToDelete = normalizedPersistedMappings
@@ -512,18 +727,20 @@ export const VendorCategoryUrlsSection: React.FC<VendorCategoryUrlsSectionProps>
         await categoryUrlService.deleteCategoryUrlMapping(mappingId);
       }
 
-      for (const row of rowsToCreate) {
-        await categoryUrlService.createCategoryUrlMapping({
-          category_id: Number(row.categoryId),
-          vendor_id: vendorId,
-          url: row.url,
-        });
-      }
-
       for (const row of rowsToUpdate) {
         await categoryUrlService.updateCategoryUrlMapping(row.id as number, {
           category_id: Number(row.categoryId),
           vendor_id: vendorId,
+          sort_order: row.sortOrder,
+          url: row.url,
+        });
+      }
+
+      for (const row of rowsToCreate) {
+        await categoryUrlService.createCategoryUrlMapping({
+          category_id: Number(row.categoryId),
+          vendor_id: vendorId,
+          sort_order: row.sortOrder,
           url: row.url,
         });
       }
@@ -623,40 +840,43 @@ export const VendorCategoryUrlsSection: React.FC<VendorCategoryUrlsSectionProps>
         )}
 
         <div className="flex flex-col gap-4">
-          {rows.map((row) => (
-            <div
-              key={row.localId}
-              className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.3fr)_auto]"
+          {!isDisabled && (
+            <p className="text-sm text-gray-500">
+              Drag the handle to change the sort order. The displayed order is saved for these mappings.
+            </p>
+          )}
+
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            measuring={{
+              droppable: {
+                strategy: MeasuringStrategy.Always,
+              },
+            }}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={rows.map((row) => row.localId)}
+              strategy={verticalListSortingStrategy}
             >
-              <CategoryTreeSelect
-                label="Categories"
-                categories={sortedCategories}
-                recentCategories={recentCategoriesList}
-                selectedIds={row.categoryIds}
-                onChange={(ids) => handleRowChange(row.localId, { categoryIds: normalizeCategoryIds(ids) })}
-                singleSelect={false}
-                disabled={isDisabled || isSaving || isCategoriesLoading}
-              />
-
-              <Input
-                label="URL"
-                value={row.url}
-                onChange={(event) => handleRowChange(row.localId, { url: event.target.value })}
-                disabled={isDisabled || isSaving}
-              />
-
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  isSquare
-                  onClick={() => handleRemoveRow(row)}
-                  disabled={isDisabled || isSaving}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          ))}
+              {rows.map((row, index) => (
+                <SortableMappingRow
+                  key={row.localId}
+                  row={row}
+                  displayIndex={index + 1}
+                  categories={sortedCategories}
+                  recentCategories={recentCategoriesList}
+                  disabled={isDisabled}
+                  isSaving={isSaving}
+                  isCategoriesLoading={isCategoriesLoading}
+                  canDrag={canReorderRows}
+                  onChange={handleRowChange}
+                  onRemove={handleRemoveRow}
+                />
+              ))}
+            </SortableContext>
+          </DndContext>
         </div>
       </div>
     </Card>
